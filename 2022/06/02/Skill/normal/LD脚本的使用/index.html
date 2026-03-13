@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="链接脚本是什么了解什么是链接脚本前，需要知道编译过程以 C 语言为例，已知从源码文件编译为可执行文件分为4个步骤：">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="LD脚本的使用">
+<meta property="og:url" content="http://example.com/2022/06/02/Skill/normal/LD%E8%84%9A%E6%9C%AC%E7%9A%84%E4%BD%BF%E7%94%A8/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="链接脚本是什么了解什么是链接脚本前，需要知道编译过程以 C 语言为例，已知从源码文件编译为可执行文件分为4个步骤：">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2022-06-01T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-06-01T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="LD">
+<meta property="article:tag" content="Linux">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2022/06/02/Skill/normal/LD%E8%84%9A%E6%9C%AC%E7%9A%84%E4%BD%BF%E7%94%A8/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2022/06/02/Skill/normal/LD%E8%84%9A%E6%9C%AC%E7%9A%84%E4%BD%BF%E7%94%A8/","path":"2022/06/02/Skill/normal/LD脚本的使用/","title":"LD脚本的使用"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>LD脚本的使用 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-number">1.</span> <span class="nav-text">链接脚本是什么</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8%E8%87%AA%E5%B7%B1%E7%BC%96%E5%86%99%E7%9A%84%E8%84%9A%E6%9C%AC"><span class="nav-number">2.</span> <span class="nav-text">如何使用自己编写的脚本</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E5%86%99%E9%93%BE%E6%8E%A5%E8%84%9A%E6%9C%AC"><span class="nav-number">3.</span> <span class="nav-text">如何写链接脚本</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ENTRY"><span class="nav-number">3.1.</span> <span class="nav-text">ENTRY</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SECTIONS"><span class="nav-number">3.2.</span> <span class="nav-text">SECTIONS</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SECTION"><span class="nav-number">3.3.</span> <span class="nav-text">SECTION</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#PROVIDE"><span class="nav-number">3.4.</span> <span class="nav-text">PROVIDE</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/02/Skill/normal/LD%E8%84%9A%E6%9C%AC%E7%9A%84%E4%BD%BF%E7%94%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="LD脚本的使用 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          LD脚本的使用
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2022-06-02 00:00:00" itemprop="dateCreated datePublished" datetime="2022-06-02T00:00:00+08:00">2022-06-02</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Skill/" itemprop="url" rel="index"><span itemprop="name">Skill</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>1.6k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>6 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="链接脚本是什么"><a href="#链接脚本是什么" class="headerlink" title="链接脚本是什么"></a>链接脚本是什么</h2><p>了解什么是链接脚本前，需要知道编译过程<br>以 C 语言为例，已知从源码文件编译为可执行文件分为4个步骤：  </p>
+<span id="more"></span>
+<ol>
+<li>预处理：尝试打开使用 include 引用的“.h”头文件，处理宏（如展开#define、判断条件#ifdef等）、处理声明函数（目的是识别返回值类型、形参数量来确认在栈中所需的空间）、处理声明全局变量等。</li>
+<li>汇编：把 C 源码汇编为 AT&amp;T 格式的汇编源码</li>
+<li>编译：从汇编源码编译为目标文件（待链接文件），目标文件的头部存在 elf 头，elf 头存在一个节头表“section list”，表内每一行存储这每个节的基本信息，如：名称、类型、起始虚拟地址、文件内偏移量、大小、标签以及对齐方式等。</li>
+<li>链接：把目标文件链接为可执行文件，可执行文件的 elf 存在两个表，一是节表“section list”，二是程序头表”segment list“。段是由可执行文件的节映射而来，段也是分类型的，如代码段、数据段等。每个段的信息被记录在程序头表内，如：文件内偏移量、大小、标签、和起始虚拟地址等。个人认为，程序头表更多的是告诉操作系统（或加载程序的任务线程）如何去加载程序。节表表示源码编译后的整体布局以便于链接，再由节映射段，可使用命令查看节与段的映射关系：readelf -e &lt;file&gt;。   <blockquote>
+<p>用命令查看 elf 头：readelf -e &lt;file&gt;</p>
+</blockquote>
+</li>
+</ol>
+<p>现在开始了解链接脚本，简单点地说，链接脚本是：告知 ld 程序如何把一至多个待链接文件链接为一个可执行文件，主要的操作对象是待连接文件的“节”，输出对象是可执行文件的“节”和“段”。最主要的操作有：设置一个程序的入口地址、如何把多个类型的节组合成一个节、把一个节映射段后加载到内存的哪里以及哪些节是不值得被处理的，等等。   </p>
+<p>比如以下一个简单的例子：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SECTIONS</span><br><span class="line">&#123;</span><br><span class="line">    . = 0x100000;</span><br><span class="line">    .text : &#123; *(.text) &#125;</span><br><span class="line">    .data : &#123; *(.data) &#125;</span><br><span class="line">    .bss : &#123; *(.bss) &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>已知一个程序内至少包含代码段“.text”、已初始化数据段“.data”(包含只读数据段)以及未初始化数据段“.bss”。该链接脚本目的是如何把待链接文件的3种类型的节（用名称区分）分别组合成可执行文件的节“.text”、“.data”和“.bss”。<br>首先，我们需要设置可执行文件的第一个节要被加载到虚拟内存的哪里，所以定义了<code>. = 0x100000</code>（把‘.’当作是地址计数器），把第一个节“.text”的起始地址被定义在 0x100000，并且把待链接文件带有后缀“.text”的节组合并映射成可执行文件的第一个节“.text”，现在地址计数器在节“.text”的尾端。接着就是可执行文件的节“.data”以及“.bss”，设置的步骤和节“.text”一样，最后把节映射为段。</p>
+<h2 id="如何使用自己编写的脚本"><a href="#如何使用自己编写的脚本" class="headerlink" title="如何使用自己编写的脚本"></a>如何使用自己编写的脚本</h2><p>ld 程序有一个自己的默认脚本，当我们需要使用用户自己写的脚本时，那么加一个参数<code>-T</code>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ld -T &lt;file.ld&gt;</span><br></pre></td></tr></table></figure>
+
+<h2 id="如何写链接脚本"><a href="#如何写链接脚本" class="headerlink" title="如何写链接脚本"></a>如何写链接脚本</h2><p>下面开始说明脚本的语法以及关键字，但是只教在脚本kernel.ld被用到的知识点，可以边看脚本边看解释，如果想要查看更多的知识点：  </p>
+<blockquote>
+<p><a target="_blank" rel="noopener" href="https://users.informatik.haw-hamburg.de/~krabat/FH-Labor/gnupro/5_GNUPro_Utilities/c_Using_LD/ldLinker_scripts.html">英文版（原版）</a><br><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/383729996">中文版</a>   </p>
+</blockquote>
+<h3 id="ENTRY"><a href="#ENTRY" class="headerlink" title="ENTRY"></a>ENTRY</h3><p>格式：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ENTRY( symbol )</span><br></pre></td></tr></table></figure>
+<p>关键字<code>ENTRY()</code>的作用是指定程序的入口地址（虚拟内存地址），<code>symbol</code>是一个符号&#x2F;标签。看 kernel.ld 和 grub_head.S 的一个节段：  </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">ENTRY(start)</span><br><span class="line">SECTIONS</span><br><span class="line">&#123;</span><br><span class="line">    ......</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">.globl start 		// 内核代码入口，此处提供该声明给 ld 链接器</span><br><span class="line">.globl flush</span><br><span class="line">.extern kern_entry	// 声明内核 C 代码的入口函数</span><br><span class="line">start:</span><br><span class="line">    cid</span><br><span class="line">	......</span><br></pre></td></tr></table></figure>
+<p>可以发现，在链接脚本 kernel.ld，<code>start</code>被设为程序的入口地址。在汇编源码文件 grub_head.S，标签<code>start</code>被设为全局，同时也表示了一个一段代码的起始虚拟地址。所以当程序开始时，CPU 的 EIP 指向<code>start</code>作为程序的入口地址开始读取执行指令。<br>因为 boot&#x2F;grub_head.S 编译为目标文件后，通过链接脚本 kernel.ld 被链接在节 .init.text，.init.text 的起始虚拟地址为 0x100000，所以 start 所指向的地址是 0x100000。</p>
+<h3 id="SECTIONS"><a href="#SECTIONS" class="headerlink" title="SECTIONS"></a>SECTIONS</h3><p>格式：  </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">SECTIONS</span><br><span class="line">&#123;</span><br><span class="line">    section-command</span><br><span class="line">    section-command</span><br><span class="line">    ......</span><br><span class="line">    section-command</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>作用是如何把待链接文件的节组合映射为可执行文件的节，然后再映射为段。</p>
+<h3 id="SECTION"><a href="#SECTION" class="headerlink" title="SECTION"></a>SECTION</h3><p>格式：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SECTION [ address ] [( type )] : [AT( LMA )]</span><br><span class="line">&#123;</span><br><span class="line">    output-sections-command</span><br><span class="line">    output-sections-command</span><br><span class="line">    ......</span><br><span class="line">&#125; [&gt; region ] [: phdr : phdr ...] [=fillexp]</span><br></pre></td></tr></table></figure>
+<p>但只在 kernel.ld 运用到的是：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SECTION : [AT( LMA )]</span><br><span class="line">&#123;</span><br><span class="line">    output-sections-command</span><br><span class="line">    output-sections-command</span><br><span class="line">    ......</span><br><span class="line">&#125; </span><br></pre></td></tr></table></figure>
+<p>作用是描述如何把待链接文件的节组合并映射为可执行文件的节，再到映射段，设置可执行文件的节&#x2F;段的属性，如：设置对齐方式、设置起始加载地址（段的起始物理地址）、设置起始虚拟地址等。<br><code>[AT( LMA )]</code>是设置节映射为段之后的加载地址（对应的是段的起始物理地址），看下列节段： </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">28|SECTIONS&#123;</span><br><span class="line">  |    ......</span><br><span class="line">42|    . += 0xC0000000;</span><br><span class="line">43|	   .text : AT(ADDR(.text) - 0xC0000000)</span><br><span class="line">44|	   &#123;</span><br><span class="line">45|		   *(.text)</span><br><span class="line">46|		   . = ALIGN(4096);</span><br><span class="line">47|	   &#125;</span><br><span class="line">  |    ......</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>第43行，设置输出节“.text”映射段，输出节映射为段时，把段的加载地址（起始物理地址）被设为：当前输出节的地址-0xC0000000（此前以把当前地址计数器的值作为输出节的地址）。<br>第45行，把待链接文件的节“.text”映射为可执行文件的节。<br>第46行，对地址计算器以4KB的方式上对齐。   </p>
+<p>如果想把某些待链接文件的节忽略，不映射到可执行文件的节，那么使用<code>/DISCARD/</code>，如下：  </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">SECTIONS&#123;</span><br><span class="line">    ......</span><br><span class="line">	/DISCARD/ : &#123; *(.comment) *(.eh_frame) &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="PROVIDE"><a href="#PROVIDE" class="headerlink" title="PROVIDE"></a>PROVIDE</h3><p>格式：  </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">PROVIDE( symbol = expression )</span><br></pre></td></tr></table></figure>
+<p>作用：定义一个标签（在目标文件被引用但未被定义的全局变量），并被赋予地址空间。  </p>
+<p>以上就是kernel.ld所涉及到的语法点，当中未讲的关键字，如：ADDR()、ALIGN()，这些看名字就能知道它是干嘛的了。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/LD/" rel="tag"># LD</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/06/02/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E8%A7%A3%E6%9E%90E820%E5%9B%BE_i386/" rel="prev" title="Linux - 解析E820图（内核版本 2.4.22，32位x86）">
+                  <i class="fa fa-angle-left"></i> Linux - 解析E820图（内核版本 2.4.22，32位x86）
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/06/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%B8%AD%E6%96%AD%E5%AD%90%E7%B3%BB%E7%BB%9F%E5%AD%A6%E4%B9%A0_i386/" rel="next" title="Linux - 中断子系统学习（内核版本 2.4.22，32位x86）">
+                  Linux - 中断子系统学习（内核版本 2.4.22，32位x86） <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

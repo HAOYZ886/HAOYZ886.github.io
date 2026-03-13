@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="i2c 是什么i2c 是一条外设总线，是一条慢速 I&#x2F;O 总线，供给慢速设备使用，如 EEPROM 。芯片（SoC）内置 i2c 控制器，用于连接主板的其中一条 i2c 总线，且作为当前总线的主设备。一条 i2c 总线上有一个主设备和若干个从设备，总线上的主设备有主动发送请求的权限，从设备仅有回应请求的权限。    SoC 芯片能连接多少条 i2c 总线，取决于 i2c 控制器的数量。">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="I2C学习笔记">
+<meta property="og:url" content="http://example.com/2024/03/13/Hardware/device/I2C%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="i2c 是什么i2c 是一条外设总线，是一条慢速 I&#x2F;O 总线，供给慢速设备使用，如 EEPROM 。芯片（SoC）内置 i2c 控制器，用于连接主板的其中一条 i2c 总线，且作为当前总线的主设备。一条 i2c 总线上有一个主设备和若干个从设备，总线上的主设备有主动发送请求的权限，从设备仅有回应请求的权限。    SoC 芯片能连接多少条 i2c 总线，取决于 i2c 控制器的数量。">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/Hardware/device/I2C%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/i2c%E7%A1%AC%E4%BB%B6%E8%BF%9E%E6%8E%A5.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/I2C%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/i2c%E5%86%99.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/I2C%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/i2c%E8%AF%BB.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/I2C%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/i2c%E5%BC%80%E5%A7%8B&%E7%BB%93%E6%9D%9F%E4%BC%A0%E8%BE%93.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/I2C%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/i2c%E6%95%B0%E6%8D%AE%E4%BC%A0%E8%BE%93.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/I2C%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/i2c%E9%80%9A%E4%BF%A1%E6%9C%BA%E5%88%B6.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/I2C%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/i2cSDA.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/I2C%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/i2cSDA&SCL.png">
+<meta property="article:published_time" content="2024-03-12T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-03-12T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Device">
+<meta property="article:tag" content="Hardware">
+<meta property="article:tag" content="I2C">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/Hardware/device/I2C%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/i2c%E7%A1%AC%E4%BB%B6%E8%BF%9E%E6%8E%A5.png">
+
+
+<link rel="canonical" href="http://example.com/2024/03/13/Hardware/device/I2C%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2024/03/13/Hardware/device/I2C%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/","path":"2024/03/13/Hardware/device/I2C学习笔记/","title":"I2C学习笔记"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>I2C学习笔记 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#i2c-%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-number">1.</span> <span class="nav-text">i2c 是什么</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%80%9A%E4%BF%A1%E6%9C%BA%E5%88%B6"><span class="nav-number">2.</span> <span class="nav-text">通信机制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%88%E4%BB%8E%E9%80%BB%E8%BE%91%E5%B1%82%E9%9D%A2%E4%B8%8A%E7%90%86%E8%A7%A3"><span class="nav-number">2.1.</span> <span class="nav-text">先从逻辑层面上理解</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#i2c-%E5%86%99%E6%93%8D%E4%BD%9C"><span class="nav-number">2.1.1.</span> <span class="nav-text">i2c 写操作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#i2c-%E8%AF%BB%E6%93%8D%E4%BD%9C"><span class="nav-number">2.1.2.</span> <span class="nav-text">i2c 读操作</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%8E%E7%89%A9%E7%90%86%E5%B1%82%E9%9D%A2%E4%B8%8A%E7%90%86%E8%A7%A3"><span class="nav-number">2.2.</span> <span class="nav-text">从物理层面上理解</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2024/03/13/Hardware/device/I2C%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="I2C学习笔记 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          I2C学习笔记
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2024-03-13 00:00:00" itemprop="dateCreated datePublished" datetime="2024-03-13T00:00:00+08:00">2024-03-13</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Hardware/" itemprop="url" rel="index"><span itemprop="name">Hardware</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>7 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="i2c-是什么"><a href="#i2c-是什么" class="headerlink" title="i2c 是什么"></a>i2c 是什么</h2><p>i2c 是一条外设总线，是一条慢速 I&#x2F;O 总线，供给慢速设备使用，如 EEPROM 。<br>芯片（SoC）内置 i2c 控制器，用于连接主板的其中一条 i2c 总线，且作为当前总线的主设备。一条 i2c 总线上有一个主设备和若干个从设备，总线上的主设备有主动发送请求的权限，从设备仅有回应请求的权限。  </p>
+<blockquote>
+<p>SoC 芯片能连接多少条 i2c 总线，取决于 i2c 控制器的数量。  </p>
+</blockquote>
+<span id="more"></span>
+
+<div align="center"><img src="/images/Hardware/device/I2C学习笔记/i2c硬件连接.png"></div>
+
+<p>其中，SCK 是时钟频率引脚，主从设备都可以<strong>控制</strong>这条引脚；SDA 是数据引脚，用于传输设备。  </p>
+<blockquote>
+<p>上拉电阻在 <a href="#%E4%BB%8E%E7%89%A9%E7%90%86%E5%B1%82%E9%9D%A2%E4%B8%8A%E7%90%86%E8%A7%A3">从物理层面上理解</a> 解释。  </p>
+</blockquote>
+<h2 id="通信机制"><a href="#通信机制" class="headerlink" title="通信机制"></a>通信机制</h2><h3 id="先从逻辑层面上理解"><a href="#先从逻辑层面上理解" class="headerlink" title="先从逻辑层面上理解"></a>先从逻辑层面上理解</h3><p>当用户使用主设备，即在主控芯片发送请求时，需要提供目的设备和请求类型。<br>i2c 总线上的从设备由一个 7 bits 的设备地址表示。在一条 i2c 总线，设备地址是唯一的，一个 i2c 设备对应一个设备地址，一个 i2c 设备只能连接一条总线。而且不同的 i2c 总线，相同地址所对应的设备是不同的。<br>请求类型分为读和写，用 1 bit 表示，0 表示 写，1 表示读。<br>把信息提供给 i2c 驱动层后，i2c 驱动层（里面的传输层）会先通过 SDA 引脚发送 start 信号（被置为 0 ），然后逐位发送设备地址 + 请求类型到 i2c 从设备。当总线上的其中一个从设备匹配时，它通过 SDA 引脚会发送 ack 信号（被置为 0 ）给主设备，根据请求类型进行传输数据。在传输期间，传输 1 字节为一个周期，每一周期，接收方必须发送 ack 信号给发送方。当传输完成时，主设备会发送 stop 信号给从设备，表示传输结束。所以可以得知，i2c 提供了一定的可靠性。</p>
+<blockquote>
+<p>个人认为，在主设备发送 start 位时，会通过广播的方式，逐位发送 start + dev_addr + rw 到当前总线的各个从设备，当这个信息发送到与 dev_addr 相符的从设备后，该从设备必须发送 ack 信号给主设备，然后再根据 rw 传输数据。  </p>
+</blockquote>
+<h4 id="i2c-写操作"><a href="#i2c-写操作" class="headerlink" title="i2c 写操作"></a>i2c 写操作</h4><ol>
+<li>主芯片发出一个 start 信号</li>
+<li>然后发出一个设备地址（确定是往哪一个从设备写数据），方向（写操作，0 ）</li>
+<li>从设备回应（用来确定这个设备是否存在），然后就可以传输数据</li>
+<li>主设备发送一个字节数据给从设备，并等待回应</li>
+<li>每传输一字节数据，从设备发送一个 ack 信号（确定数据是否接受完成），然后再传输下一个数据。</li>
+<li>数据发送完之后，主芯片就会发送一个停止信号。</li>
+</ol>
+<div align="center"><img src="/images/Hardware/device/I2C学习笔记/i2c写.png"></div>P
+
+<blockquote>
+<p>白色背景表示”主-&gt;从”，灰色背景表示”从-&gt;主”</p>
+</blockquote>
+<h4 id="i2c-读操作"><a href="#i2c-读操作" class="headerlink" title="i2c 读操作"></a>i2c 读操作</h4><ol>
+<li>主芯片发出一个 start 信号</li>
+<li>然后发出一个设备地址（确定是往哪一个从设备读数据），方向（读操作，1）</li>
+<li>从设备回应（确定这个设备是否存在），然后就可以传输数据</li>
+<li>从设备发送一个字节数据给主芯片，并等待回应</li>
+<li>每传输一字节数据，主芯片要有一个回应信号（确定数据是否接受完成），然后再传输下一个数据。</li>
+<li>数据发送完之后，主芯片就会发送一个停止信号。</li>
+</ol>
+<div align="center"><img src="/images/Hardware/device/I2C学习笔记/i2c读.png"></div>
+
+<blockquote>
+<p>白色背景表示”主-&gt;从”，灰色背景表示”从-&gt;主”</p>
+</blockquote>
+<h3 id="从物理层面上理解"><a href="#从物理层面上理解" class="headerlink" title="从物理层面上理解"></a>从物理层面上理解</h3><p>这个阶段需要知道 SDA 和 SCL 之间的关系。<br>主设备传输数据前，必须把 start + dev_addr + rw 发送到 i2c 总线，见下图的 START condition 。</p>
+<div align="center"><img src="/images/Hardware/device/I2C学习笔记/i2c开始&结束传输.png"></div>
+
+<p>当主设备发送 start 信号前，SDA 和 SCL 都是高位（与上拉电阻有关，后面会解释）。发送之后，SDA 变低位，随后 SCL 也会变低位。在 SCL 低位期间，表示主设备可以发送数据到 i2c 总线，此时会发送设备地址的一位到总线（从高到低的位数次序）。在 SCL 变高位期间，SDA 的位需要保持，供给从设备接收。待一个时钟周期结束后，即 SCL 变低位后，主设备才能发送下一位到总线。总体流程如下图：</p>
+<div align="center"><img src="/images/Hardware/device/I2C学习笔记/i2c数据传输.png"></div>
+
+<p>待完成发送一字节后，必须有其中一个从设备发送 ack 信号回应主设备，否则表示无对应设备。完整的传输流程如下图：</p>
+<div align="center"><img src="/images/Hardware/device/I2C学习笔记/i2c通信机制.png"></div>  
+
+<p>当传输完成后，先是 SCL 恢复高位，再到 SDA 恢复高位。  </p>
+<p>这里或许会有一些疑问：<br>Q: SCL 是谁主导的？<br>A: 由上文可知，当主设备发送 start 信号时，SCL 就由主设备控制了。但是，当传输完 dev_addr + rw 后，dev_addr对应的从设备必须发送 ack 信号，所以轮到当前从设备控制。  </p>
+<p>Q: 如何在 SDA 上实现双向传输？<br>A: 主芯片通过一根 SDA 线既可以把数据发给从设备，也可以从 SDA 上读取数据，连接 SDA 线的引脚里面必然有两个引脚（发送引脚&#x2F;接收引脚）。</p>
+<p>Q: 双方设备中，某个设备发送数据时，另一方怎样才能不影响 SDA 上的数据？<br>A: 这个取决于 i2c 的硬件机制。已知 SDA 和 SCL 分别外接了一个 3.3v 的上拉电阻，这使得 SDA 和 SCL 在没有被主从端传输时都处于高位。而且，在 i2c 控制器的 SDA 中有一个三极管，使用开极&#x2F;开漏电路。见下图：  </p>
+<div align="center"><img src="/images/Hardware/device/I2C学习笔记/i2cSDA.png"></div>  
+
+<ul>
+<li>当驱动三极管时，SDA 处于低电平。</li>
+<li>不驱动三级管时，SDA 处于什么电平，取决于上拉电阻和发送端。</li>
+</ul>
+<p>这里根据上图展示相应的真值表：  </p>
+<table>
+<thead>
+<tr>
+<th align="center">dev 1</th>
+<th align="center">dev 2</th>
+<th align="center">SDA</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">0</td>
+<td align="center">0</td>
+<td align="center">1 (由上拉电阻决定)</td>
+</tr>
+<tr>
+<td align="center">0</td>
+<td align="center">1</td>
+<td align="center">0</td>
+</tr>
+<tr>
+<td align="center">1</td>
+<td align="center">0</td>
+<td align="center">0</td>
+</tr>
+<tr>
+<td align="center">1</td>
+<td align="center">1</td>
+<td align="center">0</td>
+</tr>
+</tbody></table>
+<p>举例：主设备发送（ 8bit ）给从设备</p>
+<ul>
+<li>前 8 个 CLK<ol>
+<li>从设备不影响 SDA ，从设备不驱动三极管。</li>
+<li>主设备决定数据，主设备要发送 1 时不驱动三极管，要发送 0 时驱动三极管.</li>
+</ol>
+</li>
+<li>第 9 个 CLK，由从设备决定数据。<ol>
+<li>主设备不驱动三极管。</li>
+<li>从设备决定数据，要发出回应信号的话，就驱动三极管让 SDA 变为 0 从这里也可以知道 ACK 信号是低电平。</li>
+</ol>
+</li>
+</ul>
+<p>由此发现一个巧妙的设计，发送高电平始终都是由上拉电阻支持，发送低电平仅由各端的三极管决定。避免了各端发送不同的电平时导致线路短路。</p>
+<div align="center"><img src="/images/Hardware/device/I2C学习笔记/i2cSDA&SCL.png"></div>  
+
+<p>为何 SCL 也要使用上拉电阻？在第 9 个时钟之后，如果有某一方需要更多的时间来处理数据，它可以一直驱动三极管把 SCL 拉低。<br>当 SCL 为低电平时候，大家都不应该使用 i2c 总线，只有当 SCL 从低电平变为高电平的时候，i2c 总线才能被使用。<br>当它就绪后，就可以不再驱动三极管，这是上拉电阻把 SCL 变为高电平，其他设备就可以继续使用 I2C 总线了。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Hardware/" rel="tag"># Hardware</a>
+              <a href="/tags/Device/" rel="tag"># Device</a>
+              <a href="/tags/I2C/" rel="tag"># I2C</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/03/13/Hardware/device/UART%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="prev" title="UART学习笔记">
+                  <i class="fa fa-angle-left"></i> UART学习笔记
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2024/04/01/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/UBoot/UBoot-%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5/" rel="next" title="UBoot - 基本概念">
+                  UBoot - 基本概念 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="看门狗硬件见看门狗硬件原理图：">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - GPIO看门狗适配">
+<meta property="og:url" content="http://example.com/2025/01/23/%E9%85%8D%E7%BD%AE/Linux/Linux%20-%20GPIO%E7%9C%8B%E9%97%A8%E7%8B%97%E9%80%82%E9%85%8D/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="看门狗硬件见看门狗硬件原理图：">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E9%85%8D%E7%BD%AE/Linux/Linux-GPIO%E7%9C%8B%E9%97%A8%E7%8B%97%E9%80%82%E9%85%8D/1737599774659-86cadc2f-1677-4651-8f66-0eb25f0868fa.png">
+<meta property="article:published_time" content="2025-01-23T04:13:50.000Z">
+<meta property="article:modified_time" content="2025-01-23T04:13:50.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="U-Boot">
+<meta property="article:tag" content="Watchdog">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E9%85%8D%E7%BD%AE/Linux/Linux-GPIO%E7%9C%8B%E9%97%A8%E7%8B%97%E9%80%82%E9%85%8D/1737599774659-86cadc2f-1677-4651-8f66-0eb25f0868fa.png">
+
+
+<link rel="canonical" href="http://example.com/2025/01/23/%E9%85%8D%E7%BD%AE/Linux/Linux%20-%20GPIO%E7%9C%8B%E9%97%A8%E7%8B%97%E9%80%82%E9%85%8D/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2025/01/23/%E9%85%8D%E7%BD%AE/Linux/Linux%20-%20GPIO%E7%9C%8B%E9%97%A8%E7%8B%97%E9%80%82%E9%85%8D/","path":"2025/01/23/配置/Linux/Linux - GPIO看门狗适配/","title":"Linux - GPIO看门狗适配"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - GPIO看门狗适配 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9C%8B%E9%97%A8%E7%8B%97%E7%A1%AC%E4%BB%B6"><span class="nav-number">1.</span> <span class="nav-text">看门狗硬件</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%80%82%E9%85%8D%E7%9C%8B%E9%97%A8%E7%8B%97"><span class="nav-number">2.</span> <span class="nav-text">适配看门狗</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#U-boot"><span class="nav-number">2.1.</span> <span class="nav-text">U-boot</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Kernel"><span class="nav-number">2.2.</span> <span class="nav-text">Kernel</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%87%E6%8D%A2%E5%88%B0Kernel%E6%97%B6%E5%9C%A81-6%E7%A7%92%E5%86%85%E5%96%82%E7%8B%97"><span class="nav-number">3.</span> <span class="nav-text">切换到Kernel时在1.6秒内喂狗</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BF%AE%E6%94%B9U-Boot"><span class="nav-number">3.1.</span> <span class="nav-text">修改U-Boot</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BF%AE%E6%94%B9Kernel"><span class="nav-number">3.2.</span> <span class="nav-text">修改Kernel</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/01/23/%E9%85%8D%E7%BD%AE/Linux/Linux%20-%20GPIO%E7%9C%8B%E9%97%A8%E7%8B%97%E9%80%82%E9%85%8D/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - GPIO看门狗适配 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - GPIO看门狗适配
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2025-01-23 12:13:50" itemprop="dateCreated datePublished" datetime="2025-01-23T12:13:50+08:00">2025-01-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E9%85%8D%E7%BD%AE/" itemprop="url" rel="index"><span itemprop="name">配置</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>977</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>4 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="看门狗硬件"><a href="#看门狗硬件" class="headerlink" title="看门狗硬件"></a>看门狗硬件</h2><p>见看门狗硬件原理图：</p>
+<span id="more"></span>
+
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/配置/Linux/Linux-GPIO看门狗适配/1737599774659-86cadc2f-1677-4651-8f66-0eb25f0868fa.png"></div>
+
+<p>我们实际可控的，就仅有 WDI 脚。</p>
+<p>接下来适配看门狗有三部分：</p>
+<ol>
+<li>U-Boot 和 Kernel 适配看门狗</li>
+<li>确保 SPL 切换到 U-Boot 时，能在 1.6 秒内喂狗</li>
+<li>确保 U-Boot 切换到 Kernel 时，能在 1.6 秒内喂狗</li>
+</ol>
+<h2 id="适配看门狗"><a href="#适配看门狗" class="headerlink" title="适配看门狗"></a>适配看门狗</h2><h3 id="U-boot"><a href="#U-boot" class="headerlink" title="U-boot"></a>U-boot</h3><p>开启相关配置：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">CONFIG_WATCHDOG_AUTOSTART=y</span><br><span class="line">CONFIG_WDT_GPIO=y</span><br></pre></td></tr></table></figure>
+
+<p>设备树配置：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">/&#123;</span><br><span class="line">	wtd0: sgm706@0 &#123;</span><br><span class="line">		compatible = &quot;linux,wdt-gpio&quot;;</span><br><span class="line">		status = &quot;okay&quot;;</span><br><span class="line"></span><br><span class="line">		gpios = &lt;&amp;pio PL 6 GPIO_ACTIVE_LOW&gt;;</span><br><span class="line">		hw_algo = &quot;toggle&quot;;</span><br><span class="line">		hw_margin_ms = &lt;1000&gt;;</span><br><span class="line">		always-running;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>hw_algo</code>：选择喂狗方式<ul>
+<li>“toggle” ：类似于 PWM 频率的方式喂狗</li>
+<li>“level” ：把电平拉高 1 us，再拉低，一直到下次喂狗</li>
+</ul>
+</li>
+<li><code>hw_margin_ms</code>：每隔多少毫秒喂一次狗</li>
+</ul>
+<h3 id="Kernel"><a href="#Kernel" class="headerlink" title="Kernel"></a>Kernel</h3><p>开启相关配置：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">CONFIG_GPIO_WATCHDOG=y</span><br></pre></td></tr></table></figure>
+
+
+
+<p>设备树配置和 U-Boot 的一致。</p>
+<h2 id="切换到Kernel时在1-6秒内喂狗"><a href="#切换到Kernel时在1-6秒内喂狗" class="headerlink" title="切换到Kernel时在1.6秒内喂狗"></a>切换到Kernel时在1.6秒内喂狗</h2><p>从 U-Boot 切换到内核期间，如果喂狗过早，会导致切换内核后，会在内核运行 0.3 秒左右重启。这是因为没有在 1.6 秒内喂狗导致的，而且在此期间内核还没有注册 Pinctrl 驱动和 gpio_wdt 驱动。</p>
+<p>根据以上问题，对 U-Boot 和 Kernel 做出以下修改：</p>
+<ol>
+<li>U-Boot 切换到内核前，手动调用喂狗函数，喂一次狗。</li>
+<li>把内核的 Pinctrl 驱动和 gpio_wdt 驱动的注册流程，尽可能地提前。</li>
+</ol>
+<h3 id="修改U-Boot"><a href="#修改U-Boot" class="headerlink" title="修改U-Boot"></a>修改U-Boot</h3><p>由于手动调用喂狗函数需要用到 udevice ，所以在 <code>struct global_data</code> 添加一个新的字段 gpio_wdt ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">--- a/brandy/brandy<span class="number">-2.0</span>/u-boot-bsp/include/<span class="keyword">asm</span>-generic/global_data.h</span><br><span class="line">+++ b/brandy/brandy<span class="number">-2.0</span>/u-boot-bsp/include/<span class="keyword">asm</span>-generic/global_data.h</span><br><span class="line">@@ <span class="number">-499</span>,<span class="number">6</span> +<span class="number">499</span>,<span class="number">10</span> @@ <span class="class"><span class="keyword">struct</span> <span class="title">global_data</span> &#123;</span></span><br><span class="line">        <span class="type">const</span> <span class="type">void</span> *sunxi_uboot_fdt;</span><br><span class="line">        <span class="type">bool</span>           force_32bit_os;<span class="comment">//1: run 32bit os at 64bit platform</span></span><br><span class="line"> <span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">+</span><br><span class="line">+<span class="meta">#<span class="keyword">ifdef</span> CONFIG_WDT_GPIO</span></span><br><span class="line">+       <span class="class"><span class="keyword">struct</span> <span class="title">udevice</span> *<span class="title">gpio_wdt</span>;</span></span><br><span class="line">+<span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"> &#125;;</span><br></pre></td></tr></table></figure>
+
+<p>然后在 U-Boot 的 gpio_wdt.c 驱动做以下修改，把 gpio_wdt 对应 udevice 赋值到 gd-&gt;gpio_wdt ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">--- a/brandy/brandy<span class="number">-2.0</span>/u-boot<span class="number">-2023</span>/drivers/watchdog/gpio_wdt.c</span><br><span class="line">+++ b/brandy/brandy<span class="number">-2.0</span>/u-boot<span class="number">-2023</span>/drivers/watchdog/gpio_wdt.c</span><br><span class="line">@@ <span class="number">-3</span>,<span class="number">9</span> +<span class="number">3</span>,<span class="number">12</span> @@</span><br><span class="line"> <span class="meta">#<span class="keyword">include</span> <span class="string">&lt;dm.h&gt;</span></span></span><br><span class="line"> <span class="meta">#<span class="keyword">include</span> <span class="string">&lt;dm/device_compat.h&gt;</span></span></span><br><span class="line"> <span class="meta">#<span class="keyword">include</span> <span class="string">&lt;wdt.h&gt;</span></span></span><br><span class="line">+<span class="meta">#<span class="keyword">include</span> <span class="string">&lt;asm/global_data.h&gt;</span></span></span><br><span class="line"> <span class="meta">#<span class="keyword">include</span> <span class="string">&lt;asm/gpio.h&gt;</span></span></span><br><span class="line"> <span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/delay.h&gt;</span></span></span><br><span class="line"> </span><br><span class="line">+DECLARE_GLOBAL_DATA_PTR;</span><br><span class="line">+</span><br><span class="line"> <span class="class"><span class="keyword">enum</span> &#123;</span></span><br><span class="line">        HW_ALGO_TOGGLE,</span><br><span class="line">        HW_ALGO_LEVEL,</span><br><span class="line">@@ <span class="number">-70</span>,<span class="number">6</span> +<span class="number">73</span>,<span class="number">8</span> @@ <span class="type">static</span> <span class="type">int</span> <span class="title function_">dm_probe</span><span class="params">(<span class="keyword">struct</span> udevice *dev)</span></span><br><span class="line">                <span class="keyword">return</span> ret;</span><br><span class="line">        &#125;</span><br><span class="line"> </span><br><span class="line">+       gd-&gt;gpio_wdt = dev;</span><br><span class="line">+</span><br><span class="line">        <span class="keyword">if</span> (priv-&gt;always_running)</span><br><span class="line">                ret = gpio_wdt_reset(dev);</span><br><span class="line"> </span><br></pre></td></tr></table></figure>
+
+<p>然后在切换内核的函数中，在切换内核的步骤前添加喂狗操作：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">--- a/brandy/brandy<span class="number">-2.0</span>/u-boot-bsp/arch/arm/lib/bootm.c</span><br><span class="line">+++ b/brandy/brandy<span class="number">-2.0</span>/u-boot-bsp/arch/arm/lib/bootm.c</span><br><span class="line">@@ <span class="number">-292</span>,<span class="number">6</span> +<span class="number">292</span>,<span class="number">8</span> @@ <span class="type">static</span> <span class="type">void</span> <span class="title function_">switch_to_el1</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line"> <span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"> <span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"> </span><br><span class="line">+<span class="keyword">extern</span> <span class="type">int</span> <span class="title function_">wdt_reset</span><span class="params">(<span class="keyword">struct</span> udevice *dev)</span>;</span><br><span class="line">+</span><br><span class="line"> <span class="comment">/* Subcommand: GO */</span></span><br><span class="line"> <span class="type">static</span> <span class="type">void</span> <span class="title function_">boot_jump_linux</span><span class="params">(<span class="keyword">struct</span> bootm_headers *images, <span class="type">int</span> flag)</span></span><br><span class="line"> &#123;</span><br><span class="line">@@ <span class="number">-388</span>,<span class="number">6</span> +<span class="number">390</span>,<span class="number">9</span> @@ <span class="type">static</span> <span class="type">void</span> <span class="title function_">boot_jump_linux</span><span class="params">(<span class="keyword">struct</span> bootm_headers *images, <span class="type">int</span> flag)</span></span><br><span class="line">                <span class="comment">/* load and de-assert cpus before kernel*/</span></span><br><span class="line">                <span class="title function_">sunxi_smc_call_atf</span><span class="params">(ARM_SVC_ARISC_STARTUP, (ulong)r2, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>)</span>;</span><br><span class="line"> <span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">+<span class="meta">#<span class="keyword">ifdef</span> CONFIG_WDT_GPIO</span></span><br><span class="line">+               wdt_reset(gd-&gt;gpio_wdt);</span><br><span class="line">+<span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"> <span class="meta">#<span class="keyword">ifdef</span> CONFIG_SUNXI_ARM64</span></span><br><span class="line">                        <span class="keyword">if</span> (sunxi_probe_secure_monitor() &amp;&amp;</span><br><span class="line">                            (sunxi_get_force_32bit_os() == <span class="number">0</span>))</span><br></pre></td></tr></table></figure>
+
+<h3 id="修改Kernel"><a href="#修改Kernel" class="headerlink" title="修改Kernel"></a>修改Kernel</h3><p>在内核中，initcall 机制分以下等级：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> pure_initcall(fn)		__define_initcall(fn, 0)</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> core_initcall(fn)		__define_initcall(fn, 1)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> core_initcall_sync(fn)		__define_initcall(fn, 1s)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> postcore_initcall(fn)		__define_initcall(fn, 2)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> postcore_initcall_sync(fn)	__define_initcall(fn, 2s)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> arch_initcall(fn)		__define_initcall(fn, 3)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> arch_initcall_sync(fn)		__define_initcall(fn, 3s)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> subsys_initcall(fn)		__define_initcall(fn, 4)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> subsys_initcall_sync(fn)	__define_initcall(fn, 4s)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> fs_initcall(fn)			__define_initcall(fn, 5)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> fs_initcall_sync(fn)		__define_initcall(fn, 5s)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> rootfs_initcall(fn)		__define_initcall(fn, rootfs)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> device_initcall(fn)		__define_initcall(fn, 6)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> device_initcall_sync(fn)	__define_initcall(fn, 6s)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> late_initcall(fn)		__define_initcall(fn, 7)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> late_initcall_sync(fn)		__define_initcall(fn, 7s)</span></span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>from include&#x2F;linux&#x2F;init.h</p>
+</blockquote>
+<p>大部分驱动的注册流程对应的 initcall 是 device_initcall 。</p>
+<p>一般来说，Pinctrl 驱动的是 fs_initcall ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> __init <span class="title function_">sun55iw6_pio_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">return</span> platform_driver_register(&amp;sun55iw6_pinctrl_driver);</span><br><span class="line">&#125;</span><br><span class="line">fs_initcall(sun55iw6_pio_init);</span><br></pre></td></tr></table></figure>
+
+<p>gpio_wdt 驱动是：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">module_platform_driver(gpio_wdt_driver);</span><br></pre></td></tr></table></figure>
+
+<p>对应的是 device_initcall 。</p>
+<p>现在把它们两的注册流程提前到 core_initcall ，</p>
+<p>Pinctrl 驱动：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">--- a/bsp/drivers/pinctrl/pinctrl-sun55iw6.c</span><br><span class="line">+++ b/bsp/drivers/pinctrl/pinctrl-sun55iw6.c</span><br><span class="line">@@ <span class="number">-2599</span>,<span class="number">7</span> +<span class="number">2599</span>,<span class="number">7</span> @@ <span class="type">static</span> <span class="type">int</span> __init <span class="title function_">sun55iw6_pio_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line"> &#123;</span><br><span class="line">        <span class="keyword">return</span> platform_driver_register(&amp;sun55iw6_pinctrl_driver);</span><br><span class="line"> &#125;</span><br><span class="line">-fs_initcall(sun55iw6_pio_init);</span><br><span class="line">+core_initcall(sun55iw6_pio_init);</span><br></pre></td></tr></table></figure>
+
+<p>gpio_wdt 驱动：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">--- a/kernel/linux<span class="number">-5.10</span>-origin/drivers/watchdog/gpio_wdt.c</span><br><span class="line">+++ b/kernel/linux<span class="number">-5.10</span>-origin/drivers/watchdog/gpio_wdt.c</span><br><span class="line">-module_platform_driver(gpio_wdt_driver);</span><br><span class="line">+<span class="type">static</span> <span class="type">int</span> __init <span class="title function_">gpio_wdt_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">+&#123;</span><br><span class="line">+       <span class="keyword">return</span> platform_driver_register(&amp;gpio_wdt_driver);</span><br><span class="line">+&#125;</span><br><span class="line">+core_initcall(gpio_wdt_init);</span><br><span class="line"> <span class="meta">#<span class="keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+
+<p>另外，还要在 Kernel 首次喂狗前，要读取当前 GPIO 的电平，目的是确定下次喂狗是拉高还是拉低电平：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">--- a/kernel/linux<span class="number">-5.10</span>-origin/drivers/watchdog/gpio_wdt.c</span><br><span class="line">+++ b/kernel/linux<span class="number">-5.10</span>-origin/drivers/watchdog/gpio_wdt.c</span><br><span class="line">@@ <span class="number">-69</span>,<span class="number">7</span> +<span class="number">69</span>,<span class="number">8</span> @@ <span class="type">static</span> <span class="type">int</span> <span class="title function_">gpio_wdt_start</span><span class="params">(<span class="keyword">struct</span> watchdog_device *wdd)</span></span><br><span class="line"> &#123;</span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">gpio_wdt_priv</span> *<span class="title">priv</span> =</span> watchdog_get_drvdata(wdd);</span><br><span class="line"> </span><br><span class="line">-       priv-&gt;state = <span class="number">0</span>;</span><br><span class="line">+       priv-&gt;state = !gpiod_get_value_cansleep(priv-&gt;gpiod);</span><br><span class="line">+</span><br><span class="line">        gpiod_direction_output(priv-&gt;gpiod, priv-&gt;state);</span><br><span class="line"> </span><br><span class="line">        set_bit(WDOG_HW_RUNNING, &amp;wdd-&gt;status);</span><br></pre></td></tr></table></figure>
+
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Watchdog/" rel="tag"># Watchdog</a>
+              <a href="/tags/U-Boot/" rel="tag"># U-Boot</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/01/14/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GPADC%E8%B0%83%E8%AF%95/" rel="prev" title="全志Tina5.0 - GPADC调试">
+                  <i class="fa fa-angle-left"></i> 全志Tina5.0 - GPADC调试
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2025/01/26/Skill/debug/Linux%E5%86%85%E6%A0%B8KGDB%E8%B0%83%E8%AF%95/" rel="next" title="Linux - KGDB调试（基于ARM64）">
+                  Linux - KGDB调试（基于ARM64） <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

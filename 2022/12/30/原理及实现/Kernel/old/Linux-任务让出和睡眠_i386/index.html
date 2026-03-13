@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="任务让出任务让出就是指主动让出 CPU 使用权给其他在调度队列内权值最高的任务，但注意的是执行任务让出操作的任务是还在调度队列的，但是在该队列的尾部。而且任务策略的不同，做出的让出操作也是不同的。现在来看看在内核内的接口函数 yield() ：">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - 任务让出和睡眠（内核版本 2.4.22，32位x86）">
+<meta property="og:url" content="http://example.com/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%BB%BB%E5%8A%A1%E8%AE%A9%E5%87%BA%E5%92%8C%E7%9D%A1%E7%9C%A0_i386/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="任务让出任务让出就是指主动让出 CPU 使用权给其他在调度队列内权值最高的任务，但注意的是执行任务让出操作的任务是还在调度队列的，但是在该队列的尾部。而且任务策略的不同，做出的让出操作也是不同的。现在来看看在内核内的接口函数 yield() ：">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E4%BB%BB%E5%8A%A1%E8%AE%A9%E5%87%BA%E5%92%8C%E7%9D%A1%E7%9C%A0/TaskSched-7.png">
+<meta property="article:published_time" content="2022-12-29T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-12-29T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="X86">
+<meta property="article:tag" content="schedule">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E4%BB%BB%E5%8A%A1%E8%AE%A9%E5%87%BA%E5%92%8C%E7%9D%A1%E7%9C%A0/TaskSched-7.png">
+
+
+<link rel="canonical" href="http://example.com/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%BB%BB%E5%8A%A1%E8%AE%A9%E5%87%BA%E5%92%8C%E7%9D%A1%E7%9C%A0_i386/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%BB%BB%E5%8A%A1%E8%AE%A9%E5%87%BA%E5%92%8C%E7%9D%A1%E7%9C%A0_i386/","path":"2022/12/30/原理及实现/Kernel/old/Linux-任务让出和睡眠_i386/","title":"Linux - 任务让出和睡眠（内核版本 2.4.22，32位x86）"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - 任务让出和睡眠（内核版本 2.4.22，32位x86） | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%BB%E5%8A%A1%E8%AE%A9%E5%87%BA"><span class="nav-number">1.</span> <span class="nav-text">任务让出</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%BB%E5%8A%A1%E7%9D%A1%E7%9C%A0"><span class="nav-number">2.</span> <span class="nav-text">任务睡眠</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%9D%9E%E8%AE%A1%E6%97%B6%E7%9D%A1%E7%9C%A0"><span class="nav-number">2.1.</span> <span class="nav-text">非计时睡眠</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%A1%E6%97%B6%E7%9D%A1%E7%9C%A0"><span class="nav-number">2.2.</span> <span class="nav-text">计时睡眠</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%BB%BB%E5%8A%A1%E8%AE%A9%E5%87%BA%E5%92%8C%E7%9D%A1%E7%9C%A0_i386/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - 任务让出和睡眠（内核版本 2.4.22，32位x86） | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - 任务让出和睡眠（内核版本 2.4.22，32位x86）
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2022-12-30 00:00:00" itemprop="dateCreated datePublished" datetime="2022-12-30T00:00:00+08:00">2022-12-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3.5k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>13 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="任务让出"><a href="#任务让出" class="headerlink" title="任务让出"></a>任务让出</h2><p>任务让出就是指主动让出 CPU 使用权给其他在调度队列内权值最高的任务，但注意的是执行任务让出操作的任务是还在调度队列的，但是在该队列的尾部。而且任务策略的不同，做出的让出操作也是不同的。<br>现在来看看在内核内的接口函数 yield() ：</p>
+<span id="more"></span>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * yield - yield the current processor or other threads.</span></span><br><span class="line"><span class="comment"> * </span></span><br><span class="line"><span class="comment"> * This is a shortcur for kernel-space yielding - it marks</span></span><br><span class="line"><span class="comment"> * the thread runnable and calls sys_sched_yield().</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">yield</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    set_current_state(TASK_RUNNING);</span><br><span class="line">    sys_sched_yield();</span><br><span class="line">    schedule();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最主要的操作是 sys_sched_yield()</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">asmlinkage <span class="type">long</span> <span class="title function_">sys_sched_yield</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> *<span class="title">cur</span> =</span> current;</span><br><span class="line">    <span class="type">int</span> nr_pending = nr_running;</span><br><span class="line"></span><br><span class="line">    nr_pending--;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (nr_pending) </span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (cur-&gt;policy == SCHED_OTHER)</span><br><span class="line">            cur-&gt;policy |= SCHED_YIELD;</span><br><span class="line">        cur-&gt;need_resched = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">        spin_lock_irq(&amp;runqueue_lock);</span><br><span class="line">        move_last_runqueue(cur);</span><br><span class="line">        spin_unlock_irq(&amp;runqueue_lock);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/kernel/sched.c">sched.c</a></p>
+</blockquote>
+<p>通过该函数可知，如果调度队列内仅有一个任务，让出操作是无效的。如果任务策略为 SCHED_OTHER ，则该任务的策略需要被附加上 SCHED_YIELD ，这个策略标志位需要和函数 schedule() 结合说明。然后，当前任务被设置为需要调度，并加入到调度队列的尾部。</p>
+<p>然后要看看函数 schedule() 和 yield_*() 之间的联系。  </p>
+<ul>
+<li>假设策略为 SCHED_OTHER 的任务执行 yield 操作，并调用 schedule() 。最主要的是调度时的任务权值比较，看过函数 goodness() 知道，运行状态存在 SCHED_YIELD 的任务，对应的权值是 -1 。而一般来说任务的权值一般是大于等于 0 的，所以权值为 -1 的任务被调度的机率很小（指全调度队列仅有一个任务，且该任务的策略是 SCHED_OTHER|SCHED_YIELD ，这种任务才会被调度）。经过 switch_to 切换任务后，CPU 的执行权就交给权值最高的任务了。待切换回来后，还在函数 schedule() ，执行 __schedule_tail() ，把策略标志位 SCHED_YIELD 清除。  </li>
+<li>假设策略为 SCHED_RR 或 SCHED_FIFO 的任务执行 yield 操作，并调用 schedule() 。这些任务是没有策略标志位 SCHED_YIELD 的，仅找出权值最高的任务切换即可。因为这种类型的任务时间要求高。</li>
+</ul>
+<h2 id="任务睡眠"><a href="#任务睡眠" class="headerlink" title="任务睡眠"></a>任务睡眠</h2><h3 id="非计时睡眠"><a href="#非计时睡眠" class="headerlink" title="非计时睡眠"></a>非计时睡眠</h3><p>非计时睡眠，就是某一任务同步等待某一个事件完成而陷入睡眠，当事件完成后唤醒。比如竞争互斥锁，锁被其他任务占用，则只能睡眠等待。<br>通用的非计时睡眠函数有：interruptible_sleep_on() 、sleep_on()</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> SLEEP_ON_VAR    \</span></span><br><span class="line"><span class="meta">    unsigned long flags;    \</span></span><br><span class="line"><span class="meta">    wait_queue_t wait;      \</span></span><br><span class="line"><span class="meta">    init_waitqueue_entry(&amp;wait, current);</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> SLEEP_ON_HEAD   \</span></span><br><span class="line"><span class="meta">    wq_write_lock_irqsave(&amp;q-&gt;lock, flags); \</span></span><br><span class="line"><span class="meta">    __add_wait_queue(q, &amp;wait); \</span></span><br><span class="line"><span class="meta">    wq_write_unlock_irqrestore(&amp;q-&gt;lock, flags);</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> SLEEP_ON_TAIL   \</span></span><br><span class="line"><span class="meta">    wq_write_lock_irqsave(&amp;q-&gt;lock, flags); \</span></span><br><span class="line"><span class="meta">    __remove_wait_queue(&amp;wait); \</span></span><br><span class="line"><span class="meta">    wq_write_unlock_irqrestore(&amp;q-&gt;lock, flags);</span></span><br><span class="line"></span><br><span class="line">fastcall <span class="type">void</span> <span class="title function_">interruptible_sleep_on</span><span class="params">(<span class="type">wait_queue_head_t</span> * q)</span></span><br><span class="line">&#123;</span><br><span class="line">    SLEEP_ON_VAR</span><br><span class="line"></span><br><span class="line">    <span class="title function_">set_current_state</span><span class="params">(TASK_INTERRUPTIBLE)</span>;</span><br><span class="line"></span><br><span class="line">    SLEEP_ON_HEAD</span><br><span class="line">    <span class="title function_">schedule</span><span class="params">()</span>;</span><br><span class="line">    SLEEP_ON_TAIL</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">fastcall <span class="type">void</span> <span class="title function_">sleep_on</span><span class="params">(<span class="type">wait_queue_head_t</span> *q)</span></span><br><span class="line">&#123;</span><br><span class="line">	SLEEP_ON_VAR</span><br><span class="line">	</span><br><span class="line">	<span class="title function_">set_current_state</span><span class="params">(TASK_UNINTERRUPTIBLE)</span>;</span><br><span class="line"></span><br><span class="line">	SLEEP_ON_HEAD</span><br><span class="line">	<span class="title function_">schedule</span><span class="params">()</span>;</span><br><span class="line">	SLEEP_ON_TAIL</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/kernel/sched.c">sched.c</a></p>
+</blockquote>
+<p>总的来说，因为将要睡眠的任务需要被移出调度队列，所以要事先记录该任务的 PCB 地址，即加入某个等待队列内。然后调用函数 schedule() 调度切换任务。然后通过 wake_up_*() 或 wake_up_interruptible_*() 唤醒在该队列的任务（加入到调度队列），最后返回到从等待队列移除。</p>
+<h3 id="计时睡眠"><a href="#计时睡眠" class="headerlink" title="计时睡眠"></a>计时睡眠</h3><p>计时睡眠，通常用于等待某一个功能的同步，对于不同调度策略的任务，计时睡眠方式也有点不同。计时睡眠的函数有：sys_nanosleep() 、sleep_on_timeout() 、interruptible_sleep_on_timeout() 。<br>这里主讲 sys_nanosleep() ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line">asmlinkage <span class="type">long</span> </span><br><span class="line"><span class="title function_">sys_nanosleep</span><span class="params">(<span class="keyword">struct</span> timespec * rqtp, <span class="keyword">struct</span> timespec * rmtp)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">timespec</span> <span class="title">t</span>;</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> expire;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (copy_from_user(&amp;t, rqtp, <span class="keyword">sizeof</span>(<span class="keyword">struct</span> timespec)))</span><br><span class="line">        <span class="keyword">return</span> -EFAULT;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (t.tv_nsec &gt;= <span class="number">1000000000L</span> || </span><br><span class="line">        t.tv_nsec &lt; <span class="number">0</span> || t.tv_sec &lt; <span class="number">0</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">return</span> -EINVAL;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Short delay requests up to 2 ms will be handled with</span></span><br><span class="line"><span class="comment">     * high precision by a busy wait for all real-time</span></span><br><span class="line"><span class="comment">     * process.</span></span><br><span class="line"><span class="comment">     * </span></span><br><span class="line"><span class="comment">     * It is important on SMP not to do this holding locks.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">if</span> (t.tv_sec == <span class="number">0</span> &amp;&amp; t.tv_nsec &lt;= <span class="number">2000000L</span> &amp;&amp; </span><br><span class="line">        current-&gt;policy != SCHED_OTHER)</span><br><span class="line">    &#123;</span><br><span class="line">        udelay((t.tv_nsec + <span class="number">999</span>) / <span class="number">1000</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    expire = timespec_to_jiffies(&amp;t) + (t.tv_sec || t.tv_nsec);</span><br><span class="line"></span><br><span class="line">    set_current_state(TASK_INTERRUPTIBLE);</span><br><span class="line">    expire = schedule_timeout(expire);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (expire)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (rmtp) &#123;</span><br><span class="line">            jiffies_to_timespec(expire, &amp;t);</span><br><span class="line">            <span class="keyword">if</span> (copy_to_user(rmtp, &amp;t, <span class="keyword">sizeof</span>(<span class="keyword">struct</span> timespec)))</span><br><span class="line">                <span class="keyword">return</span> -EFAULT;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> -EINTR;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/kernel/timer.c">timer.c</a></p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">timespec</span> &#123;</span></span><br><span class="line">    <span class="type">time_t</span>  tv_sec;  <span class="comment">/* 记录秒数 */</span></span><br><span class="line">    <span class="type">long</span>    tv_nsec; <span class="comment">/* 记录纳秒数（小于 1 秒） */</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/include/eleos/time.h">time.h</a></p>
+</blockquote>
+<ul>
+<li>该函数是一个系统调用，所以如果是从用户层调用的，则 rqtp 和 rmtp 指向的地址是用户空间的，使用 copy_from_user() ，把数据复制到内核空间。</li>
+<li>检查 t 内的字段是否正常</li>
+<li>如果计时睡眠的时间小于等于 2ms ，而且执行计时睡眠的任务的策略还是 SCHED_FIFO 或 SCHED_RR ，则执行忙等待操作。对应的函数&#x2F;宏是 udelay() ，有关 udelay() 的内容在 <a href="14-1_%E6%97%B6%E9%97%B4%E5%BB%B6%E8%BF%9F.md">时间延迟</a> 。因为 SCHED_FIFO 和 SCHED_RR 的任务是有时间要求的，设置这么小的计数去睡眠，而且睡眠的计数是根据时钟中断执行的，发送一次时钟中断的间隔为 10ms ，所以让仅睡眠小于等于 2ms 的，这种类型的任务去等待每隔 10ms 发送一次时钟中断发出是不可取的。</li>
+<li>调用 timespec_to_jiffies() ，把时间转换为 jiffy ：  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Change timeval to jiffies, trying to avoid the most</span></span><br><span class="line"><span class="comment"> * obvious overflows..</span></span><br><span class="line"><span class="comment"> * </span></span><br><span class="line"><span class="comment"> * And some not so obvious.</span></span><br><span class="line"><span class="comment"> * </span></span><br><span class="line"><span class="comment"> * Note that we don&#x27;t want to return MAX_LONG, because</span></span><br><span class="line"><span class="comment"> * for various timeout reasons we often end up having</span></span><br><span class="line"><span class="comment"> * to wait &quot;jiffies+1&quot; in order to guarantee that we</span></span><br><span class="line"><span class="comment"> * wait at _least_ &quot;jiffies&quot; - so &quot;jiffies+1&quot; had better</span></span><br><span class="line"><span class="comment"> * still be positive.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MAX_JIFFY_OFFSET    (MAX_SCHEDULE_TIMEOUT - 1)</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 把时间转换为实时时钟计数器 0 发出的中断计数</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">unsigned</span> <span class="type">long</span> </span><br><span class="line"><span class="title function_">timespec_to_jiffies</span><span class="params">(<span class="keyword">struct</span> timespec * value)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> sec = value-&gt;tv_sec;</span><br><span class="line">    <span class="type">unsigned</span> nsec = value-&gt;tv_nsec;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (sec &gt;= (MAX_JIFFY_OFFSET / HZ))</span><br><span class="line">        <span class="keyword">return</span> MAX_JIFFY_OFFSET;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 已知 1 毫秒 = 1,000,000 纳秒，且每 10 毫秒，实时时钟的计</span></span><br><span class="line"><span class="comment">     * 数器 0 发送一次中断到 CPU ，10 毫秒 = 10,000,000 纳秒，</span></span><br><span class="line"><span class="comment">     * 现需要把 nsec 进行根据实时中断的频率进行上对齐，又根据该频率</span></span><br><span class="line"><span class="comment">     * 转换为实时时钟计数器 0 发出的中断总计数。</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    nsec += <span class="number">1000000000UL</span> / HZ - <span class="number">1</span>;</span><br><span class="line">    nsec /= <span class="number">1000000000UL</span> / HZ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> (HZ * sec + nsec);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+  而后面的 <code>(t.tv_sec || t.tv_nsec)</code> 表示计数将在下一个时钟中断开始，不是从当前的开始。<ul>
+<li>把当前任务的运行状态设置为 TASK_INTERRUPTIBLE</li>
+<li>调用函数 schedule_timeout()</li>
+</ul>
+</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">signed</span> <span class="type">long</span> <span class="title function_">schedule_timeout</span><span class="params">(<span class="type">signed</span> <span class="type">long</span> timeout)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">timer_list</span> <span class="title">timer</span>;</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> expire;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">switch</span> (timeout)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">case</span> MAX_SCHEDULE_TIMEOUT:</span><br><span class="line">            <span class="comment">/** </span></span><br><span class="line"><span class="comment">             * These two special cases are useful to be</span></span><br><span class="line"><span class="comment">             * comfortable in the caller. Nothing more. </span></span><br><span class="line"><span class="comment">             * We could task MAX_SCHEDULE_TIMEOUT from</span></span><br><span class="line"><span class="comment">             * one of the negative value but I&#x27;d like to</span></span><br><span class="line"><span class="comment">             * like to return a valid offest (&gt;=0) to </span></span><br><span class="line"><span class="comment">             * allow the caller to do everything it want</span></span><br><span class="line"><span class="comment">             * with the retval.</span></span><br><span class="line"><span class="comment">             */</span></span><br><span class="line">            schedule();</span><br><span class="line">            <span class="keyword">goto</span> out;</span><br><span class="line">        <span class="keyword">default</span>:</span><br><span class="line">            <span class="comment">/**</span></span><br><span class="line"><span class="comment">             * Another bit of PARANOID. Note that the return</span></span><br><span class="line"><span class="comment">             * will be 0 since on piece of kernel is supposed</span></span><br><span class="line"><span class="comment">             * to do a check for a negative retval of schedule</span></span><br><span class="line"><span class="comment">             * _timeout() (since it should never happends </span></span><br><span class="line"><span class="comment">             * anyway). You just have the printk() that will </span></span><br><span class="line"><span class="comment">             * tell you if something is gone wrong and where.</span></span><br><span class="line"><span class="comment">             */</span></span><br><span class="line">            <span class="keyword">if</span> (timeout &lt; <span class="number">0</span>)</span><br><span class="line">            &#123;</span><br><span class="line">                printk(PRINT_ERR <span class="string">&quot;schedule_timeout: wrong timeout&quot;</span></span><br><span class="line">                        <span class="string">&quot;value %lx from %p\n&quot;</span>, timeout, return_address());</span><br><span class="line">                set_current_state(TASK_RUNNING);</span><br><span class="line">                <span class="keyword">goto</span> out;</span><br><span class="line">            &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    expire = timeout + jiffies;</span><br><span class="line"></span><br><span class="line">    init_timer(&amp;timer);</span><br><span class="line">    timer.expires = expire;</span><br><span class="line">    timer.data = (<span class="type">unsigned</span> <span class="type">long</span>)current;</span><br><span class="line">    timer.func = process_timeout;</span><br><span class="line"></span><br><span class="line">    add_timer(&amp;timer);</span><br><span class="line">    schedule();</span><br><span class="line">    del_timer_sync(&amp;timer);</span><br><span class="line"></span><br><span class="line">    timeout = expire - jiffies;</span><br><span class="line"></span><br><span class="line">out:</span><br><span class="line">    <span class="keyword">return</span> timeout &lt; <span class="number">0</span> ? <span class="number">0</span> : timeout;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>因 switch() 内代码有详细注释，就跳过它了。</p>
+<ul>
+<li>把时间计数转换为跳数的 timeout 加上当前的 jiffies ，赋值给 expire ，这个 expire 表示计时结束的位置。</li>
+<li>这里引出一个新的结构体  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">timer_list</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">list</span>;</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> expires;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> data;</span><br><span class="line">    <span class="type">void</span> (*func)(<span class="type">unsigned</span> <span class="type">long</span>);</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+先暂且不了解该结构体的作用，我们先引出一个问题，就是计时睡眠是如何倒计时的，假设有很多任务进行计时睡眠，那么如何存储睡眠中的任务，倒计时结束后如何唤醒对应的任务？<br>根据前文所知，我们根据时钟中断的跳数进行倒计时，即 jiffies 达到 expire 就结束。但多数任务的 expire 是不同的，所以每个任务都要存储自己的 expire 。然后呢，我们该如何存储计时睡眠的任务？如果用 HASH 表存储（ HASH 冲突用链地址法），但是不同计时的任务放在同一个 HASH 表项内的链表也不行，因为每一次时钟中断，都要去查看哪些任务计时结束，而去各个表项的链表查找哪些任务计时结束是很费时间的。如果用一个很长的循序表，一个元素对应的计时，如元素 10 对应计时睡眠为 10 的任务，这样也不行，太浪费内存空间。<br>干脆我们把 jiffies 按位数分成这样：</li>
+</ul>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-任务让出和睡眠/TaskSched-7.png"></div>
+
+<p>我们把每一小节作为一个数组的索引值，比如前 8 位，即 0～255 为数组 1 的索引，第 8～13 位，即 0～63 为数组 2 的索引，以此类推。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> TVN_BITS    6</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> TVR_BITS    8</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> TVN_SIZE    (1 &lt;&lt; TVN_BITS)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> TVR_SIZE    (1 &lt;&lt; TVR_BITS)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> TVN_MASK    (TVN_SIZE - 1)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> TVR_MASK    (TVR_SIZE - 1) </span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/kernel/timer.c">timer.c</a></p>
+</blockquote>
+<p>其中 TVR_* 代表的是前 8 位，TVN_* 代表的是后 24 位。以下是各数组的声明和定义：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">timer_vec</span> &#123;</span></span><br><span class="line">    <span class="type">int</span> index;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">vec</span>[<span class="title">TVN_SIZE</span>];</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">timer_vec_root</span> &#123;</span></span><br><span class="line">    <span class="type">int</span> index;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">vec</span>[<span class="title">TVR_SIZE</span>];</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">timer_vec</span>     <span class="title">tv5</span>;</span></span><br><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">timer_vec</span>     <span class="title">tv4</span>;</span></span><br><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">timer_vec</span>     <span class="title">tv3</span>;</span></span><br><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">timer_vec</span>     <span class="title">tv2</span>;</span></span><br><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">timer_vec_root</span>    <span class="title">tv1</span>;</span></span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">timer_vec</span> * <span class="title">const</span> <span class="title">tvecs</span>[] =</span> </span><br><span class="line">    &#123; (<span class="keyword">struct</span> timer_vec *)&amp;tv1, &amp;tv2, &amp;tv3, &amp;tv4, &amp;tv5 &#125;;</span><br></pre></td></tr></table></figure>
+<p>数组内的元素是链表头，而链表节点就是计时睡眠的任务，看 struct timer_list 的字段 list 。而它的字段 data 和 func 是什么呢？<br>字段 data 是 func 的参数，这个一般是任务的 PCB 地址；func 一般是 process_timeout() 。这两个字段的出现更多的是考虑该计数机制的扩展性。<br>存储计时睡眠任务的介质搞定了，但要如何存储？<br>我们根据睡眠时间转换而来的 timeout 确定在哪个数组存储，根据当前 jiffies 加上 timeout 确定任务存储在该数组内的哪个元素。</p>
+<blockquote>
+<p>接下来讲解函数 internal_add_timer() 会明白。</p>
+</blockquote>
+<p>看 struct timer_vec 和 struct timer_vec_root 的声明，index 的作用是什么？<br>已知 jiffies 是与时俱进的，index 也是一样。比如 tv1.index ，它的范围是 0～255 ，当它被累加到 256 时复位，tv2.index 加 1 ，当 tv2.index 被累加到 64 时复位，tv3.index 加 1 ，以此类推。所以字段 index 作用是在每次的时钟中断后，根据 index 在它所属的数组找出计数睡眠的任务。</p>
+<p>我们回头看 schedule_timeout() ，前面已经定义一个结构体变量 timer ，每一个计时睡眠的任务都有这个变量，然后对它初始化：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">expire = timeout + jiffies;</span><br><span class="line"></span><br><span class="line">init_timer(&amp;timer);</span><br><span class="line">timer.expires = expire;</span><br><span class="line">timer.data = (<span class="type">unsigned</span> <span class="type">long</span>)current;</span><br><span class="line">timer.func = process_timeout;</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">init_timer</span><span class="params">(<span class="keyword">struct</span> timer_list * timer)</span></span><br><span class="line">&#123;</span><br><span class="line">    timer-&gt;<span class="built_in">list</span>.next = timer-&gt;<span class="built_in">list</span>.prev = <span class="literal">NULL</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/include/eleos/timer.h">timer.h</a></p>
+</blockquote>
+<p>然后根据 expire ，加入到对应的计时睡眠数组</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">add_timer(&amp;timer);</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">add_timer</span><span class="params">(<span class="keyword">struct</span> timer_list * timer)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> flags;</span><br><span class="line"></span><br><span class="line">    spin_lock_irqsave(&amp;timerlist_lock, flags);</span><br><span class="line">    <span class="keyword">if</span> (timer_pending(timer))</span><br><span class="line">        <span class="keyword">goto</span> bug;</span><br><span class="line">    internal_add_timer(timer);</span><br><span class="line">    spin_unlock_irqrestore(&amp;timerlist_lock, flags);</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">bug:</span><br><span class="line">    spin_unlock_irqrestore(&amp;timerlist_lock, flags);</span><br><span class="line">    printk(<span class="string">&quot;bug: kernel timer added twice at %p.\n&quot;</span>, </span><br><span class="line">            return_address());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/kernel/timer.c">timer.c</a></p>
+</blockquote>
+<p>add_timer() 只是一个接口函数，核心函数是 internal_add_timer() ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">internal_add_timer</span><span class="params">(<span class="keyword">struct</span> timer_list * timer)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> expires = timer-&gt;expires;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> idx = expires - timer_jiffies;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> * <span class="title">vec</span>;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (run_timer_list_running) &#123;</span><br><span class="line">        vec = run_timer_list_running;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (idx &lt; TVR_SIZE) &#123;</span><br><span class="line">        <span class="type">int</span> i = expires &amp; TVR_MASK;</span><br><span class="line">        vec = tv1.vec + i;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (idx &lt; (<span class="number">1</span> &lt;&lt; (TVR_BITS + TVN_BITS))) &#123;</span><br><span class="line">        <span class="type">int</span> i = (expires &gt;&gt; TVR_BITS) &amp; TVN_MASK;</span><br><span class="line">        vec = tv2.vec + i;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (idx &lt; (<span class="number">1</span> &lt;&lt; (TVR_BITS + TVN_BITS*<span class="number">2</span>))) &#123;</span><br><span class="line">        <span class="type">int</span> i = (expires &gt;&gt; (TVR_BITS+TVN_BITS)) &amp; TVN_MASK;</span><br><span class="line">        vec = tv3.vec + i;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (idx &lt; (<span class="number">1</span> &lt;&lt; (TVR_BITS + TVN_BITS*<span class="number">3</span>))) &#123;</span><br><span class="line">        <span class="type">int</span> i = (expires &gt;&gt; (TVR_BITS + TVN_BITS*<span class="number">2</span>)) &amp; TVN_MASK;</span><br><span class="line">        vec = tv4.vec + i;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> ((<span class="type">signed</span> <span class="type">long</span>) idx &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="comment">/** </span></span><br><span class="line"><span class="comment">         * can happen if you add a timer with expires == jiffies,</span></span><br><span class="line"><span class="comment">		 * or you set a timer to go off in the past</span></span><br><span class="line"><span class="comment">		 */</span></span><br><span class="line">        vec = tv1.vec + tv1.index;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (idx &lt; <span class="number">0xFFFFFFFFL</span>) &#123;</span><br><span class="line">        <span class="type">int</span> i = (expires &gt;&gt; (TVR_BITS + TVN_BITS*<span class="number">3</span>)) &amp; TVN_MASK;</span><br><span class="line">        vec = tv5.vec + i;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Timers are FIFO!</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    list_add(&amp;timer-&gt;<span class="built_in">list</span>, vec-&gt;prev);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/kernel/timer.c">timer.c</a></p>
+</blockquote>
+<p>然后调用 schedule() ，调度切换任务（注意该任务的运行状态已被更改为 TASK_INTERRUPTIBLE ）。</p>
+<p>把计时睡眠的任务加入到数组内了，现在来看看是如何倒计时的。前面说过计时是依赖于时钟中断，而对应的时钟中断处理程序是：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">do_timer</span><span class="params">(<span class="keyword">struct</span> pt_regs * regs)</span></span><br><span class="line">&#123;</span><br><span class="line">    (*(<span class="type">unsigned</span> <span class="type">long</span> *)&amp;jiffies)++;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">ifndef</span> CONFIG_SMP</span></span><br><span class="line"></span><br><span class="line">    update_process_times();</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span> <span class="comment">/* !CONFIG_SMP */</span></span></span><br><span class="line"></span><br><span class="line">    mark_bh(TIMER_BH);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/kernel/timer.c">timer.c</a></p>
+</blockquote>
+<p>在中断处理程序结束之前，我们要开启对应的时钟中断的中断后半部分（软中断）。中断后半部分 TIMER_BH 对应的处理程序是：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">timer_bh</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    run_timer_list();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们来看看 run_timer_list() ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">run_timer_list</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    spin_lock_irq(&amp;timerlist_lock);</span><br><span class="line">    <span class="keyword">while</span> ((<span class="type">long</span>)(jiffies - timer_jiffies) &gt;= <span class="number">0</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        LIST_HEAD(queued);</span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> *<span class="title">head</span>, *<span class="title">curr</span>;</span></span><br><span class="line">    </span><br><span class="line">        <span class="keyword">if</span> (!tv1.index)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="type">int</span> n = <span class="number">1</span>;</span><br><span class="line">            <span class="keyword">do</span> &#123;</span><br><span class="line">                cascade_timers(tvecs[n]);</span><br><span class="line">            &#125; <span class="keyword">while</span> (tvecs[n]-&gt;index == <span class="number">1</span> &amp;&amp; ++n &lt; NOOF_TVECS);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        run_timer_list_running = &amp;queued;</span><br><span class="line"></span><br><span class="line">    repeat:</span><br><span class="line">        head = tv1.vec + tv1.index;</span><br><span class="line">        curr = head-&gt;next;</span><br><span class="line">        <span class="keyword">if</span> (curr != head) </span><br><span class="line">        &#123;</span><br><span class="line">            <span class="class"><span class="keyword">struct</span> <span class="title">timer_list</span> *<span class="title">timer</span>;</span></span><br><span class="line">            <span class="type">void</span> (*fn)(<span class="type">unsigned</span> <span class="type">long</span>);</span><br><span class="line">            <span class="type">unsigned</span> <span class="type">long</span> data;</span><br><span class="line"></span><br><span class="line">            timer = list_entry(curr, <span class="keyword">struct</span> timer_list, <span class="built_in">list</span>);</span><br><span class="line">            fn = timer-&gt;func;</span><br><span class="line">            data = timer-&gt;data;</span><br><span class="line"></span><br><span class="line">            detach_timer(timer);</span><br><span class="line">            spin_unlock_irq(&amp;timerlist_lock);</span><br><span class="line">            fn(data);</span><br><span class="line">            spin_lock_irq(&amp;timerlist_lock);</span><br><span class="line">            <span class="keyword">goto</span> repeat;</span><br><span class="line">        &#125;</span><br><span class="line">        run_timer_list_running = <span class="literal">NULL</span>;</span><br><span class="line">        timer_jiffies++;</span><br><span class="line">        tv1.index = (tv1.index + <span class="number">1</span>) &amp; TVR_MASK;</span><br><span class="line"></span><br><span class="line">        curr = queued.next;</span><br><span class="line">        <span class="keyword">while</span> (curr != &amp;queued)</span><br><span class="line">        &#123;</span><br><span class="line">            <span class="class"><span class="keyword">struct</span> <span class="title">timer_list</span> *<span class="title">timer</span>;</span></span><br><span class="line"></span><br><span class="line">            timer = list_entry(curr, <span class="keyword">struct</span> timer_list, <span class="built_in">list</span>);</span><br><span class="line">            curr = curr-&gt;next;</span><br><span class="line">            internal_add_timer(timer);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    spin_unlock_irq(&amp;timerlist_lock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>先不管条件判断 <code>if (!tv1.index)</code> 以及在内的代码块，先看标签 repeat 以下的代码块。通过代码可知，对计时睡眠任务的处理，主要的是在 tv1 数组内。执行流程大概为：根据 tv1.index 在 tv1 数组内找出对应的元素（链表头），如果该链表存在节点，表示在该链表的任务计时睡眠已结束，则把它从链表移除，执行函数 fn(data) （实际是执行函数 process_timeout() 唤醒该任务，加入到调度队列）。从该链表遍历完成后，timer_jiffies 加 1 ，tv1.index 也加 1 。<br>然后看这个条件判断 <code>if (!tv1.index)</code> ，最典型的例子就是当内核初始化期间开启中断，jiffies 和 timer_jiffies 都为 0 。当 CPU 接收第一个时钟中断时，jiffies 加 1 。然后执行该 BH 的处理程序 run_timer_list() 时，tv1.index &#x3D; 0，期间调用函数 cascade_timers()，使其 tv2～5 的 index 都为 1 ，因为 index&#x3D;0 内的元素为空，结合上面给出图和解释去思考就明白了。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">cascade_timers</span><span class="params">(<span class="keyword">struct</span> timer_vec * tv)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> *<span class="title">head</span>, *<span class="title">cur</span>, *<span class="title">next</span>;</span></span><br><span class="line"></span><br><span class="line">    head = tv-&gt;vec + tv-&gt;index;</span><br><span class="line">    cur = head-&gt;next;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * We are removing _all_ timers from the list, so we</span></span><br><span class="line"><span class="comment">     * don&#x27;t have to detach then individually, jusy clear</span></span><br><span class="line"><span class="comment">     * the list afterwards.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">while</span> (cur != head)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">timer_list</span> *<span class="title">node</span>;</span></span><br><span class="line"></span><br><span class="line">        node = list_entry(cur, <span class="keyword">struct</span> timer_list, <span class="built_in">list</span>);</span><br><span class="line">        next = cur-&gt;next;</span><br><span class="line">        list_del(cur);</span><br><span class="line">        internal_add_timer(node);</span><br><span class="line">        cur = next;</span><br><span class="line">    &#125;</span><br><span class="line">    INIT_LIST_HEAD(head);</span><br><span class="line">    tv-&gt;index = (tv-&gt;index + <span class="number">1</span>) &amp; TVN_MASK;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>例子1：假设 timer-&gt;expires 为 260 ，timer_jiffies 为 20 ，那么 idx &#x3D; 240 ，则把该任务加入到数组 tv1 的第 timer-&gt;expires &amp; TVR_MASK 个元素（第四个元素）。当 tv1.index 从 20 累加到 256 复位时，期间已经经过 236 次 jiffies 了，当 index 被累加到 4 时，该任务的计时睡眠结束。</p>
+<p>例子2：假设 timer-&gt;expires 为 300 ，timer_jiffies 为 20 ，那么 idx &#x3D; 280 ，则把该任务加入到数组 tv2 的第 (expires &gt;&gt; TVR_BITS) &amp; TVN_MASK 个元素（第一个元素）。当 tv2.index 为 1 时，timer_jiffies 为 256 ，而且 tv1.index 为 0 ，表示期间已经经过 236 次 jiffies 了，剩余的计时 44 ，则把它作为 tv1 的索引值，把睡眠中的任务移动到该索引值对应的元素。当 tv1.index 为 44 时，该任务的计时睡眠结束。</p>
+<p>另外，run_timer_list_running 的作用是什么？<br>这个在 UP 系统用处不大，在了解 SMP 系统后，即 APIC 中断后再说明。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/X86/" rel="tag"># X86</a>
+              <a href="/tags/schedule/" rel="tag"># schedule</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E5%88%9B%E5%BB%BA%E8%BF%9B%E7%A8%8B_i386/" rel="prev" title="Linux - 创建进程（内核版本 2.4.22，32位x86）">
+                  <i class="fa fa-angle-left"></i> Linux - 创建进程（内核版本 2.4.22，32位x86）
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/12/30/Skill/debug/bochs%E6%8C%87%E4%BB%A4%E9%9B%86/" rel="next" title="bochs指令集">
+                  bochs指令集 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

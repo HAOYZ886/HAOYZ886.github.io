@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言本文档的主要调优对象是AD7616的极限采集速率，以及在软件系统层面对数据采集和解析的解耦实现（异步IO），尽可能地“压榨”该采集管道（LocalBus-&gt;FPGA-&gt;AD7616）的性能，使得应用进程在规定时间内，能快速地获取到数据并解析，仅专注解析数据即可。">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="T536 - LocalBus到FPGA到AD7616的调优">
+<meta property="og:url" content="http://example.com/2026/02/11/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="前言本文档的主要调优对象是AD7616的极限采集速率，以及在软件系统层面对数据采集和解析的解耦实现（异步IO），尽可能地“压榨”该采集管道（LocalBus-&gt;FPGA-&gt;AD7616）的性能，使得应用进程在规定时间内，能快速地获取到数据并解析，仅专注解析数据即可。">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/1769573297065-84b7dfd8-0320-413c-9447-7433ad90a916.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/1769573322240-435a5459-de97-4990-85e0-71fa14fea14e.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/1769582105585-9523f92b-80a0-4038-a292-bd47df7e4a7b.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/1769583874609-38b17288-7d9d-413d-8cc0-4762a5405ba3.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/1769593103252-1062b2a2-b2d5-4155-854c-c7144f18d399.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/1769649193007-ddf79c11-02cc-4505-9411-bd55c61cf910.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/1769593385160-faa24e41-08a0-4745-9002-05717abaae36.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/1769584829639-94e96883-16c2-40fc-8dab-90e7ebb61e7c.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/1769592215994-69d98379-6fe5-41a2-bbd1-4c2311a71dd9.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/1769594966618-1964295b-01f6-4e0e-bcde-b9277d85924d.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/1769594527754-d0a106e1-80f7-40e1-878f-7068db41904d.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/1769648863412-a309332f-53e2-4c57-87a1-9edb24fcfce8.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/1769595029354-65d3a195-7b3e-40c3-9898-3d281952e4d7.png">
+<meta property="article:published_time" content="2026-02-10T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-02-10T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Allwinner">
+<meta property="article:tag" content="Drivers">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="LocalBus">
+<meta property="article:tag" content="Tina5.0">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/1769573297065-84b7dfd8-0320-413c-9447-7433ad90a916.png">
+
+
+<link rel="canonical" href="http://example.com/2026/02/11/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2026/02/11/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/","path":"2026/02/11/原理及实现/Drivers/T536-LocalBus到FPGA到AD7616的调优/","title":"T536 - LocalBus到FPGA到AD7616的调优"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>T536 - LocalBus到FPGA到AD7616的调优 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#AD7616%E7%9A%84%E6%9E%81%E9%99%90%E9%80%9F%E7%8E%87"><span class="nav-number">2.</span> <span class="nav-text">AD7616的极限速率</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9E%81%E9%99%90%E9%80%9F%E7%8E%87"><span class="nav-number">2.1.</span> <span class="nav-text">极限速率</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A2%9D%E5%A4%96%E9%99%90%E5%88%B6"><span class="nav-number">2.2.</span> <span class="nav-text">额外限制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95%E6%80%A7%E8%83%BD"><span class="nav-number">2.3.</span> <span class="nav-text">测试性能</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9E%E4%BE%8B%E4%BB%A3%E7%A0%81"><span class="nav-number">2.3.1.</span> <span class="nav-text">实例代码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%93%E6%9E%9C%E9%AA%8C%E8%AF%81"><span class="nav-number">2.3.2.</span> <span class="nav-text">结果验证</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%81%AB%E7%84%B0%E5%9B%BE%E9%AA%8C%E8%AF%81"><span class="nav-number">2.3.3.</span> <span class="nav-text">火焰图验证</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A4%BA%E6%B3%A2%E5%99%A8%E9%AA%8C%E8%AF%81"><span class="nav-number">2.3.4.</span> <span class="nav-text">示波器验证</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BC%82%E6%AD%A5IO"><span class="nav-number">3.</span> <span class="nav-text">异步IO</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A6%82%E6%8B%AC"><span class="nav-number">3.1.</span> <span class="nav-text">概括</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0%E9%9A%BE%E7%82%B9"><span class="nav-number">3.2.</span> <span class="nav-text">实现难点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0%E7%BB%86%E8%8A%82"><span class="nav-number">3.3.</span> <span class="nav-text">实现细节</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">3.3.1.</span> <span class="nav-text">初始化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%8C%E6%AD%A5%E6%9C%BA%E5%88%B6"><span class="nav-number">3.3.2.</span> <span class="nav-text">同步机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E9%87%87%E9%9B%86%EF%BC%88%E5%86%85%E6%A0%B8%E7%BA%BF%E7%A8%8B%EF%BC%89"><span class="nav-number">3.3.3.</span> <span class="nav-text">数据采集（内核线程）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E8%8E%B7%E5%8F%96%EF%BC%88%E7%94%A8%E6%88%B7%E8%BF%9B%E7%A8%8B%EF%BC%89"><span class="nav-number">3.3.4.</span> <span class="nav-text">数据获取（用户进程）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9C%E8%AF%B4%E6%98%8E"><span class="nav-number">3.3.5.</span> <span class="nav-text">内存屏障说明</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95"><span class="nav-number">3.4.</span> <span class="nav-text">性能测试</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%93%E6%9E%9C%E9%AA%8C%E8%AF%81-1"><span class="nav-number">3.4.1.</span> <span class="nav-text">结果验证</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%81%AB%E7%84%B0%E5%9B%BE%E9%AA%8C%E8%AF%81-1"><span class="nav-number">3.4.2.</span> <span class="nav-text">火焰图验证</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A4%BA%E6%B3%A2%E5%99%A8%E9%AA%8C%E8%AF%81-1"><span class="nav-number">3.4.3.</span> <span class="nav-text">示波器验证</span></a></li></ol></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2026/02/11/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="T536 - LocalBus到FPGA到AD7616的调优 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          T536 - LocalBus到FPGA到AD7616的调优
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2026-02-11 00:00:00" itemprop="dateCreated datePublished" datetime="2026-02-11T00:00:00+08:00">2026-02-11</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3.2k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>12 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>本文档的主要调优对象是AD7616的极限采集速率，以及在软件系统层面对数据采集和解析的解耦实现（异步IO），尽可能地“压榨”该采集管道（LocalBus-&gt;FPGA-&gt;AD7616）的性能，使得应用进程在规定时间内，能快速地获取到数据并解析，仅专注解析数据即可。</p>
+<span id="more"></span>
+
+<h1 id="AD7616的极限速率"><a href="#AD7616的极限速率" class="headerlink" title="AD7616的极限速率"></a>AD7616的极限速率</h1><h2 id="极限速率"><a href="#极限速率" class="headerlink" title="极限速率"></a>极限速率</h2><p>在该采集管道中，AD7616并行传输的最大时钟频率是 33MHz ，这是结合 FPGA 的实现确定的。见以下并行读操作的时序图：<!-- 这是一张图片，ocr 内容为： --></p>
+<div align="center"><img src="/images/原理及实现/Drivers/T536-LocalBus到FPGA到AD7616的调优/1769573297065-84b7dfd8-0320-413c-9447-7433ad90a916.png"></div>
+
+<p>以下是对应的时序要求：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/原理及实现/Drivers/T536-LocalBus到FPGA到AD7616的调优/1769573322240-435a5459-de97-4990-85e0-71fa14fea14e.png"></div>
+
+<p>这里重点关注 T-RD_LOW 时序，它的时序要求是最低 30ns 。对应时钟频率是 33MHz ，30ns 对应一次时钟周期，则与该时序的时序对应。在 FPGA 的逻辑实现中，设定为发送读和写信号为一个时钟周期：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">always@(posedge pll_lbc_clk) begin</span><br><span class="line">	adc_wr_n &lt;=  adc_wr_n_tmp;</span><br><span class="line">	adc_rd_n &lt;=  adc_rd_n_tmp;</span><br><span class="line">end</span><br></pre></td></tr></table></figure>
+
+<p>所以说这是 AD7616 最大并行传输速率为 33MHz 的由来。</p>
+<p>再结合逻辑分析仪抓出来的数据：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/原理及实现/Drivers/T536-LocalBus到FPGA到AD7616的调优/1769582105585-9523f92b-80a0-4038-a292-bd47df7e4a7b.png"></div>
+
+<h2 id="额外限制"><a href="#额外限制" class="headerlink" title="额外限制"></a>额外限制</h2><p>另外，还要要求 Busy 信号拉低后才能进行传输，以下是 Busy 信号的周期，耗时 7us 左右：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/原理及实现/Drivers/T536-LocalBus到FPGA到AD7616的调优/1769583874609-38b17288-7d9d-413d-8cc0-4762a5405ba3.png"></div>
+
+<p>这也注定了数据采集的性能上限。</p>
+<h2 id="测试性能"><a href="#测试性能" class="headerlink" title="测试性能"></a>测试性能</h2><p>要求在 20ms 内采集 1024 次 32 字节的电压值。</p>
+<h3 id="实例代码"><a href="#实例代码" class="headerlink" title="实例代码"></a>实例代码</h3><p>以下是内核层的采集数据的代码实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">writel((lbc_dev-&gt;dma_rx_phy &gt;&gt; <span class="number">2</span>), (lbc_dev-&gt;reg_addr + LOCAL_BUSR_REG_DESC_SADDR));</span><br><span class="line">sunxi_lbc_dma_set_target_addr(lbc_dev-&gt;dma_tx, lbc_dev-&gt;dma_target_addr);</span><br><span class="line">lbc_adc_cs_select();</span><br><span class="line">dma_transfer_start(lbc_dev-&gt;reg_addr);</span><br><span class="line"><span class="keyword">while</span> (<span class="number">1</span>) &#123;</span><br><span class="line">	<span class="keyword">if</span> (lbc_dev-&gt;dma_result == TRANS_COMPLETED) &#123;</span><br><span class="line">		lbc_dev-&gt;dma_result = TRANS_NONE;</span><br><span class="line">		<span class="comment">//dev_info(dev, &quot;%s-&gt;%d , dma rx ok\n&quot;, __func__, __LINE__);</span></span><br><span class="line">		<span class="keyword">break</span>;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line">lbc_adc_cs_release();</span><br></pre></td></tr></table></figure>
+
+<p>这里是一直忙等待一次数据的采集完成。</p>
+<h3 id="结果验证"><a href="#结果验证" class="headerlink" title="结果验证"></a>结果验证</h3><!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/原理及实现/Drivers/T536-LocalBus到FPGA到AD7616的调优/1769593103252-1062b2a2-b2d5-4155-854c-c7144f18d399.png"></div>
+
+<p>平均耗时 20ms 。</p>
+<h3 id="火焰图验证"><a href="#火焰图验证" class="headerlink" title="火焰图验证"></a>火焰图验证</h3><!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/原理及实现/Drivers/T536-LocalBus到FPGA到AD7616的调优/1769649193007-ddf79c11-02cc-4505-9411-bd55c61cf910.png"></div>
+
+<p>多数耗时是忙等待。</p>
+<h3 id="示波器验证"><a href="#示波器验证" class="headerlink" title="示波器验证"></a>示波器验证</h3><p>量 AD7616 CONVST IO 的波形来确认速率，一个 CONVST 对应 32 字节：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/原理及实现/Drivers/T536-LocalBus到FPGA到AD7616的调优/1769593385160-faa24e41-08a0-4745-9002-05717abaae36.png"></div>
+
+<p>一个 CONVST 周期对应 26.60us 。</p>
+<h1 id="异步IO"><a href="#异步IO" class="headerlink" title="异步IO"></a>异步IO</h1><h2 id="概括"><a href="#概括" class="headerlink" title="概括"></a>概括</h2><p>这个异步 IO 是把一系列的读写操作拆分为内核线程采集数据，应用进程解析数据。该实现的载体是环形缓冲区，并采用生产者消费者模型。</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/原理及实现/Drivers/T536-LocalBus到FPGA到AD7616的调优/1769584829639-94e96883-16c2-40fc-8dab-90e7ebb61e7c.png"></div>
+
+<p>需要异步 IO 的另外一个原因是，应用层频繁通过系统调用到内核层，进行获取数据的操作是相对费时的。</p>
+<h2 id="实现难点"><a href="#实现难点" class="headerlink" title="实现难点"></a>实现难点</h2><ol>
+<li>由于环形缓冲区的生产者消费者模型是无锁的，所以仅需要关注线程之间对一个变量的访问顺序数据一致性。这需要用到内存屏障机制进行保序。</li>
+<li>要把环形缓冲区以及对应的描述符暴露到用户空间，需要用 mmap() 机制。</li>
+<li>当环形缓冲区满了，用户进程获取到数据后需要唤醒内核线程；当环形缓冲区空了，用户进程调用 poll() 睡眠等待，当有数据被填充到该缓冲区后，内核线程需要唤醒用户进程获取数据。</li>
+</ol>
+<h2 id="实现细节"><a href="#实现细节" class="headerlink" title="实现细节"></a>实现细节</h2><blockquote>
+<p>注意：LocalBus 的传输方式必须为 TRANSFER_MODE_DMA 。</p>
+</blockquote>
+<p>这是在内核层，环形缓冲区的描述符：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">lbc_fifo</span> &#123;</span></span><br><span class="line">	u32				in;</span><br><span class="line">	u32				out;</span><br><span class="line">	u32				mask;</span><br><span class="line">	u32				esize;</span><br><span class="line">	<span class="keyword">volatile</span> u8		*data;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>这是在用户空间，环形缓冲区的描述符：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">lbc_fifo</span> &#123;</span></span><br><span class="line">	<span class="type">uint32_t</span>			*in;</span><br><span class="line">	<span class="type">uint32_t</span>			*out;</span><br><span class="line">	<span class="type">uint32_t</span>			mask;</span><br><span class="line">	<span class="type">uint32_t</span>			esize;</span><br><span class="line">	<span class="keyword">volatile</span> <span class="type">uint8_t</span>	*data;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>见以下讲解。</p>
+<h3 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h3><p>初始化环形缓冲区和内核线程：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (copy_from_user((<span class="type">void</span> *)&amp;iodl, (<span class="type">void</span> __user *)arg, <span class="keyword">sizeof</span>(<span class="type">uint32_t</span>))) &#123;</span><br><span class="line">	<span class="keyword">return</span> -EFAULT;</span><br><span class="line">&#125;</span><br><span class="line">pr_info(<span class="string">&quot;set dma_fifo_rx esize to %u\n&quot;</span>, iodl);</span><br><span class="line"></span><br><span class="line">lbc_dev-&gt;fifo_rx = kzalloc(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> lbc_fifo), GFP_KERNEL);</span><br><span class="line"><span class="keyword">if</span> (!lbc_dev-&gt;fifo_rx) &#123;</span><br><span class="line">	pr_err(<span class="string">&quot;failed to allocate lbc fifo rx buffer: %s-&gt;%d\n&quot;</span>, __func__, __LINE__);</span><br><span class="line">	<span class="keyword">return</span> -ENOMEM;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">lbc_fifo_init(lbc_dev-&gt;fifo_rx, lbc_dev-&gt;dma_rx_buffer, </span><br><span class="line">		DMA_RX_DATA_MAX, iodl);</span><br><span class="line"></span><br><span class="line">lbc_dev-&gt;rx_kthread = kthread_create(lbc_fifo_rx_kthread_fn, (<span class="type">void</span> *)lbc_dev, <span class="string">&quot;lbc fifo rx&quot;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>一个元素的容量 32 个字节，用于存储 AD7616 的 16 个通道的电压值。环形缓冲区的整体大小，与 LocalBus 驱动内定义的 DMA 缓冲区 dma_rx_buffer 大小对应。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">lbc_dev-&gt;dma_rx_buffer = dma_alloc_coherent(lbc_dev-&gt;dev,</span><br><span class="line">								DMA_RX_DATA_MAX,</span><br><span class="line">								&amp;lbc_dev-&gt;dma_rx_buffer_phy,</span><br><span class="line">								GFP_KERNEL);</span><br><span class="line"><span class="keyword">if</span> (!lbc_dev-&gt;dma_rx_buffer) &#123;</span><br><span class="line">	dev_err(dev, <span class="string">&quot;failed to alloc rx buffer dma coherent\n&quot;</span>);</span><br><span class="line">	ret = <span class="number">-1</span>;</span><br><span class="line">	<span class="keyword">goto</span> tx_buffer_del;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>要求 DMA_RX_DATA_MAX 最小是 4096 ，呈 2 次幂指数扩大。环形缓冲区的长度为 DMA_RX_DATA_MAX &#x2F; 32 。</p>
+<p>下一步是把环形缓冲区和它的描述符暴露到用户空间。</p>
+<p>以下是暴露环形缓冲区描述符的内核层代码实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">long</span> <span class="title function_">sunxi_lbc_ioctl</span><span class="params">(<span class="keyword">struct</span> file *file, <span class="type">unsigned</span> <span class="type">int</span> cmd, <span class="type">unsigned</span> <span class="type">long</span> arg)</span></span><br><span class="line">&#123;</span><br><span class="line">	...</span><br><span class="line">	<span class="keyword">case</span> CMD_DMA_FIFO_RX_EXPOSE: &#123;</span><br><span class="line">		<span class="class"><span class="keyword">struct</span> <span class="title">lbc_fifo_expose</span> __<span class="title">user</span> *<span class="title">exp</span> =</span> (<span class="type">void</span> __user *)arg;</span><br><span class="line"></span><br><span class="line">		put_user(offsetof(<span class="keyword">struct</span> lbc_fifo, in), &amp;<span class="built_in">exp</span>-&gt;in_off);</span><br><span class="line">		put_user(offsetof(<span class="keyword">struct</span> lbc_fifo, out), &amp;<span class="built_in">exp</span>-&gt;out_off);</span><br><span class="line">		put_user(lbc_dev-&gt;fifo_rx-&gt;mask, &amp;<span class="built_in">exp</span>-&gt;mask);</span><br><span class="line">		put_user(lbc_dev-&gt;fifo_rx-&gt;esize, &amp;<span class="built_in">exp</span>-&gt;esize);</span><br><span class="line">		put_user(<span class="keyword">sizeof</span>(*<span class="built_in">exp</span>), &amp;<span class="built_in">exp</span>-&gt;entrie_size);</span><br><span class="line">		put_user((<span class="type">unsigned</span> <span class="type">long</span>)(lbc_dev-&gt;fifo_rx) &amp; ~PAGE_MASK, &amp;<span class="built_in">exp</span>-&gt;entire_off);</span><br><span class="line"></span><br><span class="line">		lbc_dev-&gt;dma_mmap_dir = CMD_DMA_FIFO_RX_EXPOSE;</span><br><span class="line">		<span class="keyword">break</span>;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">lbc_mmap</span><span class="params">(<span class="keyword">struct</span> file *file, <span class="keyword">struct</span> vm_area_struct *vma)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">sunxi_lbc_t</span> *<span class="title">lbc_dev</span> =</span> file-&gt;private_data;</span><br><span class="line"></span><br><span class="line">	vma-&gt;vm_flags |= VM_IO;</span><br><span class="line">	<span class="comment">/* addr 4K align */</span></span><br><span class="line">	...</span><br><span class="line">		&#125; <span class="keyword">else</span> <span class="keyword">if</span> (lbc_dev-&gt;dma_mmap_dir == CMD_DMA_FIFO_RX_EXPOSE) &#123;</span><br><span class="line">			vma-&gt;vm_flags &amp;= ~VM_IO;</span><br><span class="line">			vma-&gt;vm_pgoff = virt_to_pfn(lbc_dev-&gt;fifo_rx);</span><br><span class="line">			pr_err(<span class="string">&quot;%s-&gt;%d, lbc_dev-&gt;fifo_rx 0x%08lx\n&quot;</span>,</span><br><span class="line">					__func__, __LINE__, (<span class="type">long</span> <span class="type">unsigned</span> <span class="type">int</span>)lbc_dev-&gt;fifo_rx);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (remap_pfn_range(vma,</span><br><span class="line">			vma-&gt;vm_start,</span><br><span class="line">			vma-&gt;vm_pgoff,</span><br><span class="line">			vma-&gt;vm_end - vma-&gt;vm_start,</span><br><span class="line">			vma-&gt;vm_page_prot)) &#123;</span><br><span class="line">		<span class="keyword">return</span> -EAGAIN;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以下是用户层代码实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">ret = ioctl(fd, CMD_DMA_FIFO_RX_EXPOSE, &amp;<span class="built_in">exp</span>);</span><br><span class="line"><span class="keyword">if</span> (ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;failed to expose fifo\n&quot;</span>);</span><br><span class="line">	<span class="keyword">goto</span> fail;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">buffer = mmap(<span class="literal">NULL</span>, <span class="built_in">exp</span>.entire_size, PROT_READ|PROT_WRITE, </span><br><span class="line">		MAP_SHARED, fd, <span class="number">0</span>);</span><br><span class="line"><span class="keyword">if</span> (buffer &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;failed to get fifo\n&quot;</span>);</span><br><span class="line">	<span class="keyword">goto</span> fail;</span><br><span class="line">&#125;</span><br><span class="line">buffer += <span class="built_in">exp</span>.entire_off; </span><br><span class="line">fifo-&gt;in = (<span class="type">uint32_t</span> *)(buffer + <span class="built_in">exp</span>.in_off);</span><br><span class="line">fifo-&gt;out = (<span class="type">uint32_t</span> *)(buffer + <span class="built_in">exp</span>.out_off);</span><br><span class="line">fifo-&gt;mask = <span class="built_in">exp</span>.mask;</span><br><span class="line">fifo-&gt;esize = <span class="built_in">exp</span>.esize;</span><br></pre></td></tr></table></figure>
+
+<p>然后是把环形缓冲区本体通过 mmap() 映射到用户空间，以下是内核层实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">lbc_mmap</span><span class="params">(<span class="keyword">struct</span> file *file, <span class="keyword">struct</span> vm_area_struct *vma)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">sunxi_lbc_t</span> *<span class="title">lbc_dev</span> =</span> file-&gt;private_data;</span><br><span class="line"></span><br><span class="line">	vma-&gt;vm_flags |= VM_IO;</span><br><span class="line">	<span class="comment">/* addr 4K align */</span></span><br><span class="line">	...</span><br><span class="line">		&#125; <span class="keyword">else</span> <span class="keyword">if</span> (lbc_dev-&gt;dma_mmap_dir == CMD_MMAP_DMA_RX_BUF) &#123;</span><br><span class="line">			vma-&gt;vm_page_prot = pgprot_noncached(vma-&gt;vm_page_prot);</span><br><span class="line">			vma-&gt;vm_pgoff = lbc_dev-&gt;dma_rx_buffer_phy &gt;&gt; PAGE_SHIFT;</span><br><span class="line">			pr_err(<span class="string">&quot;%s-&gt;%d, lbc_dev-&gt;dma_rx_buffer_phy 0x%08lx\n&quot;</span>,</span><br><span class="line">					__func__, __LINE__, (<span class="type">long</span> <span class="type">unsigned</span> <span class="type">int</span>)lbc_dev-&gt;dma_rx_buffer_phy);</span><br><span class="line">		&#125; ...</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (remap_pfn_range(vma,</span><br><span class="line">			vma-&gt;vm_start,</span><br><span class="line">			vma-&gt;vm_pgoff,</span><br><span class="line">			vma-&gt;vm_end - vma-&gt;vm_start,</span><br><span class="line">			vma-&gt;vm_page_prot)) &#123;</span><br><span class="line">		<span class="keyword">return</span> -EAGAIN;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以下是用户层实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">ret = ioctl(fd, CMD_MMAP_DMA_RX_BUF, &amp;<span class="built_in">exp</span>);</span><br><span class="line"><span class="keyword">if</span> (ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;failed to set mmap dma_rx_buf\n&quot;</span>);</span><br><span class="line">	<span class="keyword">goto</span> fifo_unmap;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">buffer = mmap(<span class="literal">NULL</span>, DMA_RX_DATA_MAX, PROT_READ|PROT_WRITE, </span><br><span class="line">		MAP_SHARED, fd, <span class="number">0</span>);</span><br><span class="line"><span class="keyword">if</span> (buffer &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;failed to get fifo\n&quot;</span>);</span><br><span class="line">	<span class="keyword">goto</span> fifo_unmap;</span><br><span class="line">&#125;</span><br><span class="line"><span class="built_in">printf</span>(<span class="string">&quot;buffer mmap addr: %p\n&quot;</span>, buffer);</span><br><span class="line">fifo-&gt;data = buffer;</span><br></pre></td></tr></table></figure>
+
+<h3 id="同步机制"><a href="#同步机制" class="headerlink" title="同步机制"></a>同步机制</h3><p>当环形缓冲区满了，用户进程获取到数据后需要唤醒内核线程。</p>
+<p>在 LocalBus 驱动的 probe() 阶段，需要初始化一个 completion 描述符，用于环形缓冲区满了之后的同步操作。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">lbc_probe</span><span class="params">(<span class="keyword">struct</span> platform_device *pdev)</span></span><br><span class="line">&#123;</span><br><span class="line">	...</span><br><span class="line">	init_waitqueue_head(&amp;sunx_lbc_dev-&gt;dma_wait);</span><br><span class="line"></span><br><span class="line">+	init_completion(&amp;sunx_lbc_dev-&gt;fifo_free_compl);</span><br><span class="line"></span><br><span class="line">	dev_set_drvdata(sunx_lbc_dev-&gt;dev_lbc, sunx_lbc_dev);</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当环形缓冲区满了之后，调用 wait_for_completion() 等待应用进程（消费者）获取数据：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">lbc_fifo_rx_kthread_fn</span><span class="params">(<span class="type">void</span> *parg)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">while</span> (!kthread_should_stop()) &#123;</span><br><span class="line">		off = lbc_fifo_get_free_index(lbc_dev-&gt;fifo_rx);</span><br><span class="line">		<span class="keyword">if</span> (off &lt; <span class="number">0</span>) &#123;</span><br><span class="line">			pr_err(<span class="string">&quot;lbc_fifo_rx  full\n&quot;</span>);</span><br><span class="line">			reinit_completion(&amp;lbc_dev-&gt;fifo_free_compl);</span><br><span class="line">			wait_for_completion(&amp;lbc_dev-&gt;fifo_free_compl);</span><br><span class="line">			<span class="keyword">continue</span>;</span><br><span class="line">		&#125;</span><br><span class="line">		...</span><br><span class="line">	&#125;</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>应用进程获取到数据后，通过 IOCTL 唤醒内核线程继续工作：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">case</span> CMD_DMA_FIFO_RX_WAKEUP:</span><br><span class="line">	<span class="keyword">if</span> (!completion_done(&amp;lbc_dev-&gt;fifo_free_compl))</span><br><span class="line">		complete(&amp;lbc_dev-&gt;fifo_free_compl);</span><br><span class="line">	<span class="keyword">break</span>;</span><br></pre></td></tr></table></figure>
+
+
+
+<p>当环形缓冲区空了，用户进程调用 poll() 睡眠等待，加入到 dma_wait 等待队列，以下是内核层的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">__poll_t</span> <span class="title function_">sunxi_lbc_poll</span><span class="params">(<span class="keyword">struct</span> file *file, poll_table *wait)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">sunxi_lbc_t</span> *<span class="title">lbc_dev</span> =</span> file-&gt;private_data;</span><br><span class="line"></span><br><span class="line">	poll_wait(file, &amp;lbc_dev-&gt;dma_wait, wait);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> lbc_dev-&gt;dma_result == TRANS_COMPLETED ? EPOLLIN | EPOLLRDNORM : <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当有数据被填充到该缓冲区后，LocalBus发送中断，在对应的处理程序中，把相关状态置位并把所有的在 dma_wait 的任务唤醒：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">irqreturn_t</span> <span class="title function_">sunxi_lbc_handler</span><span class="params">(<span class="type">int</span> irq, <span class="type">void</span> *dev_id)</span></span><br><span class="line">&#123;</span><br><span class="line">	u32 irq_status;</span><br><span class="line">	u32 data;</span><br><span class="line">	u32 data1;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">sunxi_lbc_t</span> *<span class="title">lbc_dev</span> =</span> (<span class="keyword">struct</span> <span class="type">sunxi_lbc_t</span> *)dev_id;</span><br><span class="line"></span><br><span class="line">	irq_status = readl(lbc_dev-&gt;reg_addr + LOCAL_BUSR_REG_IRPR);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* dma */</span></span><br><span class="line">	<span class="keyword">if</span> (irq_status &amp; DMA_TCIP) &#123;</span><br><span class="line">		writel((DMA_TCIP | TCIE), (lbc_dev-&gt;reg_addr + LOCAL_BUSR_REG_IRPR));</span><br><span class="line">		lbc_dev-&gt;dma_result = TRANS_COMPLETED;</span><br><span class="line">		wake_up_all(&amp;lbc_dev-&gt;dma_wait);</span><br><span class="line">	&#125;</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="数据采集（内核线程）"><a href="#数据采集（内核线程）" class="headerlink" title="数据采集（内核线程）"></a>数据采集（内核线程）</h3><p>往环形缓冲区写入数据前，根据索引 IN 找到空闲的元素，对应的函数实现是 lbc_fifo_get_free_index() ；</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">u32 <span class="title function_">lbc_fifo_get_free_index</span><span class="params">(<span class="keyword">struct</span> lbc_fifo *fifo)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">if</span> (lbc_fifo_unused(fifo) == <span class="number">0</span>)</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> ((fifo-&gt;in) &amp; fifo-&gt;mask) * fifo-&gt;esize;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>填充数据完成后，才能把索引 IN 加一，对应的函数实现是 lbc_fifo_advance_in() 。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">lbc_fifo_advance_in</span><span class="params">(<span class="keyword">struct</span> lbc_fifo *fifo)</span></span><br><span class="line">&#123;</span><br><span class="line">	smp_mb();	<span class="comment">// 对应 lbc_fifo_empty() 的 fifo-&gt;in 读操作</span></span><br><span class="line">	fifo-&gt;in = (fifo-&gt;in + <span class="number">1</span>) &amp; fifo-&gt;mask;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以下是整体的“数据采集”的代码实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">lbc_fifo_rx_kthread_fn</span><span class="params">(<span class="type">void</span> *parg)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">sunxi_lbc_t</span> *<span class="title">lbc_dev</span> =</span> (<span class="keyword">struct</span> <span class="type">sunxi_lbc_t</span> *)parg;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> timeout = <span class="number">0</span>;</span><br><span class="line">	<span class="type">int</span> off;</span><br><span class="line"></span><br><span class="line">	set_user_nice(current, <span class="number">-20</span>);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span> (!kthread_should_stop()) &#123;</span><br><span class="line">		off = lbc_fifo_get_free_index(lbc_dev-&gt;fifo_rx);</span><br><span class="line">		<span class="keyword">if</span> (off &lt; <span class="number">0</span>) &#123;</span><br><span class="line">			pr_err(<span class="string">&quot;lbc_fifo_rx  full\n&quot;</span>);</span><br><span class="line">			reinit_completion(&amp;lbc_dev-&gt;fifo_free_compl);</span><br><span class="line">			wait_for_completion(&amp;lbc_dev-&gt;fifo_free_compl);</span><br><span class="line">			<span class="keyword">continue</span>;</span><br><span class="line">		&#125;</span><br><span class="line">		lbc_dev-&gt;dma_result = TRANS_NONE;</span><br><span class="line"></span><br><span class="line">		lbc_adc_convst_io(lbc_dev);</span><br><span class="line">		writel((lbc_dev-&gt;dma_rx_phy &gt;&gt; <span class="number">2</span>), (lbc_dev-&gt;reg_addr + LOCAL_BUSR_REG_DESC_SADDR));</span><br><span class="line">		update_dma_rx_desc_buffer_saddr(lbc_dev, lbc_dev-&gt;dma_rx_buffer_phy + off);</span><br><span class="line">		lbc_adc_cs_select();</span><br><span class="line">		dma_transfer_start(lbc_dev-&gt;reg_addr);</span><br><span class="line"></span><br><span class="line">		timeout = wait_event_timeout(lbc_dev-&gt;dma_wait, lbc_dev-&gt;dma_result, <span class="number">10</span>*HZ);</span><br><span class="line">		lbc_adc_cs_release();</span><br><span class="line">		<span class="keyword">if</span> (<span class="number">0</span> == timeout) &#123;</span><br><span class="line">			dev_err(lbc_dev-&gt;dev, <span class="string">&quot;%s[%d]: dma rx time out\n&quot;</span>, __func__, __LINE__);</span><br><span class="line">			<span class="keyword">return</span> -EFAULT;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		lbc_fifo_advance_in(lbc_dev-&gt;fifo_rx);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="数据获取（用户进程）"><a href="#数据获取（用户进程）" class="headerlink" title="数据获取（用户进程）"></a>数据获取（用户进程）</h3><p>往环形缓冲区获取数据前，根据索引 OUT 找到元素，对应的函数实现是 lbc_fifo_get_free_index() ；</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">lbc_fifo_get_data</span><span class="params">(<span class="type">int</span> fd, <span class="keyword">struct</span> lbc_fifo *fifo, <span class="keyword">volatile</span> <span class="type">uint8_t</span> **data)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">pollfd</span> <span class="title">pfd</span> =</span> &#123; &#125;;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!fifo || !data)</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line">	pfd.fd = fd;</span><br><span class="line">	pfd.events = POLLIN;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (lbc_fifo_empty(fifo)) &#123;</span><br><span class="line">		<span class="built_in">printf</span>(<span class="string">&quot;...waiting for data...\n&quot;</span>);</span><br><span class="line">		<span class="type">int</span> ret = poll(&amp;pfd, <span class="number">1</span>, <span class="number">100</span>);</span><br><span class="line">		<span class="keyword">if</span> (ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">			<span class="built_in">printf</span>(<span class="string">&quot;poll failed\n&quot;</span>);</span><br><span class="line">			<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	*data = lbc_fifo_get_out_data(fifo);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>填充数据完成后，才能把索引 IN 加一，对应的函数实现是 lbc_fifo_advance_in() 。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">lbc_fifo_advance_out</span><span class="params">(<span class="type">int</span> fd, <span class="keyword">struct</span> lbc_fifo *fifo)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">static</span> <span class="type">int</span> count = <span class="number">0</span>;</span><br><span class="line">	<span class="type">int</span> is_full;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!fifo)</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line">	is_full = lbc_fifo_full(fifo);</span><br><span class="line"></span><br><span class="line">	_lbc_fifo_advance_out(fifo);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (is_full &amp;&amp; ioctl(fd, CMD_DMA_FIFO_RX_WAKEUP, <span class="literal">NULL</span>) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">		<span class="comment">//printf(&quot;failed to wakeup fifo_rx\n&quot;);</span></span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (count &gt;= <span class="number">128</span>)</span><br><span class="line">		count = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以下是根据以上函数的简单实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; <span class="number">64</span>;) &#123;</span><br><span class="line">	usleep(<span class="number">1</span>);</span><br><span class="line">	ret = lbc_fifo_get_data(fd, fifo, (<span class="keyword">volatile</span> <span class="type">uint8_t</span> **)&amp;volt_u);</span><br><span class="line">	<span class="keyword">if</span> (ret &lt; <span class="number">0</span>)</span><br><span class="line">		<span class="keyword">continue</span>;</span><br><span class="line">	</span><br><span class="line">	lbc_fifo_advance_out(fd, fifo);</span><br><span class="line">	i++;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="内存屏障说明"><a href="#内存屏障说明" class="headerlink" title="内存屏障说明"></a>内存屏障说明</h3><blockquote>
+<p>保序的范围是 CPU Core 之间；保序的方向是读和写；保序的等级是内存访问顺序。</p>
+</blockquote>
+<p>该机制在这个环形缓冲区中关系到索引 IN&#x2F;OUT 的写和读操作。内核线程仅更新索引 IN ，用户进程仅更新索引 OUT ，但它们需要读索引 IN&#x2F;OUT 来确定当前环形缓冲区的状态，即是满了还是空了。见一下视图：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/原理及实现/Drivers/T536-LocalBus到FPGA到AD7616的调优/1769592215994-69d98379-6fe5-41a2-bbd1-4c2311a71dd9.png"></div>
+
+<p>在内核线程，填充数据前确认环形缓冲区是否空闲，需要调用 lbc_fifo_unused() 确认。所有我们想要尽量“每一次”都能找到空闲的元素项，不想空跑还需要用户进程唤醒它。所以说，想在一个时刻内（一段时钟周期内），双方之间进行保序，以下是相关代码实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">unsigned</span> <span class="type">int</span> <span class="title function_">lbc_fifo_unused</span><span class="params">(<span class="keyword">struct</span> lbc_fifo *fifo)</span></span><br><span class="line">&#123;</span><br><span class="line">	smp_mb();	<span class="comment">// 对应fifo-&gt;out = out 或 fifo-&gt;out++;</span></span><br><span class="line">	(fifo-&gt;mask + <span class="number">1</span>) - (fifo-&gt;in - fifo-&gt;out);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">void</span> _lbc_fifo_advance_out(<span class="keyword">struct</span> lbc_fifo *fifo)</span><br><span class="line">&#123;</span><br><span class="line">	*fifo-&gt;out = (*fifo-&gt;out + <span class="number">1</span>) &amp; (fifo-&gt;mask);</span><br><span class="line">	smp_mb();	<span class="comment">// 对应lbc_fifo_unused()</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>同理，在用户线程，获取数据前确认环形缓冲区是否为空，需要调用 lbc_fifo_empty() 确认。所有我们想要尽量“每一次”都能获取到数据，不想空跑还需要调用 poll() 等待。所以说，想在一个时刻内（一段时钟周期内），双方之间进行保序，以下是相关代码实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// smp_mb(); 对应 fifo-&gt;in++;</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> lbc_fifo_empty(fifo) (&#123; \</span></span><br><span class="line"><span class="meta">		smp_mb(); *((fifo)-&gt;in) == *((fifo)-&gt;out); \</span></span><br><span class="line"><span class="meta">	&#125;)</span></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">lbc_fifo_advance_in</span><span class="params">(<span class="keyword">struct</span> lbc_fifo *fifo)</span></span><br><span class="line">&#123;</span><br><span class="line">	fifo-&gt;in = (fifo-&gt;in + <span class="number">1</span>) &amp; fifo-&gt;mask;</span><br><span class="line">	smp_mb();	<span class="comment">// 对应 lbc_fifo_empty() 的 fifo-&gt;in 读操作</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>另外注意结构体 <code>struct lbc_fifo</code>的成员变量 in 和 out ，它们是没有被 volatile 关键字修饰的。这是因为 smp_mb() 的本体内已包含 “memory” 约束，保护输入和输出操作数的上下文语义，不会被优化。</p>
+<h2 id="性能测试"><a href="#性能测试" class="headerlink" title="性能测试"></a>性能测试</h2><p>为了兼顾环形缓冲区的特性，分别验证采集和获取数据 128 次的时间。</p>
+<h3 id="结果验证-1"><a href="#结果验证-1" class="headerlink" title="结果验证"></a>结果验证</h3><p>以下是内核线程采集数据的耗时：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/原理及实现/Drivers/T536-LocalBus到FPGA到AD7616的调优/1769594966618-1964295b-01f6-4e0e-bcde-b9277d85924d.png"></div>
+
+<p>以下是应用程序获取数据的耗时：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/原理及实现/Drivers/T536-LocalBus到FPGA到AD7616的调优/1769594527754-d0a106e1-80f7-40e1-878f-7068db41904d.png"></div>
+
+<h3 id="火焰图验证-1"><a href="#火焰图验证-1" class="headerlink" title="火焰图验证"></a>火焰图验证</h3><!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/原理及实现/Drivers/T536-LocalBus到FPGA到AD7616的调优/1769648863412-a309332f-53e2-4c57-87a1-9edb24fcfce8.png"></div>
+
+<p><a target="_blank" rel="noopener" href="https://embedsky-rd.yuque.com/attachments/yuque/0/2026/svg/43240359/1769648949044-7f9b4bf7-82fd-4065-8260-84d7593e35b3.svg">perf.svg</a></p>
+<p>结合《<a href="#JROBM">额外限制</a>》可知，采集速率的被限制在主动延迟等待。</p>
+<h3 id="示波器验证-1"><a href="#示波器验证-1" class="headerlink" title="示波器验证"></a>示波器验证</h3><p>量 AD7616 CONVST IO 的波形来确认采集数据的速率，一个 CONVST 对应 32 字节：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/原理及实现/Drivers/T536-LocalBus到FPGA到AD7616的调优/1769595029354-65d3a195-7b3e-40c3-9898-3d281952e4d7.png"></div>
+
+<p>注意，采集数据的代码实现并没有忙等待采集完成，而是使用睡眠等待，所以周期较长。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Allwinner/" rel="tag"># Allwinner</a>
+              <a href="/tags/Tina5-0/" rel="tag"># Tina5.0</a>
+              <a href="/tags/Drivers/" rel="tag"># Drivers</a>
+              <a href="/tags/LocalBus/" rel="tag"># LocalBus</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/01/16/Skill/debug/Linux%E5%86%85%E6%A0%B8BPF%E8%B0%83%E8%AF%95/" rel="prev" title="Linux - BPF调试">
+                  <i class="fa fa-angle-left"></i> Linux - BPF调试
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/02/19/Skill/normal/Linux-samba%E6%90%AD%E5%BB%BA/" rel="next" title="samba搭建">
+                  samba搭建 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

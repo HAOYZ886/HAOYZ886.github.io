@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="参考https:&#x2F;&#x2F;blog.csdn.net&#x2F;feelabclihu&#x2F;article&#x2F;details&#x2F;126564748 理解文中的保序是指 CPU 之间的保序，或 CPU 与 DMA 之间的保序，保序的操作就是禁止乱序执行和内存重排序。这个保序像 CPU 之间的同步操作，如：  当 CPU0 执行到 flag &#x3D; 1; 后，CPU1 才能执行 if (flag &#x3D;&#x3D; 1) 。比如，不能把 fl">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="内存屏障的使用">
+<meta property="og:url" content="http://example.com/2024/06/19/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9C%E7%9A%84%E4%BD%BF%E7%94%A8/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="参考https:&#x2F;&#x2F;blog.csdn.net&#x2F;feelabclihu&#x2F;article&#x2F;details&#x2F;126564748 理解文中的保序是指 CPU 之间的保序，或 CPU 与 DMA 之间的保序，保序的操作就是禁止乱序执行和内存重排序。这个保序像 CPU 之间的同步操作，如：  当 CPU0 执行到 flag &#x3D; 1; 后，CPU1 才能执行 if (flag &#x3D;&#x3D; 1) 。比如，不能把 fl">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9C%E7%9A%84%E4%BD%BF%E7%94%A8/mb.png">
+<meta property="article:published_time" content="2024-06-18T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-11-15T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="ARM64">
+<meta property="article:tag" content="Kernel">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="MemoryBarrier">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9C%E7%9A%84%E4%BD%BF%E7%94%A8/mb.png">
+
+
+<link rel="canonical" href="http://example.com/2024/06/19/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9C%E7%9A%84%E4%BD%BF%E7%94%A8/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2024/06/19/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9C%E7%9A%84%E4%BD%BF%E7%94%A8/","path":"2024/06/19/原理及实现/Kernel/内存屏障的使用/","title":"内存屏障的使用"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>内存屏障的使用 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">1.</span> <span class="nav-text">参考</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%90%86%E8%A7%A3"><span class="nav-number">2.</span> <span class="nav-text">理解</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#SMP-ATOMIC-OPERATION"><span class="nav-number">3.</span> <span class="nav-text">SMP &amp; ATOMIC OPERATION</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1"><span class="nav-number">3.1.</span> <span class="nav-text">1</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#A"><span class="nav-number">3.1.1.</span> <span class="nav-text">A</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Q"><span class="nav-number">3.1.2.</span> <span class="nav-text">Q</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2"><span class="nav-number">3.2.</span> <span class="nav-text">2</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#A-1"><span class="nav-number">3.2.1.</span> <span class="nav-text">A</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#B"><span class="nav-number">3.2.2.</span> <span class="nav-text">B</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%AA%E4%BA%BA%E7%90%86%E8%A7%A3"><span class="nav-number">3.3.</span> <span class="nav-text">个人理解</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2024/06/19/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9C%E7%9A%84%E4%BD%BF%E7%94%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="内存屏障的使用 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          内存屏障的使用
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2024-06-19 00:00:00" itemprop="dateCreated datePublished" datetime="2024-06-19T00:00:00+08:00">2024-06-19</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2024-11-16 00:00:00" itemprop="dateModified" datetime="2024-11-16T00:00:00+08:00">2024-11-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2.9k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>10 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/feelabclihu/article/details/126564748">https://blog.csdn.net/feelabclihu/article/details/126564748</a></p>
+<h1 id="理解"><a href="#理解" class="headerlink" title="理解"></a>理解</h1><p>文中的保序是指 CPU 之间的保序，或 CPU 与 DMA 之间的保序，保序的操作就是禁止<strong>乱序执行和内存重排序</strong>。<br>这个保序像 CPU 之间的同步操作，如：</p>
+<p><img src="/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9C%E7%9A%84%E4%BD%BF%E7%94%A8/mb.png" alt="mb"></p>
+<p>当 CPU0 执行到 <code>flag = 1;</code> 后，CPU1 才能执行 <code>if (flag == 1)</code> 。比如，不能把 <code>flag = 1;</code> 被重排到 <code>if (flag == 1)</code> 的后面；变量 a 的加载不能在 <code>if (flag == 1)</code> 之前（分支预测搞的鬼）。<br>综上所知，在内存屏障之前的指令要完成，然后才能执行屏障后面的指令。</p>
+<span id="more"></span>
+
+<p>当然，这个是程序员想要的结果，并不是预料到的结果。如果在弱序系统中，即 CPU 并不关心其它 CPU ，自顾自地去执行指令（尤其是为了效率，会使用乱序执行和内存重排序机制），上面的“想要的结果”是不可能执行成功的。就需要“人为干预”，这就是添加内存屏障，防止乱序执行和内存重排序。见以下 DMB 解释：</p>
+<blockquote>
+<p>The Data Memory Barrier (DMB) prevents the reordering of specified explicit data accesses <strong>across the barrier instruction</strong>. All explicit data load or store instructions, which are executed by the PE in program order before the DMB, <strong>are observed by all Observers</strong> within a specified Shareability domain before the data accesses after the DMB in program order.</p>
+</blockquote>
+<p>第一句话可理解为，像 store 和 load 等可重排序的指令禁止重排序。<br>然后第二句话，在 DMB 之前的 store 和 load 指令，都会被 Observers 监控。但是来了一个问题，就是谁来开这个监控，谁有这个主动权？<br>这个是需要使用场景支撑。根据上图所知，我是必须要在 <code>if (flag == 1)</code> 之前，把变量 flag 和 a 都赋值完成，但是 CPU1 也有可能先加载 a 变量，可以把 smp_wmb() 放在 <code>a = 3;</code> 和 <code>flag = 1;</code> 之间。在 <code>flag = 1;</code> 和 <code>if (flag == 1)</code> 之间也需要保序，则在它们之间放一个 smp_mb() 。但是 smp_mb() 给哪个 CPU 执行？可以把它放到 CPU1 ，因为防止 a 经过内存重排和分支预测被预先加载，但要把放在 <code>a = 3;</code> 和 <code>flag = 1;</code> 之间 smp_wmb() 去掉，因为 smp_mb() 是针对 load 和 store 指令内存屏障。或者 smp_wmb() 可以留着，但是要把 smp_mb() 放在 <code>if (flag == 1)</code> 后面。</p>
+<p>它们的保序是通过各CPU的观察者 observer 监督来保证的。开启保序 dmb 后，观察者 observer 就监督保序下段代码的读写内存指令，尤其监督该指令的操作物理内存地址，针对各CPU对该物理内存地址读写的操作，保证该地址的读写顺序，即保序。<br>比如：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">dw_hdmi_enable_late</span><span class="params">(<span class="type">void</span>)</span> </span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dw_hdmi_enable_late</span> * <span class="title">hdmi_late</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dw_hdmi</span> * <span class="title">hdmi</span>;</span></span><br><span class="line"></span><br><span class="line">	hlist_for_each_entry(hdmi_late, &amp;(hdmi_late_head.hdmi_head), node) </span><br><span class="line">	&#123;</span><br><span class="line">		hdmi = container_of(hdmi_late, <span class="keyword">struct</span> dw_hdmi, enable_late);</span><br><span class="line"></span><br><span class="line">		smp_mb();</span><br><span class="line">		hdmi_late-&gt;skip = <span class="literal">false</span>;</span><br><span class="line">		<span class="keyword">if</span> (hdmi_late-&gt;enabled) </span><br><span class="line">			...	</span><br><span class="line">		...</span><br><span class="line">	&#125;</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>和</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">irqreturn_t</span> <span class="title function_">dw_hdmi_hardirq</span><span class="params">(<span class="type">int</span> irq, <span class="type">void</span> *dev_id)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dw_hdmi</span> *<span class="title">hdmi</span> =</span> dev_id;</span><br><span class="line">	u8 intr_stat;</span><br><span class="line">	<span class="type">irqreturn_t</span> ret = IRQ_NONE;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (hdmi-&gt;enable_late.skip) &#123;</span><br><span class="line">		hdmi-&gt;enable_late.enabled = <span class="literal">true</span>;</span><br><span class="line">		<span class="keyword">return</span> IRQ_HANDLED;</span><br><span class="line">	&#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>第一段代码由 CPU0 运行，第二段是中断处理程序，由 CPU1 运行，且运行次数不定，而第一段代码内的循环由 HDMI 的个数决定，比如说就一个 HDMI 吧。而且第一段代码是在特定时间运行。<br>字段 skip 和 enabled 先前分别被初始化为 true 和 false 。<br>先搞清楚3个point：</p>
+<ol>
+<li>谁要和谁保序：<ol>
+<li>谁主动使用内存屏障？</li>
+<li>确定操作域的范围，inner share domain（CPU内的 cores）、outer share domain（CPU对DMA） 和 full system domain（CPU对CPU）。</li>
+</ol>
+</li>
+<li>在哪里保序：确定保序等级，如 dmb、dsb、isb 和 ldar</li>
+<li>朝哪个方向保序：如 load、store 和 any</li>
+</ol>
+<p>在第一段代码中的 <code>smp_mb();</code> </p>
+<ol>
+<li>Core0 要和 Core1 保序，即 ish</li>
+<li><code>smp_mb();</code> 的下面两条指令分别是：store 和 load ，即 dmb</li>
+<li><code>smp_mb();</code> 的下面两条指令两个方向都有，则 any<br>所以 <code>smp_mb()</code> 实际是 dmb(ish)</li>
+</ol>
+<p>当 Core0 执行 <code>smp_mb();</code> 后，Core1 执行 <code>if (hdmi-&gt;enable_late.skip)</code>时，Core1 的观察者发现字段 skip 和 enabled 在被 Core0 分别写和读，则等 Core0 操作完成后再执行 Core1 分别对字段 skip 和 enabled 的读和写。<br>注意：dmb仅对 load 和 store 操作保序，且对 core0 和 1 都会访问的物理内存地址保序，如字段 skip 和 enabled。</p>
+<p>内存屏障就是：在 SMP 系统，在同一段时间内，对同一内存地址访问的对象之间的保序。</p>
+<p>为什么需要 3 个 point ？</p>
+<ol>
+<li>为什么需要保序范围？<br> 范围越小，observer监视的范围就越小，使得系统仅针对一个小的范围保序，减少性能的浪费。就比如说 CPU 内的 cores 之间保序，就不需要全局的保序范围，仅需针对该 CPU 内的范围保序即可。</li>
+<li>为什么需要保序等级？<br> 这个关乎于 CPU 的乱序执行，保序等级越大 CPU 的乱序执行就越少。就算编译器没有针对 CPU 乱序执行而对代码做执行顺序上的优化，CPU也是会乱序执行的，所以这个保序等级是限制 CPU 的乱序执行。</li>
+<li>为什么需要保序方向？<br> 这个也和 CPU 的乱序执行有关。当然，虚拟寄存器也是有这个关系限制的（但不知道 ARM 有没有这个特性）。</li>
+</ol>
+<h1 id="SMP-ATOMIC-OPERATION"><a href="#SMP-ATOMIC-OPERATION" class="headerlink" title="SMP &amp; ATOMIC OPERATION"></a>SMP &amp; ATOMIC OPERATION</h1><h2 id="1"><a href="#1" class="headerlink" title="1"></a>1</h2><h3 id="A"><a href="#A" class="headerlink" title="A"></a>A</h3><p>static inline void tasklet_disable_nosync(struct tasklet_struct *t)<br>{<br>	atomic_inc(&amp;t-&gt;count);<br>	smp_mb__after_atomic();<br>}<br>和<br>static inline void tasklet_enable(struct tasklet_struct *t)<br>{<br>	smp_mb__before_atomic();<br>	atomic_dec(&amp;t-&gt;count);<br>}<br>中，smp_mb__after_atomic();和smp_mb__before_atomic();有什么讲究，回答前请认真思考</p>
+<h3 id="Q"><a href="#Q" class="headerlink" title="Q"></a>Q</h3><p>在Linux内核中，tasklet_disable_nosync和tasklet_enable函数是用于控制tasklet（轻量级的底半部处理机制）的启用和禁用的。这两个函数通过操作tasklet_struct中的count成员来实现对tasklet的控制。count的增减通过原子操作来完成，以确保在多核处理器环境中的正确性和同步。</p>
+<p>在这两个函数中，smp_mb__after_atomic();和smp_mb__before_atomic();是内存屏障（Memory Barriers）的使用，它们在多处理器系统中非常关键，用于确保内存操作的顺序性和可见性。下面详细解释这两个内存屏障的作用：</p>
+<p>smp_mb__after_atomic();</p>
+<p>smp_mb__after_atomic();是一个在原子操作之后使用的内存屏障。它确保了在此屏障之前的所有内存操作（包括紧邻其之前的原子操作）在多核心处理器环境中对其他处理器可见之前，不会与屏障之后的任何内存操作发生重排序。换句话说，它强制保证了原子增加操作atomic_inc(&amp;t-&gt;count);完成后，之后的内存操作不会被提前执行。</p>
+<p>smp_mb__before_atomic();</p>
+<p>smp_mb__before_atomic();是一个在原子操作之前使用的内存屏障。它确保了在此屏障之后的所有内存操作（包括紧邻其之后的原子操作）在多核心处理器环境中对其他处理器可见之前，不会与屏障之前的任何内存操作发生重排序。这意味着在执行原子减少操作atomic_dec(&amp;t-&gt;count);之前，之前的所有内存写入操作都已经完成，并且这些操作的效果对所有处理器都是可见的。</p>
+<p>总结来说，smp_mb__after_atomic();和smp_mb__before_atomic();的使用是为了确保在多核处理器环境下，与tasklet控制相关的原子操作前后的内存访问顺序和可见性，从而避免潜在的数据竞争和不一致问题。这对于内核中的并发编程是非常重要的，因为它帮助维护了代码的正确性和稳定性。</p>
+<h2 id="2"><a href="#2" class="headerlink" title="2"></a>2</h2><h3 id="A-1"><a href="#A-1" class="headerlink" title="A"></a>A</h3><p>我还是不懂，我想知道什么时候可以用smp_mb__before_atomic();，什么时候可以用smp_mb__after_atomic();</p>
+<h3 id="B"><a href="#B" class="headerlink" title="B"></a>B</h3><p>了解何时使用smp_mb__before_atomic();和smp_mb__after_atomic();，我们需要先理解它们各自的作用以及内存屏障在并发编程中的重要性。</p>
+<ol>
+<li><p>何时使用smp_mb__before_atomic();<br>当你需要确保一系列的内存写操作在一个接下来的原子操作之前对其他处理器可见时，应该使用smp_mb__before_atomic();。这种情况通常出现在你希望在执行原子操作改变某个状态之前，确保之前对共享数据的修改已经完成并且可以被其他核心观察到。简单地说，当你关心一个原子操作前的内存操作的顺序和可见性时，就应该使用smp_mb__before_atomic();。</p>
+</li>
+<li><p>何时使用smp_mb__after_atomic();<br>相反地，当你需要确保一个原子操作之后的内存写操作不会被重排序到原子操作之前时，应该使用smp_mb__after_atomic();。这适用于当你在改变了某个状态后，希望确保紧接着的内存操作（例如，对另一部分共享数据的更新）只有在原子操作完全完成后才执行。这样做是为了保证状态的改变对其他处理器立即可见，避免因为重排序导致的不一致状态。</p>
+</li>
+</ol>
+<ul>
+<li>使用场景示例<br><code>smp_mb__before_atomic();</code>的使用场景：<br>假设有一个标志位flag和一个计数器counter，你想在增加计数器之前，先更新标志位，并确保这个标志位的更新对其他处理器立即可见。在这种情况下，你会在更新标志位之后、执行原子操作增加计数器之前使用<code>smp_mb__before_atomic();</code>。</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">flag = new_value; <span class="comment">// 更新标志位</span></span><br><span class="line">smp_mb__before_atomic();</span><br><span class="line"><span class="type">atomic_inc</span>(&amp;counter); <span class="comment">// 原子操作增加计数器</span></span><br></pre></td></tr></table></figure>
+<p><code>smp_mb__after_atomic();</code>的使用场景：<br>假设在完成一个原子减少操作后，你需要立即通知其他处理器这一变化，通过设置一个标志位。为了确保原子操作完成后标志位的更新对所有处理器可见，并且这个更新不会被重排序到原子操作之前，你会在原子操作之后使用<code>smp_mb__after_atomic();</code>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">atomic_dec</span>(&amp;counter); <span class="comment">// 原子操作减少计数器</span></span><br><span class="line">smp_mb__after_atomic();</span><br><span class="line">flag = new_value; <span class="comment">// 更新标志位</span></span><br></pre></td></tr></table></figure>
+<p>总结，smp_mb__before_atomic();和smp_mb__after_atomic();的使用取决于你希望如何控制原子操作前后内存操作的顺序和可见性。正确使用这些内存屏障能够帮助你避免在多处理器系统中常见的并发问题，如数据竞争和状态不一致。</p>
+<h2 id="个人理解"><a href="#个人理解" class="headerlink" title="个人理解"></a>个人理解</h2><p>这个需要从 SMP 的数据时序性和有效性、一个 barrier 的由来和应用、MESI 协议、编译器对 CPU 特性的优化（如乱序执行）说明。<br>比如说软中断的 tasklet_enable() 、tasklet_disable()。<br>tasklet_disable()：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">tasklet_disable_nosync</span><span class="params">(<span class="keyword">struct</span> tasklet_struct *t)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">atomic_inc</span>(&amp;t-&gt;count);</span><br><span class="line">	smp_mb__after_atomic();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">tasklet_disable</span><span class="params">(<span class="keyword">struct</span> tasklet_struct *t)</span></span><br><span class="line">&#123;</span><br><span class="line">	tasklet_disable_nosync(t);</span><br><span class="line">	tasklet_unlock_wait(t);</span><br><span class="line">	smp_mb();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>tasklet_enable()：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">tasklet_enable</span><span class="params">(<span class="keyword">struct</span> tasklet_struct *t)</span></span><br><span class="line">&#123;</span><br><span class="line">	smp_mb__before_atomic();</span><br><span class="line">	<span class="type">atomic_dec</span>(&amp;t-&gt;count);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>smp_mb__before_atomic() 和 smp_mb__after_atomic() 的本体：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> barrier() __asm__ __volatile__(<span class="string">&quot;&quot;</span>: : :<span class="string">&quot;memory&quot;</span>)</span></span><br></pre></td></tr></table></figure>
+
+<p>barrier 的由来是因为 GCC 编译器（带参数 -O2）会根据 CPU 特性，如乱序执行，把代码优化为符合特性的代码。最显著的是 CPU 乱序执行，GCC会把相关性差的代码的顺序打乱，使得在执行期间能更符合 CPU 乱序执行。但是在 SMP 系统，对于共享资源，这种乱序性可能是致命的。已知 CPU 访问内存期间会把相应数据放到缓存以便后续访问，每个 CPU 内核有自己的缓存（私有的），同时多个 CPU 内核连接下层的共享缓存。私有缓存的策略一般是回写，根据 MESI 协议可知，当一个共享资源被修改时，仅暂存到对应的私有缓存中，且被标记为修改</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Kernel/" rel="tag"># Kernel</a>
+              <a href="/tags/MemoryBarrier/" rel="tag"># MemoryBarrier</a>
+              <a href="/tags/ARM64/" rel="tag"># ARM64</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/06/03/Skill/normal/%E4%BB%A3%E7%A0%81%E9%98%85%E8%AF%BB%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/" rel="prev" title="代码阅读环境搭建（clangd+bear）">
+                  <i class="fa fa-angle-left"></i> 代码阅读环境搭建（clangd+bear）
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2024/06/21/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-IMX8MP_HDMI%E9%A9%B1%E5%8A%A8%E5%88%86%E6%9E%90/" rel="next" title="Linux - IMX8MP HDMI驱动分析">
+                  Linux - IMX8MP HDMI驱动分析 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

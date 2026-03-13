@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="查看频率和模式1cat &#x2F;sys&#x2F;kernel&#x2F;debug&#x2F;mmc0&#x2F;ios  输出： 123456789clock:          150000000 Hzvdd:            23 (3.5 ~ 3.6 V)bus mode:       2 (push-pull)chip select:    0 (don&#x27;t care)power mode:     2 (on)b">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - 查看eMMC信息">
+<meta property="og:url" content="http://example.com/2025/11/19/Skill/device/Linux-%E6%9F%A5%E7%9C%8BeMMC%E4%BF%A1%E6%81%AF/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="查看频率和模式1cat &#x2F;sys&#x2F;kernel&#x2F;debug&#x2F;mmc0&#x2F;ios  输出： 123456789clock:          150000000 Hzvdd:            23 (3.5 ~ 3.6 V)bus mode:       2 (push-pull)chip select:    0 (don&#x27;t care)power mode:     2 (on)b">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/Skill/device/%E5%9C%A8Linux%E6%9F%A5%E7%9C%8BeMMC%E4%BF%A1%E6%81%AF/emmc_device_life_define.png">
+<meta property="og:image" content="http://example.com/images/Skill/device/%E5%9C%A8Linux%E6%9F%A5%E7%9C%8BeMMC%E4%BF%A1%E6%81%AF/emm_EOL.png">
+<meta property="article:published_time" content="2025-11-19T04:03:55.000Z">
+<meta property="article:modified_time" content="2025-11-19T04:03:55.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Device">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="eMMC">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/Skill/device/%E5%9C%A8Linux%E6%9F%A5%E7%9C%8BeMMC%E4%BF%A1%E6%81%AF/emmc_device_life_define.png">
+
+
+<link rel="canonical" href="http://example.com/2025/11/19/Skill/device/Linux-%E6%9F%A5%E7%9C%8BeMMC%E4%BF%A1%E6%81%AF/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2025/11/19/Skill/device/Linux-%E6%9F%A5%E7%9C%8BeMMC%E4%BF%A1%E6%81%AF/","path":"2025/11/19/Skill/device/Linux-查看eMMC信息/","title":"Linux - 查看eMMC信息"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - 查看eMMC信息 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E9%A2%91%E7%8E%87%E5%92%8C%E6%A8%A1%E5%BC%8F"><span class="nav-number">1.</span> <span class="nav-text">查看频率和模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E5%AF%BF%E5%91%BD"><span class="nav-number">2.</span> <span class="nav-text">查看寿命</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E5%9F%BA%E6%9C%AC%E4%BF%A1%E6%81%AF"><span class="nav-number">3.</span> <span class="nav-text">查看基本信息</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/11/19/Skill/device/Linux-%E6%9F%A5%E7%9C%8BeMMC%E4%BF%A1%E6%81%AF/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - 查看eMMC信息 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - 查看eMMC信息
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2025-11-19 12:03:55" itemprop="dateCreated datePublished" datetime="2025-11-19T12:03:55+08:00">2025-11-19</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Skill/" itemprop="url" rel="index"><span itemprop="name">Skill</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>724</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>3 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="查看频率和模式"><a href="#查看频率和模式" class="headerlink" title="查看频率和模式"></a>查看频率和模式</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/kernel/debug/mmc0/ios</span><br></pre></td></tr></table></figure>
+
+<p>输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">clock:          150000000 Hz</span><br><span class="line">vdd:            23 (3.5 ~ 3.6 V)</span><br><span class="line">bus mode:       2 (push-pull)</span><br><span class="line">chip select:    0 (don&#x27;t care)</span><br><span class="line">power mode:     2 (on)</span><br><span class="line">bus width:      3 (8 bits)</span><br><span class="line">timing spec:    10 (mmc HS400)</span><br><span class="line">signal voltage: 1 (1.80 V)</span><br><span class="line">driver type:    0 (driver type B)</span><br></pre></td></tr></table></figure>
+
+<span id="more"></span>
+
+<h2 id="查看寿命"><a href="#查看寿命" class="headerlink" title="查看寿命"></a>查看寿命</h2><p><strong>查看预估寿命（基于写入量估算）</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/block/mmcblk0/device/life_time</span><br></pre></td></tr></table></figure>
+
+<p>输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">0x1 0x1</span><br></pre></td></tr></table></figure>
+
+<p>这两个数据出自于 eMMC 的 ext_csd 寄存器的位 268 和位 269 ：</p>
+<div align="center"><img src="/images/Skill/device/在Linux查看eMMC信息/emmc_device_life_define.png"></div>
+
+<p>第一个“0x1”表示<code>type A</code>，第二个“0x1”表示<code>type B</code>。</p>
+<p>有些 eMMC 是不支持 <code>type B</code>，则默认为 0 。</p>
+<p>数值越小，表示当前 eMMC 的寿命越健康。参考以下表格，查看预估寿命：</p>
+<table>
+<thead>
+<tr>
+<th align="center">数值</th>
+<th align="center">预估寿命</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">0x0</td>
+<td align="center">未定义（不支持）</td>
+</tr>
+<tr>
+<td align="center">0x1</td>
+<td align="center">0~10%</td>
+</tr>
+<tr>
+<td align="center">0x2</td>
+<td align="center">10~20%</td>
+</tr>
+<tr>
+<td align="center">。。。</td>
+<td align="center">。。。</td>
+</tr>
+<tr>
+<td align="center">0x8</td>
+<td align="center">70~80%</td>
+</tr>
+<tr>
+<td align="center">0x9</td>
+<td align="center">80~90%</td>
+</tr>
+<tr>
+<td align="center">0xA</td>
+<td align="center">90~100%</td>
+</tr>
+<tr>
+<td align="center">0xB</td>
+<td align="center"><font style="color:rgb(15, 17, 21);">设备已超过其预估的寿命</font><br/><font style="color:rgb(15, 17, 21);">（但可能仍能工作）</font></td>
+</tr>
+</tbody></table>
+<p>当数值为 0x9 或 0xA 时，需要迁移数据。</p>
+<p><strong>查看预警：</strong></p>
+<p>提供基于<strong>实际坏块状态</strong>的、<strong>离散</strong>的寿命<strong>终点</strong>预警：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/block/mmcblk0/device/pre_eol_info</span><br></pre></td></tr></table></figure>
+
+<p>输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">0x1</span><br></pre></td></tr></table></figure>
+
+<p>这两个数据出自于 eMMC 的 ext_csd 寄存器的位 267 ：</p>
+<div align="center"><img src="/images/Skill/device/在Linux查看eMMC信息/emm_EOL.png"></div>
+
+<p>数值越小，表示当前 eMMC 的寿命越健康。参考以下表格，查看预警：</p>
+<ul>
+<li><code>0x01</code> (Normal): 器件处于正常工作状态，剩余寿命充足，预留块充足（例如 &gt;80% 剩余），远未接近 EOL。</li>
+<li><code>0x02</code> (Warning &#x2F; Approaching End-of-Life):这是最关键的状态！器件的坏块数量或磨损程度已达到制造商预设的第一个阈值，表明剩余寿命显著减少，预留块消耗已达到厂商设定的“预警阈值”（例如剩余 20%），强烈建议主机系统尽快进行数据备份并计划更换器件。这通常就是“Pre-EOL”信息所指的状态。</li>
+<li><code>0x03</code> (Urgent &#x2F; End-of-Life): 器件的坏块数量或磨损程度已达到或超过制造商预设的最终阈值，预留块已耗尽，器件随时可能完全失效，强烈要求立即停止写入操作，只读取关键数据进行备份，并必须更换器件。</li>
+<li><code>0x00</code> (Undefine)：通常保留或表示未定义&#x2F;不支持。</li>
+</ul>
+<p>当数值为 0x2 时，建议迁移数据。</p>
+<h2 id="查看基本信息"><a href="#查看基本信息" class="headerlink" title="查看基本信息"></a>查看基本信息</h2><p>查看 eMMC 姓名：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/block/mmcblk0/device/name</span><br><span class="line"></span><br><span class="line">EMC929</span><br></pre></td></tr></table></figure>
+
+<p>查看出厂日期：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/block/mmcblk0/device/date</span><br><span class="line"></span><br><span class="line">09/2025</span><br></pre></td></tr></table></figure>
+
+<p>查看厂商ID：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/block/mmcblk0/device/manfid</span><br><span class="line"></span><br><span class="line">0x0000ab</span><br></pre></td></tr></table></figure>
+
+<p>OEM厂商ID：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/block/mmcblk0/device/oemid</span><br><span class="line"></span><br><span class="line">0x0122</span><br></pre></td></tr></table></figure>
+
+<p>设备序列号：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/block/mmcblk0/device/serial</span><br><span class="line"></span><br><span class="line">0x0e868176</span><br></pre></td></tr></table></figure>
+
+<p>硬件版本：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/block/mmcblk0/device/hwrev</span><br><span class="line"></span><br><span class="line">0x0</span><br></pre></td></tr></table></figure>
+
+<p>固件版本：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/block/mmcblk0/device/fwrev</span><br><span class="line"></span><br><span class="line">0x0000000004b07151</span><br></pre></td></tr></table></figure>
+
+<p>设备修订版本：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/block/mmcblk0/device/rev</span><br><span class="line"></span><br><span class="line">0x8</span><br></pre></td></tr></table></figure>
+
+<p>产品版本：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/block/mmcblk0/device/prv</span><br><span class="line"></span><br><span class="line">0x12</span><br></pre></td></tr></table></figure>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Device/" rel="tag"># Device</a>
+              <a href="/tags/eMMC/" rel="tag"># eMMC</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/11/17/Skill/debug/Linux%E5%86%85%E6%A0%B8perf/" rel="prev" title="Linux - perf调试">
+                  <i class="fa fa-angle-left"></i> Linux - perf调试
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2025/11/20/BUG/%E5%9B%A0%E7%9C%8B%E9%97%A8%E7%8B%97%E5%BC%82%E5%B8%B8%E9%87%8D%E5%90%AF%E9%97%AE%E9%A2%98/" rel="next" title="因看门狗异常重启问题">
+                  因看门狗异常重启问题 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="任务调度的对象任务调度中的任务，按类型大致分为三种：  交互式任务，该类型的任务有一定的实时要求，起码不能让操作该任务的用户感觉到有延迟，且对执行时间的长度要求不高。最典型的例子就是 bash（见下图）。">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - 任务调度（内核版本 2.4.22，32位x86）">
+<meta property="og:url" content="http://example.com/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6_i386/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="任务调度的对象任务调度中的任务，按类型大致分为三种：  交互式任务，该类型的任务有一定的实时要求，起码不能让操作该任务的用户感觉到有延迟，且对执行时间的长度要求不高。最典型的例子就是 bash（见下图）。">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6/TaskSched-1.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6/TaskSched-3.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6/TaskSched-2.png">
+<meta property="article:published_time" content="2022-12-29T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-12-29T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="X86">
+<meta property="article:tag" content="schedule">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6/TaskSched-1.png">
+
+
+<link rel="canonical" href="http://example.com/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6_i386/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6_i386/","path":"2022/12/30/原理及实现/Kernel/old/Linux-任务调度_i386/","title":"Linux - 任务调度（内核版本 2.4.22，32位x86）"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - 任务调度（内核版本 2.4.22，32位x86） | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6%E7%9A%84%E5%AF%B9%E8%B1%A1"><span class="nav-number">1.</span> <span class="nav-text">任务调度的对象</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B0%83%E5%BA%A6%E6%96%B9%E5%BC%8F"><span class="nav-number">2.</span> <span class="nav-text">调度方式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6%E5%92%8C%E4%BB%BB%E5%8A%A1%E8%BF%90%E8%A1%8C%E7%8A%B6%E6%80%81%E4%B9%8B%E9%97%B4%E7%9A%84%E8%81%94%E7%B3%BB"><span class="nav-number">3.</span> <span class="nav-text">任务调度和任务运行状态之间的联系</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6%E7%9A%84%E6%A0%B8%E5%BF%83%E5%87%BD%E6%95%B0"><span class="nav-number">4.</span> <span class="nav-text">任务调度的核心函数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%8E%E8%A2%AB%E5%8A%A8%E8%B0%83%E5%BA%A6%E7%9B%B8%E5%85%B3%E7%9A%84%E5%87%BD%E6%95%B0"><span class="nav-number">5.</span> <span class="nav-text">与被动调度相关的函数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%8E%E4%B8%BB%E5%8A%A8%E8%B0%83%E5%BA%A6%E7%9B%B8%E5%85%B3%E7%9A%84%E5%87%BD%E6%95%B0"><span class="nav-number">6.</span> <span class="nav-text">与主动调度相关的函数</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6_i386/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - 任务调度（内核版本 2.4.22，32位x86） | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - 任务调度（内核版本 2.4.22，32位x86）
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2022-12-30 00:00:00" itemprop="dateCreated datePublished" datetime="2022-12-30T00:00:00+08:00">2022-12-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>4k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>15 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="任务调度的对象"><a href="#任务调度的对象" class="headerlink" title="任务调度的对象"></a>任务调度的对象</h2><p>任务调度中的任务，按类型大致分为三种：</p>
+<ol>
+<li>交互式任务，该类型的任务有一定的实时要求，起码不能让操作该任务的用户感觉到有延迟，且对执行时间的长度要求不高。最典型的例子就是 bash（见下图）。</li>
+</ol>
+<span id="more"></span>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-任务调度/TaskSched-1.png"></div>
+
+<ol start="2">
+<li>后台任务，又称为批处理应用，该类型的应用是没有严格的实时要求，但是它需要相对较长的时间去执行。详细地说，就是这种类型的应用的时间片要求是比较大的，而且它要在“理想”的时间间隔内，得到 CPU 的使用权。所以这种任务有一个指标：平均速度，而平均速度包含：在调度队列内多久才轮到它执行？以及从调度后的执行时长又是多久？</li>
+<li>实时任务，该类型的任务有强烈的实时要求，而且也要考虑到它执行的时间是否很快？是否达到一个“平均速度”？它程序的本身是否很庞大？最典型的例子就是，当你在 bash 输入一个命令并回车，而你输入的命令对应的程序就是一个实时任务，如上图已输入的命令 <code>ls</code> 。</li>
+</ol>
+<p>根据这些类型的任务，新增加一个功能：根据不同类型的任务赋予不同的调度策略。调度策略有：SCHED_RR 、SCHED_FIFO 、SCHED_OTHER 。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> SCHED_OTHER     0</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> SCHED_FIFO      1</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> SCHED_RR        2</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/include/eleos/sched.h">sched.h</a></p>
+</blockquote>
+<ul>
+<li>SCHED_OTHER ：其他类型的任务，如：交互式任务、idle、内核线程 init 。</li>
+<li>SCHED_FIFO ：要求响应时间快，且执行时间短的任务（实时任务）。</li>
+<li>SCHED_RR ：执行时间较长的任务（后台任务）。</li>
+</ul>
+<h2 id="调度方式"><a href="#调度方式" class="headerlink" title="调度方式"></a>调度方式</h2><p>任务调度的方式分为两种，一是主动调度，二是被动调度。<br>主动调度就是任务在执行它自己的主执行流时（指的是无意外情况），执行流内存在任务调度函数 schedule() 。<br>被动调度是有条件被动调度，当满足某一条件时，内核会强制调用 schedule() 把当前任务换下，把 CPU 的执行权给下一个任务。</p>
+<p>被动调度设置在哪里？有一个被动调度设置在用户任务通过中断&#x2F;异常进入到内核层后，再从内核层回到用户层时，检查当前任务是否可调度。前面刚刚说了被动调度是有条件的，最典型的例子，就是实时中断。当实时时钟的计数器0计数完成后发出一次中断，发出的间隔为 10ms 。每个任务都有一个时间片，实时中断一次，时间片减一次。时间片为 0 时，设置该任务的状态为可调度，该任务从内核层返回用户层前夕，检查此标志位，该标志位被置1表示要调度。先列出该被动调度的代码：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">ENTRY(ret_from_sys_call)</span><br><span class="line">    cli</span><br><span class="line">    <span class="title function_">GET_CURRENT</span><span class="params">(%ebx)</span></span><br><span class="line">    cmpl    $0,<span class="title function_">need_resched</span><span class="params">(%ebx)</span></span><br><span class="line">    jne reschedule</span><br><span class="line">restore_all:</span><br><span class="line">    RESTORE_ALL</span><br></pre></td></tr></table></figure>
+
+<p>那么主动调度和被动调度有哪些？<br>主动调度：</p>
+<ul>
+<li>睡眠，指的是主动调用有关 sleep_*() 的函数，可设置睡眠时间。</li>
+<li>让出，指的是调用函数 yield() ，让出 CPU 使用权给其他任务。</li>
+</ul>
+<p>被动调度：</p>
+<ul>
+<li>当任务的时间片被时钟中断减为0，则调度。</li>
+<li>竞争互斥锁失败时睡眠等待，任务获取不了锁（这是条件）只能被迫睡眠。</li>
+<li>信号，当然，这不是泛指全部信号，而是指某一个类型的信号。举个例子，当我们在命令行终端输入一个命令执行程序，在执行过程中，我们可以输入快捷键“ctrl+z”，把当前进程挂起，我认为这也是主动调度，因为我“手动”干预了，也是有条件的被动调度。</li>
+<li>唤醒一个任务，把当前任务和刚唤醒的任务对比权值，当前任务的比它的小（条件）则调度。</li>
+<li>设置任务的调度策略（后面会知道策略是什么），当设置的任务调度策略比当前任务的高（条件），则调度。</li>
+</ul>
+<p>另外，主动调度和被动调度是和调度策略挂钩的。调度策略为 SCHED_FIFO 的任务是不会被强制调度的，因为它的实时要求高，且执行时间短<a href="%E4%B8%8D%E8%83%BD%E8%A2%AB%E5%8A%A8%E8%B0%83%E5%BA%A6%E5%B0%B1%E6%84%8F%E5%91%B3%E7%9D%80%E5%AE%9E%E6%97%B6%E4%BB%BB%E5%8A%A1%E6%98%AF%E6%B2%A1%E6%9C%89%E6%97%B6%E9%97%B4%E7%89%87%E7%9A%84%EF%BC%8C%E4%B8%8D%E4%BC%9A%E5%9B%A0%E6%97%B6%E9%97%B4%E7%89%87%E5%87%8F%E8%87%B30%E8%80%8C%E5%8F%91%E7%94%9F%E8%A2%AB%E5%8A%A8%E8%B0%83%E5%BA%A6%E3%80%82">^1</a>。调度策略为 SCHED_RR 或 SCHED_OTHER 的任务即可主动调度，也可被动调度。</p>
+<h2 id="任务调度和任务运行状态之间的联系"><a href="#任务调度和任务运行状态之间的联系" class="headerlink" title="任务调度和任务运行状态之间的联系"></a>任务调度和任务运行状态之间的联系</h2><p>调度队列内的任务都是 TASK_RUNNING 状态，当我们对某一个任务设置睡眠或追踪时，该任务的运行状态就要设置为非 TASK_RUNNING ，如 TASK_INTERRUPTIBLE 、TASK_STOPPED 等等。并且要从调度队列移除放到其他队列、或者其他存储空间存储该任务对应的 PCB 地址。<br>比如，我们要对当前任务进行浅度睡眠（可被信号打断），调用函数 interruptible_sleep_on() 。执行该函数的过程中，首先对该任务的运行状态设置为 TASK_INTERRUPTIBLE ，然后把该任务的 PCB 地址保存（一般是用一个队列保存的），接着调用 schedule() ，期间会把该任务从调度队列移除，然后切换下一个权值高的任务执行。<br>以下是任务调度和任务运行状态之间的关系图：</p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-任务调度/TaskSched-3.png"></div>
+
+<h2 id="任务调度的核心函数"><a href="#任务调度的核心函数" class="headerlink" title="任务调度的核心函数"></a>任务调度的核心函数</h2><p>任务调度的核心函数就是 schedule() ，以下是它的执行流程：</p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-任务调度/TaskSched-2.png"></div>
+
+<p>以下代码分段讲解：</p>
+<blockquote>
+<p>from <a href="../../../src/kernel/sched.c">sched.h</a></p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * &#x27;schedule()&#x27; is the scheduler function. It&#x27;s a very simple </span></span><br><span class="line"><span class="comment"> * and nice scheduler: it&#x27;s not perfect, but certainly works</span></span><br><span class="line"><span class="comment"> * for most things.</span></span><br><span class="line"><span class="comment"> * Task 0 is the &#x27;idle&#x27; task, which gets called when no other</span></span><br><span class="line"><span class="comment"> * tasks can run. It can not be killed, and it cannot sleep.</span></span><br><span class="line"><span class="comment"> * The &#x27;state&#x27; information in task[0] is never used.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">asmlinkage <span class="type">void</span> <span class="title function_">schedule</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> *<span class="title">prev</span>, *<span class="title">next</span>, *<span class="title">p</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> *<span class="title">tmp</span>;</span></span><br><span class="line">    <span class="type">int</span> c;</span><br><span class="line"></span><br><span class="line">    spin_lock_prefetch(&amp;runqueue_lock);</span><br><span class="line"></span><br><span class="line">    BUG_ON(!current-&gt;active_mm);</span><br><span class="line"></span><br><span class="line">need_resched_back:</span><br><span class="line">    prev = current;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (unlikely(in_interrupt())) </span><br><span class="line">        panic(<span class="string">&quot;Scheduling in interrupt\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">    spin_lock_irq(&amp;runqueue_lock);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * move an exhausted RR process to be last...</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">if</span> (unlikely(prev-&gt;policy == SCHED_RR))</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (!prev-&gt;counter) &#123;</span><br><span class="line">            prev-&gt;counter = NICE_TO_TICKS(prev-&gt;nice);</span><br><span class="line">            move_last_runqueue(prev);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>首先查看当前任务的 active_mm 是否存在。PCB 的字段 mm、active_mm 用于记录内存空间的状态，在创建任务期间（调用 fork()）可知，你可以选择用父进程的 mm ，也可以自己创建。另外，正在运行的内核线程是没有 mm 的，但有 active_mm ，因为内核线程仅在内核空间执行，而且每个任务的页目录表都映射着内核空间<a href="%E7%94%B1%E4%BA%8E%E6%9A%82%E6%97%B6%E6%94%AF%E6%8C%81%E5%86%85%E6%A0%B8%E7%BA%BF%E7%A8%8B%EF%BC%8C%E6%9C%89%E5%85%B3%E7%94%A8%E6%88%B7%E7%A9%BA%E9%97%B4%E7%9A%84%E5%86%85%E5%AE%B9%E4%B8%8D%E8%83%BD%E5%A4%9F%E5%BE%88%E5%A5%BD%E5%9C%B0%E5%B1%95%E5%BC%80%E8%AF%B4%E6%98%8E%EF%BC%8C%E6%89%80%E4%BB%A5%E4%BB%85%E5%88%9D%E6%AD%A5%E8%AF%B4%E6%98%8E%E8%AF%A5%E5%86%85%E5%AE%B9%E3%80%82">^2</a>。</p>
+<p>检查该函数是否在执行中断期间执行，是否打出 BUG 信息。因为该函数用于切换任务的，换句话说是切换任务的执行流。虽然当前任务因中断切换到了中断处理程序这个执行流，但从内核的角度来说，当前执行的中断处理程序也是属于当前任务的执行流。所以切换新任务后，该中断处理程序就不能继续执行了，只能等再次切换到此任务后再次执行。这是一个非常致命的错误，因为在中断期间所处理的数据是必需随着中断处理程序的实时启动而实时更新的，简单来说就是有很强烈的时间要求，不能怠慢。在中断期间调用任务调度，是很不合理的行为。</p>
+<p>如果当前的任务是 SCHED_RR 的，并且时间片到了，则把时间片恢复，把它移动到调度队列的尾部。这里说明一下宏 NICE_TO_TICKS 以及 nice 。nice 是一个优先级，范围是 -20~19 ，它是一个负数优先级，用于计算 SCHED_OTHER 任务的权值，以及设置 SCHED_OTHER&#x2F;SCHED_RR 任务的时间片。而宏 NICE_TO_TICKS 是为 SCHED_OTHER&#x2F;SCHED_RR 任务计算时间片，定义如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> NICE_TO_TICKS(nice) (TICK_SCALE(20-(nice)) + 1)</span></span><br></pre></td></tr></table></figure>
+
+<p>宏 TICK_SCALE 定义如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Scheduling quanta.</span></span><br><span class="line"><span class="comment"> * </span></span><br><span class="line"><span class="comment"> * NOTE! The unix &quot;nice&quot; value influences how long a process</span></span><br><span class="line"><span class="comment"> * gets. The nice value range from -20 to +19, where a -20</span></span><br><span class="line"><span class="comment"> * is a &quot;high-priority&quot; task, and a &quot;+10&quot; is a low-priority</span></span><br><span class="line"><span class="comment"> * task.</span></span><br><span class="line"><span class="comment"> * </span></span><br><span class="line"><span class="comment"> * We want the time-slice to be around 50ms or so, so this </span></span><br><span class="line"><span class="comment"> * calculation depends on the value of HZ.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="keyword">if</span> HZ &lt; 200</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> TICK_SCALE(x)   ((x) &gt;&gt; 2)</span></span><br><span class="line"><span class="meta">#<span class="keyword">elif</span> HZ &lt; 400</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> TICK_SCALE(x)   ((x) &gt;&gt; 1)</span></span><br><span class="line"><span class="meta">#<span class="keyword">elif</span> HZ &lt; 800</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> TICK_SCALE(x)   (x)</span></span><br><span class="line"><span class="meta">#<span class="keyword">elif</span> HZ &lt; 1600</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> TICK_SCALE(x)   ((x) &lt;&lt; 1)</span></span><br><span class="line"><span class="meta">#<span class="keyword">else</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> TICK_SCALE(x)   ((x) &lt;&lt; 2)</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+<p>简单来说，宏 TICK_SCALE 是根据 nice 计算时间片。比如，x&#x3D;20，HZ&#x3D;100，则宏 TICK_SCALE 计算的结果为 5 。即经过 5 次时钟中断后，任务发生第一调度，换算为时间则是 50ms ，即 50ms 后发生调度。</p>
+<p>回到 NICE_TO_TICKS ，后面的 +1 是因为 nice 通过 TICK_SCALE 的计算后，发现时间配额与优先级之间不平衡。比如 nice&#x3D;0 、另一个 nice&#x3D;-3 ，HZ &#x3D; 100 ，则通过 TICK_SCALE(20-(nice)) 后，时间配额都是 5 。详细请看下列表格：</p>
+<p>优先级：20</p>
+<table>
+<thead>
+<tr>
+<th align="center">HZ&#x2F;毫秒（对应1秒）</th>
+<th align="center">时间配额（实时中断次数）</th>
+<th align="center">时间配额（毫秒）</th>
+<th align="center">时间配额（实时中断次数）+1 以及对应毫秒</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">100&#x2F;10</td>
+<td align="center">5</td>
+<td align="center">50</td>
+<td align="center">6&#x2F;60</td>
+</tr>
+<tr>
+<td align="center">250&#x2F;5</td>
+<td align="center">10</td>
+<td align="center">50</td>
+<td align="center">11&#x2F;55</td>
+</tr>
+<tr>
+<td align="center">500&#x2F;2</td>
+<td align="center">20</td>
+<td align="center">40</td>
+<td align="center">21&#x2F;42</td>
+</tr>
+<tr>
+<td align="center">1000&#x2F;1</td>
+<td align="center">40</td>
+<td align="center">40</td>
+<td align="center">41&#x2F;41</td>
+</tr>
+<tr>
+<td align="center">2000&#x2F;0.5</td>
+<td align="center">80</td>
+<td align="center">40</td>
+<td align="center">81&#x2F;40</td>
+</tr>
+</tbody></table>
+<p>优先级：23</p>
+<table>
+<thead>
+<tr>
+<th align="center">HZ&#x2F;毫秒（对应1秒）</th>
+<th align="center">时间配额（实时中断次数）</th>
+<th align="center">时间配额（毫秒）</th>
+<th align="center">时间配额（实时中断次数）+1 以及对应毫秒</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">100&#x2F;10</td>
+<td align="center">5</td>
+<td align="center">50</td>
+<td align="center">6&#x2F;60</td>
+</tr>
+<tr>
+<td align="center">250&#x2F;5</td>
+<td align="center">11</td>
+<td align="center">55</td>
+<td align="center">12&#x2F;60</td>
+</tr>
+<tr>
+<td align="center">500&#x2F;2</td>
+<td align="center">23</td>
+<td align="center">46</td>
+<td align="center">24&#x2F;48</td>
+</tr>
+<tr>
+<td align="center">1000&#x2F;1</td>
+<td align="center">46</td>
+<td align="center">46</td>
+<td align="center">47&#x2F;47</td>
+</tr>
+<tr>
+<td align="center">2000&#x2F;0.5</td>
+<td align="center">92</td>
+<td align="center">46</td>
+<td align="center">93&#x2F;46</td>
+</tr>
+</tbody></table>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">switch</span> (prev-&gt;state)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">case</span> TASK_INTERRUPTIBLE:</span><br><span class="line">        <span class="keyword">if</span> (signal_pending(prev)) &#123;</span><br><span class="line">            set_task_state(prev, TASK_RUNNING);</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    <span class="keyword">default</span>:</span><br><span class="line">        del_from_runqueue(prev);</span><br><span class="line">    <span class="keyword">case</span> TASK_RUNNING:;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">prev-&gt;need_resched = <span class="number">0</span>;</span><br></pre></td></tr></table></figure>
+<p>然后开始检查当前任务的运行状态，如果是非 TASK_RUNNING 的，从调度队列删除，除非是 TASK_INTERRUPTIBLE 并且被信号打断的任务。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">repeat_schedule:</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Default process to select..</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    next = idle_task();</span><br><span class="line">    c = <span class="number">-1000</span>;</span><br><span class="line">    list_for_each(tmp, &amp;runqueue_head)</span><br><span class="line">    &#123;</span><br><span class="line">        p = list_entry(tmp, <span class="keyword">struct</span> task_struct, run_list);</span><br><span class="line">        <span class="type">int</span> weight = goodness(p, prev-&gt;active_mm);</span><br><span class="line">        <span class="keyword">if</span> (weight &gt; c)</span><br><span class="line">            c = weight, next = p;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (unlikely(!c))</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> *<span class="title">p</span>;</span></span><br><span class="line"></span><br><span class="line">        spin_unlock_irq(&amp;runqueue_lock);</span><br><span class="line">        read_lock(&amp;tasklist_lock);</span><br><span class="line"></span><br><span class="line">        for_each_task(p)</span><br><span class="line">            p-&gt;counter = (p-&gt;counter &gt;&gt; <span class="number">1</span>) + NICE_TO_TICKS(p-&gt;nice);</span><br><span class="line">        </span><br><span class="line">        read_unlock(&amp;tasklist_lock);</span><br><span class="line">        spin_lock_irq(&amp;runqueue_lock);</span><br><span class="line">        <span class="keyword">goto</span> repeat_schedule;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    spin_unlock_irq(&amp;runqueue_lock);</span><br></pre></td></tr></table></figure>
+
+<p>在调度队列内找出权值最高的任务，计算权值的函数 goodness() 在这里：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * This is the function that decides how desirable a process </span></span><br><span class="line"><span class="comment"> * is...</span></span><br><span class="line"><span class="comment"> * </span></span><br><span class="line"><span class="comment"> * Return values:</span></span><br><span class="line"><span class="comment"> *      -1000: never select this</span></span><br><span class="line"><span class="comment"> *          0: out of time, recalculate counters (but it might</span></span><br><span class="line"><span class="comment"> *             still be selected)</span></span><br><span class="line"><span class="comment"> *        +ve: &quot;goodness&quot; value (the larger, the better)</span></span><br><span class="line"><span class="comment"> *       1000: realtime process, select this.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">int</span> </span><br><span class="line"><span class="title function_">goodness</span><span class="params">(<span class="keyword">struct</span> task_struct * p, <span class="keyword">struct</span> mm_struct * this_mm)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> weight;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * select the current process after every other runnable</span></span><br><span class="line"><span class="comment">     * process, but before the idle thread.</span></span><br><span class="line"><span class="comment">     * Also, don&#x27;t trigger a counter recalculation.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    weight = <span class="number">-1</span>;</span><br><span class="line">    <span class="keyword">if</span> (p-&gt;policy &amp; SCHED_YIELD)</span><br><span class="line">        <span class="keyword">goto</span> out;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Non-RT process - normal case first.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">if</span> (p-&gt;policy == SCHED_OTHER)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="comment">/**</span></span><br><span class="line"><span class="comment">         * Give the process a first-approximation goodness</span></span><br><span class="line"><span class="comment">         * value according to the number of clock-ticks it</span></span><br><span class="line"><span class="comment">         * has left.</span></span><br><span class="line"><span class="comment">         * </span></span><br><span class="line"><span class="comment">         * Don&#x27;t do any other calculations if the time slice</span></span><br><span class="line"><span class="comment">         * is over...</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        weight = p-&gt;counter;</span><br><span class="line">        <span class="keyword">if</span> (!weight)</span><br><span class="line">            <span class="keyword">goto</span> out;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/**</span></span><br><span class="line"><span class="comment">         * .. and a slight advantage to the current MM</span></span><br><span class="line"><span class="comment">         * 如果用户任务用的是当前任务的 MM ，或者 p 是内核任务</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="keyword">if</span> (p-&gt;mm == this_mm || !p-&gt;mm)</span><br><span class="line">            weight++;</span><br><span class="line">        weight += <span class="number">20</span> - p-&gt;nice;</span><br><span class="line">        <span class="keyword">goto</span> out;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Realtime process, select the first one on the runqueue</span></span><br><span class="line"><span class="comment">     * (taking priorities within processes into account).</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    weight = <span class="number">1000</span> + p-&gt;rt_priority;</span><br><span class="line"></span><br><span class="line">out:</span><br><span class="line">    <span class="keyword">return</span> weight;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>回到 schedule() ，如果调度队列内的所有任务的权值都为 0 ，即时间片都为 0 。则表示队列内的任务都是 SCHED_OTHER ，则为每个任务重新设置时间片，然后重新找出权值最高的任务。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (unlikely(prev == next)) &#123;</span><br><span class="line">    prev-&gt;policy &amp;= ~SCHED_YIELD;</span><br><span class="line">    <span class="keyword">goto</span> same_process;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">mm_struct</span> *<span class="title">mm</span> =</span> next-&gt;mm;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">mm_struct</span> *<span class="title">oldmm</span> =</span> prev-&gt;active_mm;</span><br><span class="line">    <span class="keyword">if</span> (!mm) &#123;</span><br><span class="line">        BUG_ON(next-&gt;active_mm);</span><br><span class="line">        next-&gt;active_mm = oldmm;</span><br><span class="line">        <span class="type">atomic_inc</span>(&amp;oldmm-&gt;mm_count);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        BUG_ON(next-&gt;active_mm != mm);</span><br><span class="line">        switch_mm(oldmm, mm);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!prev-&gt;mm) &#123;</span><br><span class="line">        prev-&gt;active_mm = <span class="literal">NULL</span>;</span><br><span class="line">        mmdrop(oldmm);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如果调度队列中仅有一个任务，则不用切换任务了。</p>
+<p>如果下一个任务 mm 和 active_mm 为空，则表示该任务是内核线程，则把当前任务的 active_mm 作为下一个任务的 active_mm 。如果不为空，则表示下一个任务是用户任务，则切换页目录表（待实现）。</p>
+<p>然后，如果当前任务为内核任务，则把它的 active_mm 设为空。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * This just switches the register state and the stack.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    switch_to(prev, next);</span><br><span class="line">    __schedule_tail(prev);</span><br><span class="line"></span><br><span class="line">same_process:</span><br><span class="line">    <span class="keyword">if</span> (current-&gt;need_resched)</span><br><span class="line">        <span class="keyword">goto</span> need_resched_back;</span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>switch_to 是一个宏，以下是它的定义：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> switch_to(prev, next) \</span></span><br><span class="line"><span class="meta">do &#123;    \</span></span><br><span class="line"><span class="meta">    asm volatile (  \</span></span><br><span class="line"><span class="meta">        <span class="string">&quot;pushl  %%esi \n\t&quot;</span>  \</span></span><br><span class="line"><span class="meta">        <span class="string">&quot;pushl  %%edi \n\t&quot;</span>  \</span></span><br><span class="line"><span class="meta">        <span class="string">&quot;pushl  %%ebp \n\t&quot;</span>  \</span></span><br><span class="line"><span class="meta">        <span class="string">&quot;movl   %%esp,%0 \n\t&quot;</span>  \</span></span><br><span class="line"><span class="meta">        <span class="string">&quot;movl   %2,%%esp \n\t&quot;</span>  \</span></span><br><span class="line"><span class="meta">        <span class="string">&quot;movl   $1f,%1 \n\t&quot;</span>    \</span></span><br><span class="line"><span class="meta">        <span class="string">&quot;pushl  %3  \n\t&quot;</span>   \</span></span><br><span class="line"><span class="meta">        <span class="string">&quot;jmp __switch_to \n\t&quot;</span>  \</span></span><br><span class="line"><span class="meta">        <span class="string">&quot;1: \n\t&quot;</span>   \</span></span><br><span class="line"><span class="meta">        <span class="string">&quot;popl   %%ebp \n\t&quot;</span> \</span></span><br><span class="line"><span class="meta">        <span class="string">&quot;popl   %%edi \n\t&quot;</span> \</span></span><br><span class="line"><span class="meta">        <span class="string">&quot;popl   %%esi \n\t&quot;</span> \</span></span><br><span class="line"><span class="meta">        : <span class="string">&quot;=m&quot;</span> ((prev)-&gt;thread.esp), <span class="string">&quot;=m&quot;</span> ((prev)-&gt;thread.eip)  \</span></span><br><span class="line"><span class="meta">        : <span class="string">&quot;m&quot;</span> ((next)-&gt;thread.esp), <span class="string">&quot;m&quot;</span> ((next)-&gt;thread.eip),   \</span></span><br><span class="line"><span class="meta">          <span class="string">&quot;a&quot;</span> (prev), <span class="string">&quot;d&quot;</span> (next)    \</span></span><br><span class="line"><span class="meta">        : <span class="string">&quot;memory&quot;</span>  \</span></span><br><span class="line"><span class="meta">    );  \</span></span><br><span class="line"><span class="meta">&#125; while (0)</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/include/asm-i386/system.h">system.h</a></p>
+</blockquote>
+<p>首先对寄存器 esi 、edi 、ebp 压栈，原因是 esi 和 edi 是数据流指令的指定寄存器；ebp 是作为在栈内的函数实参和局部变量的基地址。而其他寄存器，如 eax 、ebx 、ecx 和 edx，会根据实际情况压栈保存。</p>
+<blockquote>
+<p>如何根据实际情况存储的呢？<br>以 gcc 编译器把 C 源码编译为汇编指令为方向，以用 C 源码定义的函数出发。<br>已知在 i386 平台内， eax 是基础寄存器（访问内存最为频繁的）；ebx 是基地址寄存器；ecx 是计数寄存器；edx是给 eax 辅助运算的寄存器；ebp 和 esp 是栈操作寄存器；esi 和 edi 是数据流寄存器（分别是源地址寄存器和目的地址寄存器）。gcc 也是支持 i386 的寄存器使用标准。C 源码的函数的局部变量以及实参都在栈内（除非用寄存器传参），且用 ebp 作为在函数内、在栈内局部变量以及实参的基地址。C 源码通过 gcc 编译为汇编指令后，可以发现，eax 是使用最频繁的寄存器，而且是访问内存最为频繁的寄存器（更多的像 CPU 访问内存的中转站一样）。 gcc 还会根据函数与函数之间寄存器的使用情况，把寄存器压栈保护。比如函数 A 和函数 B 都使用 ecx ，函数 A 调用函数 B ，但函数 A 调用前后还需要 ecx ，所以执行函数 B 时，会把 ecx 压栈，返回前出栈。<br>另外再说一句，如果使用内联汇编，内联汇编所用到的寄存器会在执行内联汇编的指令前压栈保护。</p>
+</blockquote>
+<p>__switch_to 是一个函数，但目前作用仅有一个，就是作为一个跳板。用该函数返回后就是下一个任务的执行流了。</p>
+<p>回到 schedule() ，目前 schedule_tail() 的唯一作用是把 yield 状态去掉</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * schedule_tail() is getting called from the fork return</span></span><br><span class="line"><span class="comment"> * path. This cleans up all remaining scheduler things,</span></span><br><span class="line"><span class="comment"> * without impacting the common case.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> __schedule_tail(<span class="keyword">struct</span> task_struct * prev)</span><br><span class="line">&#123;</span><br><span class="line">    prev-&gt;policy &amp;= ~SCHED_YIELD;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">asmlinkage <span class="type">void</span> <span class="title function_">schedule_tail</span><span class="params">(<span class="keyword">struct</span> task_struct * prev)</span></span><br><span class="line">&#123;</span><br><span class="line">    __schedule_tail(prev);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从切换任务后，如果当前任务的运行状态是 SCHED_YIELD ，则去除该状态，因为已经让出一次了。</p>
+<h2 id="与被动调度相关的函数"><a href="#与被动调度相关的函数" class="headerlink" title="与被动调度相关的函数"></a>与被动调度相关的函数</h2><p>第一个就是有关时间配额（时间片）的被动调度，每经过一次时钟中断，当前任务的时间配额减 1 。减至 0 时则表示该任务需要被调度（除了 SCHED_FIFO 任务）。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Called from the timer interrupt handler to charge one </span></span><br><span class="line"><span class="comment"> * tick to the current process.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">void</span> <span class="title function_">update_process_times</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> *<span class="title">p</span> =</span> current;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (p-&gt;pid) </span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (--p-&gt;counter &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">            p-&gt;counter = <span class="number">0</span>;</span><br><span class="line">            <span class="keyword">if</span> (p-&gt;policy != SCHED_FIFO)</span><br><span class="line">                p-&gt;need_resched = <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/kernel/timer.c">timer.c</a> </p>
+</blockquote>
+<p>当用户任务从中断&#x2F;异常回来，经过从内核层回到用户层期间，会检查当前任务是否需要被调度</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">ENTRY(ret_from_sys_call)</span><br><span class="line">    cli</span><br><span class="line">    <span class="title function_">GET_CURRENT</span><span class="params">(%ebx)</span></span><br><span class="line">    cmpl    $0,<span class="title function_">need_resched</span><span class="params">(%ebx)</span></span><br><span class="line">    jne reschedule</span><br><span class="line">restore_all:</span><br><span class="line">    RESTORE_ALL</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/arch/i386/kernel/entry.S">entry.S</a></p>
+</blockquote>
+<p>其中，GET_CURRENT 是一个宏 </p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> GET_CURRENT(reg)    \</span></span><br><span class="line"><span class="meta">    movl    $-8192,reg; \</span></span><br><span class="line"><span class="meta">    andl    %esp,reg</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/arch/i386/kernel/entry.S">entry.S</a></p>
+</blockquote>
+<p>第二个是更换任务策略，对应的函数为 sys_sched_setscheduler() 。</p>
+<p>剩下的如唤醒、等待锁等等将在以后的说明。</p>
+<h2 id="与主动调度相关的函数"><a href="#与主动调度相关的函数" class="headerlink" title="与主动调度相关的函数"></a>与主动调度相关的函数</h2><p>睡眠以及让出操作在 任务让出与睡眠 说明。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/X86/" rel="tag"># X86</a>
+              <a href="/tags/schedule/" rel="tag"># schedule</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/10/28/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E4%BC%99%E4%BC%B4%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8/" rel="prev" title="Linux - 伙伴位图分配器（内核版本 2.4.22，32位x86）">
+                  <i class="fa fa-angle-left"></i> Linux - 伙伴位图分配器（内核版本 2.4.22，32位x86）
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E5%88%9B%E5%BB%BA%E8%BF%9B%E7%A8%8B_i386/" rel="next" title="Linux - 创建进程（内核版本 2.4.22，32位x86）">
+                  Linux - 创建进程（内核版本 2.4.22，32位x86） <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

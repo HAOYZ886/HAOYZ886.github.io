@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言本文注重讲解 AD7616 的：  配置方式为：软件模式 传输方式为：并行模式 读采样值的方式为：并行模式 + Sequencer + Burst 模式">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="AD7616学习笔记">
+<meta property="og:url" content="http://example.com/2025/06/25/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="前言本文注重讲解 AD7616 的：  配置方式为：软件模式 传输方式为：并行模式 读采样值的方式为：并行模式 + Sequencer + Burst 模式">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750751773672-13952d96-ade9-4f9e-8920-93b98c92d4bb.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750757289815-cecedd8f-6bc0-434a-93c0-aac0f41bbaa1.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750757585165-7d4a00c0-8bbb-41a4-8172-52b349ed45ed.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750757641728-4dad0d2a-2e8a-4c4b-9161-7bbcf7f7f2a2.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750757667842-c9330893-017e-4f2f-a730-2cd367d4248b.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750758089947-21d67c5e-8bee-4d9d-9110-767fc1726713.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750759083077-f59fafb3-1dc7-41f3-ac16-9281ca3f560e.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750764050511-2dc9d276-c20d-4b6d-bd5b-e4da62de4446.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750765382764-a931e450-cccb-48a6-8f6f-7bc7257d2f1e.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750765412643-69e0bd75-0363-4b20-84e4-3be0d02cca97.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750765714330-30a20ecc-2800-49fd-955b-6db1ae96ad89.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750765555066-840e41d0-da90-4c63-bf87-c8bad04b78fe.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750765877010-c0534bd0-c877-48cd-85aa-9c97cb21b62b.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750765579421-2256d0e9-6137-46b0-a1fe-e379c33ad5fd.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750766409634-af9f00a6-ee10-42f0-b458-bf242f22d015.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750813496791-8a50d8fc-dae0-4878-8f58-a8b2aabdc569.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750814888604-44fc70d8-ba48-4d20-8663-dd1d710b8d5e.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750816039669-9a0e002a-29a9-4da0-af90-330f01e6c7bd.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750816277971-45a336be-2039-4641-a48b-ad890c7f0c1e.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750817015666-cbe52f37-3206-4dd5-af2c-551b16c12aff.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750817027716-22bdb6b2-3eca-42da-8bd5-0def1c6769af.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750818566297-36ff2cf9-0c4a-4cad-99b3-21589623d13a.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750818943223-99b79517-627a-467c-a68b-f1b91cb67a50.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750819721449-b82bac58-7a1d-4664-be7b-2a5ff00bb54b.png">
+<meta property="article:published_time" content="2025-06-24T16:00:00.000Z">
+<meta property="article:modified_time" content="2025-06-24T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="AD7616">
+<meta property="article:tag" content="Device">
+<meta property="article:tag" content="Hardware">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1750751773672-13952d96-ade9-4f9e-8920-93b98c92d4bb.png">
+
+
+<link rel="canonical" href="http://example.com/2025/06/25/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2025/06/25/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/","path":"2025/06/25/Hardware/device/AD7616学习笔记/","title":"AD7616学习笔记"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>AD7616学习笔记 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E8%B5%84%E6%96%99"><span class="nav-number">2.</span> <span class="nav-text">参考资料</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A6%82%E8%BF%B0"><span class="nav-number">3.</span> <span class="nav-text">概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8A%9F%E8%83%BD%E7%AE%80%E8%BF%B0"><span class="nav-number">4.</span> <span class="nav-text">功能简述</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8A%9F%E8%83%BD%E8%A7%A3%E6%9E%90"><span class="nav-number">4.1.</span> <span class="nav-text">功能解析</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#AD7616%E7%9A%84%E7%A1%AC%E4%BB%B6%E5%BA%94%E7%94%A8"><span class="nav-number">4.2.</span> <span class="nav-text">AD7616的硬件应用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A8%A1%E6%95%B0%E6%95%B0%E5%80%BC%E8%BD%AC%E6%8D%A2%E7%94%B5%E5%8E%8B%E5%80%BC"><span class="nav-number">4.3.</span> <span class="nav-text">模数数值转换电压值</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#AD7616%E5%AF%84%E5%AD%98%E5%99%A8%E8%AF%B4%E6%98%8E"><span class="nav-number">5.</span> <span class="nav-text">AD7616寄存器说明</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%84%E5%AD%98%E5%99%A8%E5%90%88%E9%9B%86"><span class="nav-number">5.1.</span> <span class="nav-text">寄存器合集</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%84%E5%AD%98%E5%99%A8%E5%AF%BB%E5%9D%80"><span class="nav-number">5.2.</span> <span class="nav-text">寄存器寻址</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E5%AF%84%E5%AD%98%E5%99%A8%EF%BC%88CONFIGURATION-REGISTER%EF%BC%89"><span class="nav-number">5.3.</span> <span class="nav-text">配置寄存器（CONFIGURATION REGISTER）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8C%87%E5%AE%9A%E9%80%9A%E9%81%93%E9%87%87%E9%9B%86%E5%AF%84%E5%AD%98%E5%99%A8-%EF%BC%88CHANNEL-REGISTER%EF%BC%89"><span class="nav-number">5.4.</span> <span class="nav-text">指定通道采集寄存器 （CHANNEL REGISTER）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%80%9A%E9%81%93%E9%87%87%E9%9B%86%E8%8C%83%E5%9B%B4%E5%AF%84%E5%AD%98%E5%99%A8%E7%BB%84-%EF%BC%88INPUT-RANGE-REGISTERS%EF%BC%89"><span class="nav-number">5.5.</span> <span class="nav-text">通道采集范围寄存器组 （INPUT RANGE REGISTERS）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BA%8F%E5%88%97%E6%A0%88%E5%AF%84%E5%AD%98%E5%99%A8%E7%BB%84-%EF%BC%88SEQUENCER-STACK-REGISTERS%EF%BC%89"><span class="nav-number">5.6.</span> <span class="nav-text">序列栈寄存器组 （SEQUENCER STACK REGISTERS）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%93%8D%E4%BD%9CAD7616"><span class="nav-number">6.</span> <span class="nav-text">操作AD7616</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%8D%E4%BD%8D%E6%93%8D%E4%BD%9C"><span class="nav-number">6.1.</span> <span class="nav-text">复位操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%99%E5%AF%84%E5%AD%98%E5%99%A8%E6%93%8D%E4%BD%9C"><span class="nav-number">6.2.</span> <span class="nav-text">写寄存器操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%BB%E5%AF%84%E5%AD%98%E5%99%A8%E6%93%8D%E4%BD%9C"><span class="nav-number">6.3.</span> <span class="nav-text">读寄存器操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%BB%E9%87%87%E9%9B%86%E7%94%B5%E5%8E%8B%E5%80%BC%E6%97%B6%E5%BA%8F%EF%BC%88Sequencer%EF%BC%89"><span class="nav-number">6.4.</span> <span class="nav-text">读采集电压值时序（Sequencer）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E8%83%BD%E8%AF%8A%E6%96%AD%E9%80%9A%E9%81%93%E5%92%8C%E9%80%9A%E9%81%93%E8%87%AA%E6%A3%80%EF%BC%88Sequencer%EF%BC%89"><span class="nav-number">6.5.</span> <span class="nav-text">使能诊断通道和通道自检（Sequencer）</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/06/25/Hardware/device/AD7616%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="AD7616学习笔记 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          AD7616学习笔记
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2025-06-25 00:00:00" itemprop="dateCreated datePublished" datetime="2025-06-25T00:00:00+08:00">2025-06-25</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Hardware/" itemprop="url" rel="index"><span itemprop="name">Hardware</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3.5k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>13 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>本文注重讲解 AD7616 的：</p>
+<ul>
+<li>配置方式为：软件模式</li>
+<li>传输方式为：并行模式</li>
+<li>读采样值的方式为：并行模式 + Sequencer + Burst 模式</li>
+</ul>
+<span id="more"></span>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><p><a target="_blank" rel="noopener" href="https://www.analog.com/media/cn/technical-documentation/data-sheets/AD7616_cn.pdf">AD7616.pdf</a></p>
+<h2 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h2><p><font style="color:rgb(42, 43, 46);">AD7616是一个16位DAS，支持16通道双同步采样。AD7616采用单个5v电源，可容纳±10v、±5v和±2.5 V真双极输入信号，同时以每通道对高达1 MSPS的吞吐量采样，信噪比为90.5 dB。片上过采样模式（92 dB，过采样比（OSR）为2）可以实现更高的信噪比性能。</font></p>
+<p><font style="color:rgb(42, 43, 46);">输入钳位保护电路可以承受高达 ±21 V。AD7616的模拟输入阻抗为1 MΩ，与采样频率无关。单电源操作、片上滤波和高输入阻抗消除了对驱动运放和外部双极电源的需求。</font></p>
+<p><font style="color:rgb(42, 43, 46);">该器件包含模拟输入箝位保护、双16位电荷再分配SAR模数转换器（ADC）、灵活数字滤波器、2.5 V参考和参考缓冲器以及高速串行和并行接口。</font></p>
+<h2 id="功能简述"><a href="#功能简述" class="headerlink" title="功能简述"></a><font style="color:rgb(42, 43, 46);">功能简述</font></h2><h3 id="功能解析"><a href="#功能解析" class="headerlink" title="功能解析"></a>功能解析</h3><p><font style="color:rgb(42, 43, 46);">以下是它的功能视图：</font></p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750751773672-13952d96-ade9-4f9e-8920-93b98c92d4bb.png"></div>
+
+<p>见下图的红色框，引脚 <code>V0A ~ V7A</code> 和 <code>V0B ~ V7B</code> 是采集电压通道。</p>
+<p>见下图的黄色框，其中，<code>9:1 MUX</code>的 Input 端包含V0A ~ V7A 或 V0B ~ V7B ，还有来自 <code>2:1 MUX</code>的输出端。可通过 CONTROL INPUTS（硬件模式，见灰色框），也可通过操作 AD7616 的寄存器（软件模式），选择采集哪些电压通道。而且在软件模式中，还能指定读取采样通道的顺序。也可以选择诊断通道（<code>Vcc 和 ALDO</code>），检测 AD7617 内部电压是否运行正常。</p>
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750757289815-cecedd8f-6bc0-434a-93c0-aac0f41bbaa1.png"></div>
+
+<p>见上图的绿色框，会把输入端的电压通过<code>16-BIT SAR</code><font style="color:rgb(42, 43, 46);">模数转换器，转换为相关模数数值。再然后把该数值通过并行模式，从引脚</font><code>&lt;font style=&quot;color:rgb(42, 43, 46);&quot;&gt;DB0~DB15&lt;/font&gt;</code><font style="color:rgb(42, 43, 46);">输出，见蓝色边框。</font></p>
+<p><font style="color:rgb(42, 43, 46);">已知软件模式需要访问寄存器才能配置，如何访问寄存器？</font></p>
+<p><font style="color:rgb(42, 43, 46);">在并行模式下，是通过</font><code>&lt;font style=&quot;color:rgb(42, 43, 46);&quot;&gt;DB0~DB15&lt;/font&gt;</code><font style="color:rgb(42, 43, 46);">引脚指定寄存器地址，并把对应数值写入 AD7616 ，也可以通过</font><code>&lt;font style=&quot;color:rgb(42, 43, 46);&quot;&gt;DB0~DB15&lt;/font&gt;</code><font style="color:rgb(42, 43, 46);">引脚指定寄存器地址，从 AD7616 读出寄存器的值。</font></p>
+<p><font style="color:rgb(42, 43, 46);">那么怎么配置读操作和写操作？</font></p>
+<p><font style="color:rgb(42, 43, 46);">在并行模式中，引脚</font><code>&lt;font style=&quot;color:rgb(42, 43, 46);&quot;&gt;BURST&lt;/font&gt;</code><font style="color:rgb(42, 43, 46);">被作为写操作引脚，该引脚被拉低时表示开启写操作。引脚</font><code>&lt;font style=&quot;color:rgb(42, 43, 46);&quot;&gt;SCLK&lt;/font&gt;</code><font style="color:rgb(42, 43, 46);">（上图中未被标出，给串行模式作时钟引脚）被作为读操作引脚，该引脚被拉低时表示开启读操作。</font></p>
+<h3 id="AD7616的硬件应用"><a href="#AD7616的硬件应用" class="headerlink" title="AD7616的硬件应用"></a><font style="color:rgb(42, 43, 46);">AD7616的硬件应用</font></h3><p>指定 AD7616 的配置方式为软件模式，传输方式为并行模式，则 AD7616 本身的配置为：</p>
+<ol>
+<li>配置<code>SER/PAR</code>引脚，该引脚被置位表示使用串行模式，被清除表示使用并行模式，故把该位清除。</li>
+<li>把上图灰色框中的除了<code>RESET</code>、<code>BURST</code>、<code>BUSY</code>和<code>CONVST</code>之外的引脚用 GND 拉低，因为它们是用在硬件模式的。</li>
+<li>在并行模式下，引脚<code>OS2 TO OS0</code>、<code>SDOx/SDI</code> 和<code>SER1W</code>都是作为引脚<code>DB15 TO DB0</code>。</li>
+<li>另外，我们这边把引脚用3.3V电压<code>REFSEL</code>拉高，表示使用内部参考电压，把引脚<code>VDRIVER</code>也用3.3V拉高。所以见紫色框，把除<code>REFSEL</code>和<code>VDRIVER</code>之外的引脚，都直接接上 GND 。</li>
+</ol>
+<p>根据以上需求，AD7616 的外围电路如下图所示：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750757585165-7d4a00c0-8bbb-41a4-8172-52b349ed45ed.png"></div>
+
+
+
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750757641728-4dad0d2a-2e8a-4c4b-9161-7bbcf7f7f2a2.png"></div>
+
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750757667842-c9330893-017e-4f2f-a730-2cd367d4248b.png"></div>
+
+<h3 id="模数数值转换电压值"><a href="#模数数值转换电压值" class="headerlink" title="模数数值转换电压值"></a>模数数值转换电压值</h3><p>参考以下公式：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750758089947-21d67c5e-8bee-4d9d-9110-767fc1726713.png"></div>
+
+<p>其中<font style="color:rgb(42, 43, 46);">±10v等是模数数值，VIN为电压值</font>。</p>
+<p>另外，由于使用内部参考电压，则<code>REFINOUT</code>为 2.5V 。</p>
+<h2 id="AD7616寄存器说明"><a href="#AD7616寄存器说明" class="headerlink" title="AD7616寄存器说明"></a>AD7616寄存器说明</h2><p>注意，仅有在软件模式下才能使用寄存器来配置 AD7616 ，硬件模式只能操作上图灰色框中的引脚来配置 AD7616 。</p>
+<h3 id="寄存器合集"><a href="#寄存器合集" class="headerlink" title="寄存器合集"></a>寄存器合集</h3><p>以下是 AD7616 可操控的寄存组：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750759083077-f59fafb3-1dc7-41f3-ac16-9281ca3f560e.png"></div>
+
+<h3 id="寄存器寻址"><a href="#寄存器寻址" class="headerlink" title="寄存器寻址"></a>寄存器寻址</h3><p>使用以下方式指定寄存器地址、读写操作和数据（仅限写操作）。</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750764050511-2dc9d276-c20d-4b6d-bd5b-e4da62de4446.png"></div>
+
+<ul>
+<li>位15是指定是要读出寄存器的值（把该位清除），还是把值写入寄存器（把该位置位）。注意不要和 AD7616 并行模式下的引脚 <code>WR</code>和<code>RD</code>混淆，这些引脚是用于指定传输数据方向，而位15的 <code>W/R</code>是用于指定读写寄存器。</li>
+<li>位 9~14 是指定寄存器地址去访问</li>
+<li>位 0~8 存储寄存器的数值，但仅限写寄存器操作，即位 15 被置位。</li>
+</ul>
+<h3 id="配置寄存器（CONFIGURATION-REGISTER）"><a href="#配置寄存器（CONFIGURATION-REGISTER）" class="headerlink" title="配置寄存器（CONFIGURATION REGISTER）"></a>配置寄存器（C<font style="color:rgb(0,0,0);">ONFIGURATION REGISTER</font>）</h3><p>该寄存器可配置 sequencer 、Burst 模式、oversampling, 和 CRC 。</p>
+<blockquote>
+<p>该寄存器在 T536 中仅配置为 sequencer 和 Burst 模式。</p>
+</blockquote>
+<p>见以下定义：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750765382764-a931e450-cccb-48a6-8f6f-7bc7257d2f1e.png"></div>
+
+<ul>
+<li>位 9~15 的作用是和《寄存器寻址》所讲的一致。</li>
+<li>位 5 SEQEN 被置位时，使能 sequencer 。使能后，序列栈寄存器组可被使用。</li>
+<li>位 6 BURSREN 被置位时，使能 Burst 模式。使能后，如该模式和 sequencer 配合，则仅需发出一次 CONVST 信号，就能一次性发送所有在序列栈寄存器组内指定的采集通道内的数模数值。</li>
+<li>其它位在 T536 暂未用到，忽略。详细见 AD7616 规格书的第 42 页。</li>
+</ul>
+<h3 id="指定通道采集寄存器-（CHANNEL-REGISTER）"><a href="#指定通道采集寄存器-（CHANNEL-REGISTER）" class="headerlink" title="指定通道采集寄存器 （CHANNEL REGISTER）"></a>指定通道采集寄存器 （<font style="color:rgb(0,0,0);">CHANNEL REGISTER</font>）</h3><p>该寄存器用于指定通道去采集电压值。但如果在配置寄存器选择了 sequencer ，则该寄存器不用配置。</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750765412643-69e0bd75-0363-4b20-84e4-3be0d02cca97.png"></div>
+
+<p>以下是该寄存器的定义：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750765714330-30a20ecc-2800-49fd-955b-6db1ae96ad89.png"></div>
+
+<h3 id="通道采集范围寄存器组-（INPUT-RANGE-REGISTERS）"><a href="#通道采集范围寄存器组-（INPUT-RANGE-REGISTERS）" class="headerlink" title="通道采集范围寄存器组 （INPUT RANGE REGISTERS）"></a>通道采集范围寄存器组 （<font style="color:rgb(0,0,0);">INPUT RANGE REGISTERS</font>）</h3><p>该寄存器组 0x04~0x07 的作用是指定各通道的采集电压的范围，见以下定义：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750765555066-840e41d0-da90-4c63-bf87-c8bad04b78fe.png"></div>
+
+<p>以上寄存器组的位 9~15 的作用是和《寄存器寻址》所讲的一致。</p>
+<p>以寄存器 0x04 为例，以下是它的定义，指定 V0A~V3A 通道的采集电压范围：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750765877010-c0534bd0-c877-48cd-85aa-9c97cb21b62b.png"></div>
+
+<p>寄存器 0x05 则是指定 V4A~V7A 通道的采集电压范围。</p>
+<p>寄存器 0x06 则是指定 V0B~V3B 通道的采集电压范围。</p>
+<p>寄存器 0x07 则是指定 V4B~V7B 通道的采集电压范围。</p>
+<h3 id="序列栈寄存器组-（SEQUENCER-STACK-REGISTERS）"><a href="#序列栈寄存器组-（SEQUENCER-STACK-REGISTERS）" class="headerlink" title="序列栈寄存器组 （SEQUENCER STACK REGISTERS）"></a>序列栈寄存器组 （<font style="color:rgb(0,0,0);">SEQUENCER STACK REGISTERS</font>）</h3><p>该寄存器组用于指定采集通道来读取电压值，另外还能指定诊断通道来检测 AD7616 的内部电压。</p>
+<p>该寄存器组内的寄存器个数为 32 个，见以下寄存器的定义：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750765579421-2256d0e9-6137-46b0-a1fe-e379c33ad5fd.png"></div>
+
+<p>位 9~15 的作用是和《寄存器寻址》所讲的一致。</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750766409634-af9f00a6-ee10-42f0-b458-bf242f22d015.png"></div>
+
+<p>那么这个寄存器组该如何正确使用？</p>
+<p>虽然说该寄存器组叫序列栈寄存器组，但它和栈的特性无一点关系。你仅需顺着寄存器地址，去指定要读取通道的顺序。比如说，我要按顺序读取 (V0A和V0B) ~ (V7A和V7B) 通道的电压值，则可以这样配置：</p>
+<table>
+<thead>
+<tr>
+<th align="center">寄存器地址</th>
+<th align="center">值（位0~7）</th>
+<th align="center">终止位（位8）</th>
+<th align="center">最终值（位15置位）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">0x20</td>
+<td align="center">0x0000</td>
+<td align="center">0</td>
+<td align="center">0xC000</td>
+</tr>
+<tr>
+<td align="center">0x21</td>
+<td align="center">0x0011</td>
+<td align="center">0</td>
+<td align="center">0xC211</td>
+</tr>
+<tr>
+<td align="center">0x22</td>
+<td align="center">0x0022</td>
+<td align="center">0</td>
+<td align="center">0xC422</td>
+</tr>
+<tr>
+<td align="center">0x23</td>
+<td align="center">0x0033</td>
+<td align="center">0</td>
+<td align="center">0xC633</td>
+</tr>
+<tr>
+<td align="center">0x24</td>
+<td align="center">0x0044</td>
+<td align="center">0</td>
+<td align="center">0xC844</td>
+</tr>
+<tr>
+<td align="center">0x25</td>
+<td align="center">0x0055</td>
+<td align="center">0</td>
+<td align="center">0xCA55</td>
+</tr>
+<tr>
+<td align="center">0x26</td>
+<td align="center">0x0066</td>
+<td align="center">0</td>
+<td align="center">0xCC66</td>
+</tr>
+<tr>
+<td align="center">0x27</td>
+<td align="center">0x0077</td>
+<td align="center"><font style="color:#DF2A3F;">1</font></td>
+<td align="center">0xCF77</td>
+</tr>
+</tbody></table>
+<p>其中终止位对应的是位 SSREN ，表示在此寄存器终止往下遍历，返回到起始处。</p>
+<p>当你根据以上列表配置好寄存器后，AD7616 即可通过此配置，按顺序把 (V0A和V0B) ~ (V7A和V7B) 通道的电压值发出。发出完成后，会再次按之前配置的顺序发出，以此反复。</p>
+<h2 id="操作AD7616"><a href="#操作AD7616" class="headerlink" title="操作AD7616"></a>操作AD7616</h2><h3 id="复位操作"><a href="#复位操作" class="headerlink" title="复位操作"></a>复位操作</h3><p>在操作 AD7616 前需要先给它复位，把 RESET 引脚拉低即可，见以下时序图：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750813496791-8a50d8fc-dae0-4878-8f58-a8b2aabdc569.png"></div>
+
+<p>复位操作分为部分复位和全复位，其中，部分复位是需要拉低 40~500 纳秒，如果超过 500 纳秒，则表示全复位，但全复位至少要拉低 1.2 微秒。</p>
+<p>在引脚<code>RESET</code>拉低期间：</p>
+<ul>
+<li>需要给<code>VCC</code>和<code>VDRIVER</code>上3.3V，至少在<code>RESET</code>拉高前的 1ms 给它们上电。</li>
+<li>需要配置<code>REFSEL</code>、<code>SER/PAR</code>和<code>SER1W</code>等引脚，见以下最小时序范围：</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750814888604-44fc70d8-ba48-4d20-8663-dd1d710b8d5e.png"></div>
+
+<p>在引脚<code>RESET</code>拉高期间：</p>
+<ul>
+<li>需要把已配置<code>REFSEL</code>、<code>SER/PAR</code>和<code>SER1W</code>等引脚，使其 AD7616 接收到这些配置，见以下最小时序范围：</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750816039669-9a0e002a-29a9-4da0-af90-330f01e6c7bd.png"></div>
+
+<ul>
+<li>然后等待 AD7616 配置完成，见以下最小时序范围：</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750816277971-45a336be-2039-4641-a48b-ad890c7f0c1e.png"></div>
+
+<p>另外，部分复位和全复位的区别是，部分复位仅重置以下模块：</p>
+<ul>
+<li>Sequencer</li>
+<li>Digital filter</li>
+<li>SPI</li>
+<li>Both SAR ADCs</li>
+</ul>
+<p>而且在软件模式下，部分复位不会把寄存器重置。</p>
+<blockquote>
+<p>通常来说，都是用全复位来重置 AD7616 。</p>
+</blockquote>
+<h3 id="写寄存器操作"><a href="#写寄存器操作" class="headerlink" title="写寄存器操作"></a>写寄存器操作</h3><p>以下是写寄存器的时序（并行模式），其中<code>DB15 TO DB0</code>包含寄存器地址和寄存器值（详细看《寄存器合集》和《寄存器寻址》）：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750817015666-cbe52f37-3206-4dd5-af2c-551b16c12aff.png"></div>
+
+<p>需要先发出片选信号，把 <code>CS</code>拉低，稍后发送写操作信号，把<code>WR</code>拉低。然后就能发送数据到 AD7616 。</p>
+<h3 id="读寄存器操作"><a href="#读寄存器操作" class="headerlink" title="读寄存器操作"></a>读寄存器操作</h3><p>以下是读寄存器的时序（并行模式），先指定寄存器地址（详细看《寄存器合集》和《寄存器寻址》），把地址通过<code>DB15 TO DB0</code>传输到 AD7616，然后通过<code>DB15 TO DB0</code>读出寄存器值：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750817027716-22bdb6b2-3eca-42da-8bd5-0def1c6769af.png"></div>
+
+<p>每次进行读或写操作时，都需要把<code>CS</code>拉低，然后再根据操作拉低对应的引脚，再操作 <code>DB15 TO DB0</code> 。</p>
+<h3 id="读采集电压值时序（Sequencer）"><a href="#读采集电压值时序（Sequencer）" class="headerlink" title="读采集电压值时序（Sequencer）"></a>读采集电压值时序（Sequencer）</h3><p>当你根据《配置寄存器（C<font style="color:rgb(0,0,0);">ONFIGURATION REGISTER</font>）》和《序列栈寄存器组 （SEQUENCER STACK REGISTERS）》配置好 Sequencer 功能后，即可操控引脚<code>CONVST</code>，根据你配置好的读通道顺序来读取电压值，但是是每读一次 AxV 和 BxV 通道前，需要操控一次<code>CONVST</code>：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750818566297-36ff2cf9-0c4a-4cad-99b3-21589623d13a.png"></div>
+
+<p>另外，可以根据《配置寄存器（C<font style="color:rgb(0,0,0);">ONFIGURATION REGISTER</font>）》使能 Burst 模式后，仅需要操控一次引脚<code>CONVST</code>，即可根据你配置好的读通道顺序，来一次性读取电压值：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750818943223-99b79517-627a-467c-a68b-f1b91cb67a50.png"></div>
+
+<h3 id="使能诊断通道和通道自检（Sequencer）"><a href="#使能诊断通道和通道自检（Sequencer）" class="headerlink" title="使能诊断通道和通道自检（Sequencer）"></a>使能诊断通道和通道自检（Sequencer）</h3><p>在开启 Sequencer 模块后，启用诊断通道和通道自检很简单，仅需在序列栈寄存器的第 4~7 位写入以下值即可：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/device/AD7616学习笔记/1750819721449-b82bac58-7a1d-4664-be7b-2a5ff00bb54b.png"></div>
+
+<p>那么我可以基于在《序列栈寄存器组 （SEQUENCER STACK REGISTERS）》列出表格，继续扩展：</p>
+<table>
+<thead>
+<tr>
+<th align="center">寄存器地址</th>
+<th align="center">值（位0~7）</th>
+<th align="center">终止位（位8）</th>
+<th align="center">最终值（位15置位）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">0x20</td>
+<td align="center">0x0000</td>
+<td align="center">0</td>
+<td align="center">0xC000</td>
+</tr>
+<tr>
+<td align="center">0x21</td>
+<td align="center">0x0011</td>
+<td align="center">0</td>
+<td align="center">0xC211</td>
+</tr>
+<tr>
+<td align="center">0x22</td>
+<td align="center">0x0022</td>
+<td align="center">0</td>
+<td align="center">0xC422</td>
+</tr>
+<tr>
+<td align="center">0x23</td>
+<td align="center">0x0033</td>
+<td align="center">0</td>
+<td align="center">0xC633</td>
+</tr>
+<tr>
+<td align="center">0x24</td>
+<td align="center">0x0044</td>
+<td align="center">0</td>
+<td align="center">0xC844</td>
+</tr>
+<tr>
+<td align="center">0x25</td>
+<td align="center">0x0055</td>
+<td align="center">0</td>
+<td align="center">0xCA55</td>
+</tr>
+<tr>
+<td align="center">0x26</td>
+<td align="center">0x0066</td>
+<td align="center">0</td>
+<td align="center">0xCC66</td>
+</tr>
+<tr>
+<td align="center">0x27</td>
+<td align="center">0x0077</td>
+<td align="center">0</td>
+<td align="center">0xCE77</td>
+</tr>
+<tr>
+<td align="center">0x28</td>
+<td align="center">0x00BB（通道自检）</td>
+<td align="center">0</td>
+<td align="center">0xD0BB</td>
+</tr>
+<tr>
+<td align="center">0x29</td>
+<td align="center">0x0089（VCC+ALDO）</td>
+<td align="center"><font style="color:#DF2A3F;">1</font></td>
+<td align="center">0xD389</td>
+</tr>
+</tbody></table>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Hardware/" rel="tag"># Hardware</a>
+              <a href="/tags/Device/" rel="tag"># Device</a>
+              <a href="/tags/AD7616/" rel="tag"># AD7616</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/06/20/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-%E7%83%A7%E5%BD%95%E5%AE%89%E8%B7%AFFPGA%E5%9B%BA%E4%BB%B6%E9%A9%B1%E5%8A%A8/" rel="prev" title="Linux - 烧录安路FPGA固件驱动">
+                  <i class="fa fa-angle-left"></i> Linux - 烧录安路FPGA固件驱动
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2025/06/27/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9C%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="next" title="内存屏障学习笔记">
+                  内存屏障学习笔记 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

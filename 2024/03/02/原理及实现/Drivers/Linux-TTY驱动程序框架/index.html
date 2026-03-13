@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="TTY驱动程序框架参考资料：  解密TTY 彻底理解Linux的各种终端类型以及概念 Linux终端和Line discipline图解 What Are Teletypes, and Why Were They Used with Computers?">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - TTY驱动程序框架">
+<meta property="og:url" content="http://example.com/2024/03/02/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="TTY驱动程序框架参考资料：  解密TTY 彻底理解Linux的各种终端类型以及概念 Linux终端和Line discipline图解 What Are Teletypes, and Why Were They Used with Computers?">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6/tty_drivers.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6/tty_driver_level.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6/teletype.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6/tty_and_computer.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6/teletype_uart.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6/multi_user.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6/crt.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6/personal_computer.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6/tty_console.png">
+<meta property="article:published_time" content="2024-03-01T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-03-01T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Drivers">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="TTY">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6/tty_drivers.png">
+
+
+<link rel="canonical" href="http://example.com/2024/03/02/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2024/03/02/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6/","path":"2024/03/02/原理及实现/Drivers/Linux-TTY驱动程序框架/","title":"Linux - TTY驱动程序框架"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - TTY驱动程序框架 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6"><span class="nav-number">1.</span> <span class="nav-text">TTY驱动程序框架</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%A1%8C%E8%A7%84%E7%A8%8B%E7%9A%84%E5%BC%95%E5%85%A5"><span class="nav-number">1.1.</span> <span class="nav-text">行规程的引入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6-1"><span class="nav-number">1.2.</span> <span class="nav-text">TTY驱动程序框架</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TTY%E4%BD%93%E7%B3%BB%E4%B8%AD%E8%AE%BE%E5%A4%87%E8%8A%82%E7%82%B9%E7%9A%84%E5%B7%AE%E5%88%AB"><span class="nav-number">2.</span> <span class="nav-text">TTY体系中设备节点的差别</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%82%BB%E5%82%BB%E5%88%86%E4%B8%8D%E6%B8%85"><span class="nav-number">2.1.</span> <span class="nav-text">傻傻分不清</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9B%B8%E5%85%B3%E5%8E%86%E5%8F%B2"><span class="nav-number">2.2.</span> <span class="nav-text">相关历史</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%94%B5%E4%BC%A0%E6%9C%BAteletype"><span class="nav-number">2.2.1.</span> <span class="nav-text">电传机teletype</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%AE%A1%E7%AE%97%E6%9C%BA%E9%9C%80%E8%A6%81%E6%8E%A7%E5%88%B6"><span class="nav-number">2.2.2.</span> <span class="nav-text">计算机需要控制</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8teletype"><span class="nav-number">2.2.2.1.</span> <span class="nav-text">使用teletype</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#teletype%E8%A2%AB%E6%B7%98%E6%B1%B0%E4%BA%86"><span class="nav-number">2.2.2.2.</span> <span class="nav-text">teletype被淘汰了</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E4%B8%AA%E4%BA%BA%E7%94%B5%E8%84%91%E5%92%8C%E8%99%9A%E6%8B%9F%E7%BB%88%E7%AB%AF"><span class="nav-number">2.2.2.3.</span> <span class="nav-text">个人电脑和虚拟终端</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%A8Ubuntu%E4%B8%8A%E6%BC%94%E7%A4%BA"><span class="nav-number">2.3.</span> <span class="nav-text">在Ubuntu上演示</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%90%84%E7%B1%BB%E8%AE%BE%E5%A4%87%E8%8A%82%E7%82%B9%E7%9A%84%E5%B7%AE%E5%88%AB"><span class="nav-number">2.3.1.</span> <span class="nav-text">各类设备节点的差别</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#dev-ttyN-N-1-2-3-%E2%80%A6"><span class="nav-number">2.3.2.</span> <span class="nav-text">&#x2F;dev&#x2F;ttyN(N&#x3D;1,2,3,…)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#dev-tty0"><span class="nav-number">2.3.3.</span> <span class="nav-text">&#x2F;dev&#x2F;tty0</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#dev-tty"><span class="nav-number">2.3.4.</span> <span class="nav-text">&#x2F;dev&#x2F;tty</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Terminal%E5%92%8CConsole%E7%9A%84%E5%B7%AE%E5%88%AB"><span class="nav-number">2.3.5.</span> <span class="nav-text">Terminal和Console的差别</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#dev-console"><span class="nav-number">2.3.6.</span> <span class="nav-text">&#x2F;dev&#x2F;console</span></a></li></ol></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2024/03/02/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - TTY驱动程序框架 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - TTY驱动程序框架
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2024-03-02 00:00:00" itemprop="dateCreated datePublished" datetime="2024-03-02T00:00:00+08:00">2024-03-02</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>7 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="TTY驱动程序框架"><a href="#TTY驱动程序框架" class="headerlink" title="TTY驱动程序框架"></a>TTY驱动程序框架</h2><p>参考资料：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/liqiuhao/p/9031803.html">解密TTY</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/dog250/article/details/78766716">彻底理解Linux的各种终端类型以及概念</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/dog250/article/details/78818612">Linux终端和Line discipline图解</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.howtogeek.com/727213/what-are-teletypes-and-why-were-they-used-with-computers/">What Are Teletypes, and Why Were They Used with Computers?</a></li>
+</ul>
+<span id="more"></span>
+
+<h3 id="行规程的引入"><a href="#行规程的引入" class="headerlink" title="行规程的引入"></a>行规程的引入</h3><div align="center"><img src="/images/原理及实现/Drivers/Linux-TTY驱动程序框架/tty_drivers.png"></div>
+
+<p>以下文字引用自参考资料<strong>解密TTY</strong>：</p>
+<p>大多数用户都会在输入时犯错，所以退格键会很有用。这当然可以由应用程序本身来实现，但是根据UNIX设计“哲学”，应用程序应尽可能保持简单。为了方便起见，操作系统提供了一个编辑缓冲区和一些基本的编辑命令（退格，清除单个单词，清除行，重新打印），这些命令在行规范（line discipline）内默认启用。高级应用程序可以通过将行规范设置为原始模式（raw mode）而不是默认的成熟或准则模式（cooked and canonical）来禁用这些功能。大多数交互程序（编辑器，邮件客户端，shell，及所有依赖curses或readline的程序）均以原始模式运行，并自行处理所有的行编辑命令。行规范还包含字符回显和回车换行（译者注：\r\n 和 \n）间自动转换的选项。如果你喜欢，可以把它看作是一个原始的内核级sed(1)。</p>
+<p>另外，内核提供了几种不同的行规范。一次只能将其中一个连接到给定的串行设备。行规范的默认规则称为N_TTY（drivers&#x2F;char&#x2F;n_tty.c，如果你想继续探索的话）。其他的规则被用于其他目的，例如管理数据包交换（ppp，IrDA，串行鼠标），但这不在本文的讨论范围之内。</p>
+<h3 id="TTY驱动程序框架-1"><a href="#TTY驱动程序框架-1" class="headerlink" title="TTY驱动程序框架"></a>TTY驱动程序框架</h3><div align="center"><img src="/images/原理及实现/Drivers/Linux-TTY驱动程序框架/tty_driver_level.png"></div>
+
+<h2 id="TTY体系中设备节点的差别"><a href="#TTY体系中设备节点的差别" class="headerlink" title="TTY体系中设备节点的差别"></a>TTY体系中设备节点的差别</h2><p>参考资料</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://www.cnblogs.com/liqiuhao/p/9031803.html">解密TTY</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/dog250/article/details/78766716">彻底理解Linux的各种终端类型以及概念</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.csdn.net/dog250/article/details/78818612">Linux终端和Line discipline图解</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.howtogeek.com/727213/what-are-teletypes-and-why-were-they-used-with-computers/">What Are Teletypes, and Why Were They Used with Computers?</a></li>
+</ul>
+<h3 id="傻傻分不清"><a href="#傻傻分不清" class="headerlink" title="傻傻分不清"></a>傻傻分不清</h3><p>&#x2F;dev&#x2F;ttyS0、&#x2F;dev&#x2F;ttySAC0、&#x2F;dev&#x2F;tty、&#x2F;dev&#x2F;tty0、&#x2F;dev&#x2F;tty1、&#x2F;dev&#x2F;console，它们有什么差别？</p>
+<table>
+<thead>
+<tr>
+<th>设备节点</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>&#x2F;dev&#x2F;ttyS0、&#x2F;dev&#x2F;ttySAC0</td>
+<td>串口</td>
+</tr>
+<tr>
+<td>&#x2F;dev&#x2F;tty1、&#x2F;dev&#x2F;tty2、&#x2F;dev&#x2F;tty3、……</td>
+<td>虚拟终端设备节点</td>
+</tr>
+<tr>
+<td>&#x2F;dev&#x2F;tty0</td>
+<td>前台终端</td>
+</tr>
+<tr>
+<td>&#x2F;dev&#x2F;tty</td>
+<td>程序自己的终端，可能是串口、也可能是虚拟终端</td>
+</tr>
+<tr>
+<td>&#x2F;dev&#x2F;console</td>
+<td>控制台，又内核的cmdline参数确定</td>
+</tr>
+</tbody></table>
+<p>TTY&#x2F;Terminal&#x2F;Console&#x2F;UART，它们有什么差别？</p>
+<table>
+<thead>
+<tr>
+<th>术语</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>TTY</td>
+<td>来自teletype，最古老的输入输出设备，现在用来表示内核的一套驱动系统</td>
+</tr>
+<tr>
+<td>Terminal</td>
+<td>终端，暗含远端之意，也是一个输入输出设备，可能是真实设备，也可能是虚拟设备</td>
+</tr>
+<tr>
+<td>Console</td>
+<td>控制台，含控制之意，也是一种Terminal，权限更大，可以查看内核打印信息</td>
+</tr>
+<tr>
+<td>UART</td>
+<td>串口，它的驱动程序包含在TTY驱动体系之内</td>
+</tr>
+</tbody></table>
+<h3 id="相关历史"><a href="#相关历史" class="headerlink" title="相关历史"></a>相关历史</h3><h4 id="电传机teletype"><a href="#电传机teletype" class="headerlink" title="电传机teletype"></a>电传机teletype</h4><p>teletype，更准确地说是teleprinter，是一种通信设备，可以用来发送、接收文本信息。<br>teletype是一家公司的名字，它生产的teleprinter实在太有名，结果公司名变成了这类产品的名字：teleprinter都被称为teletype了。</p>
+<div align="center"><img src="/images/原理及实现/Drivers/Linux-TTY驱动程序框架/teletype.png"></div>
+
+<p>teletype被用来传输商业电报，想像一下：</p>
+<ul>
+<li>把两台teletype的线缆接在一起，或者使用无线技术连接两台teletype</li>
+<li>这边打字，另一边就可以接收到信息并通过纸张打印出来</li>
+<li>注意：这两台teletype可以离得很远</li>
+</ul>
+<h4 id="计算机需要控制"><a href="#计算机需要控制" class="headerlink" title="计算机需要控制"></a>计算机需要控制</h4><h5 id="使用teletype"><a href="#使用teletype" class="headerlink" title="使用teletype"></a>使用teletype</h5><p>teletype的简称就是TTY。<br>最古老的计算机支持的是批处理模型：</p>
+<ul>
+<li>怎么编程？卡片打孔，然后喂给计算机。</li>
+<li>怎么得到输出信息？计算机根据结果在卡片上打孔，需要专人翻译这些卡片。</li>
+</ul>
+<p>如果把两台teletype的其中一台，替换为计算机，不就更方便了吗？可以即时输入指令、即时看到结果。</p>
+<p>于是teletype变成了计算机的终端、Terminal，远端之意。</p>
+<p>teletype和计算机可以放在一个房间里，也可以放在很远很远的地方。</p>
+<div align="center"><img src="/images/原理及实现/Drivers/Linux-TTY驱动程序框架/tty_and_computer.png"></div>
+
+
+<p>teletype是通过串口(UART)跟计算机相连的：</p>
+<div align="center"><img src="/images/原理及实现/Drivers/Linux-TTY驱动程序框架/teletype_uart.png"></div>
+
+
+<p>那时计算机很贵，发展出多用户系统，多个用户可以分时使用计算机，降低成本：</p>
+<div align="center"><img src="/images/原理及实现/Drivers/Linux-TTY驱动程序框架/multi_user.png"></div>
+
+
+
+
+<h5 id="teletype被淘汰了"><a href="#teletype被淘汰了" class="headerlink" title="teletype被淘汰了"></a>teletype被淘汰了</h5><p>1960年代，CRT显示器+键盘，替代了teletype：</p>
+<ul>
+<li>显示器替代了纸张</li>
+<li>速度更快</li>
+<li>成本更低</li>
+<li>它仍然只是一个终端(terminal)，通过线缆连接到计算机</li>
+<li>虽然不再是teletype，但是它的驱动程序仍然叫做TTY</li>
+</ul>
+<div align="center"><img src="/images/原理及实现/Drivers/Linux-TTY驱动程序框架/crt.png"></div>
+
+
+<h5 id="个人电脑和虚拟终端"><a href="#个人电脑和虚拟终端" class="headerlink" title="个人电脑和虚拟终端"></a>个人电脑和虚拟终端</h5><p>上图长得像电脑，但是它只是一个终端，它要连接到计算机才能工作。</p>
+<p>这才是电脑：计算单元(CPU、硬盘、内存等等)、终端(键盘、显示器)都齐全了：</p>
+<div align="center"><img src="/images/原理及实现/Drivers/Linux-TTY驱动程序框架/personal_computer.png"></div>
+
+<p>硬件上只有一套键盘、显示器。</p>
+<p>但是在Linux系统中，我们可以打开多个命令行程序(也叫terminal、shell)，每个程序都对应一个”虚拟终端”。</p>
+<h3 id="在Ubuntu上演示"><a href="#在Ubuntu上演示" class="headerlink" title="在Ubuntu上演示"></a>在Ubuntu上演示</h3><p>按住键盘：Ctrl+Alt+F3启动一个虚拟终端，Ctrl+Alt+F4再启动一个虚拟终端。</p>
+<p>在里面切换为root用户：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">sudo passwd root // 如果su root不成功，就先设置root密码</span><br><span class="line">su root</span><br></pre></td></tr></table></figure>
+
+
+
+<h4 id="各类设备节点的差别"><a href="#各类设备节点的差别" class="headerlink" title="各类设备节点的差别"></a>各类设备节点的差别</h4><p>由于历史原因，下图中两条红线之内的代码被称为TTY子系统。</p>
+<p>它既支持UART，也支持键盘、显示器，还支持更复杂的功能(比如伪终端)。</p>
+<div align="center"><img src="/images/原理及实现/Drivers/Linux-TTY驱动程序框架/tty_console.png"></div>
+
+<h4 id="dev-ttyN-N-1-2-3-…"><a href="#dev-ttyN-N-1-2-3-…" class="headerlink" title="&#x2F;dev&#x2F;ttyN(N&#x3D;1,2,3,…)"></a>&#x2F;dev&#x2F;ttyN(N&#x3D;1,2,3,…)</h4><p>&#x2F;dev&#x2F;tty3、&#x2F;dev&#x2F;tty4：表示某个程序使用的虚拟终端</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">// 在tty3、tty4终端来回切换，执行命令</span><br><span class="line"></span><br><span class="line">echo hello &gt; /dev/tty3</span><br><span class="line">echo hi    &gt; /dev/tty4</span><br></pre></td></tr></table></figure>
+
+<h4 id="dev-tty0"><a href="#dev-tty0" class="headerlink" title="&#x2F;dev&#x2F;tty0"></a>&#x2F;dev&#x2F;tty0</h4><p>&#x2F;dev&#x2F;tty0：表示前台程序的虚拟终端</p>
+<ul>
+<li><p>你正在操作的界面，就是前台程序</p>
+</li>
+<li><p>其他后台程序访问&#x2F;dev&#x2F;tty0的话，就是访问前台程序的终端，切换前台程序时，&#x2F;dev&#x2F;tty0是变化的</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">// 1. 在tty3终端执行如下命令</span><br><span class="line">// 2. 然后在tty3、tty4来回切换</span><br><span class="line"></span><br><span class="line">while [ 1 ]; do echo msg_from_tty3 &gt; /dev/tty0; sleep 5; done</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h4 id="dev-tty"><a href="#dev-tty" class="headerlink" title="&#x2F;dev&#x2F;tty"></a>&#x2F;dev&#x2F;tty</h4><p>&#x2F;dev&#x2F;tty表示本程序的终端，可能是虚拟终端，也可能是真实的中断。</p>
+<p>程序A在前台、后台间切换，它自己的&#x2F;dev&#x2F;tty都不会变。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">// 1. 在tty3终端执行如下命令</span><br><span class="line">// 2. 然后在tty3、tty4来回切换</span><br><span class="line"></span><br><span class="line">while [ 1 ]; do echo msg_from_tty3 &gt; /dev/tty; sleep 5; done</span><br></pre></td></tr></table></figure>
+
+<h4 id="Terminal和Console的差别"><a href="#Terminal和Console的差别" class="headerlink" title="Terminal和Console的差别"></a>Terminal和Console的差别</h4><p>Terminal含有远端的意思，中文为：终端。Console翻译为控制台，可以理解为权限更大、能查看更多信息。</p>
+<p>比如我们可以在Console上看到内核的打印信息，从这个角度上看：</p>
+<ul>
+<li>Console是某一个Terminal</li>
+<li>Terminal并不都是Console。</li>
+<li>我们可以从多个Terminal中选择某一个作为Console</li>
+<li>很多时候，两个概念混用，并无明确的、官方的定义</li>
+</ul>
+<h4 id="dev-console"><a href="#dev-console" class="headerlink" title="&#x2F;dev&#x2F;console"></a>&#x2F;dev&#x2F;console</h4><p>选哪个？内核的打印信息从哪个设备上显示出来？<br>可以通过内核的cmdline来指定，<br>比如: console&#x3D;ttyS0 console&#x3D;tty<br>我不想去分辨这个设备是串口还是虚拟终端，<br>有没有办法得到这个设备？<br>有！通过&#x2F;dev&#x2F;console！<br>console&#x3D;ttyS0时：&#x2F;dev&#x2F;console就是ttyS0<br>console&#x3D;tty时：&#x2F;dev&#x2F;console就是前台程序的虚拟终端<br>console&#x3D;tty0时：&#x2F;dev&#x2F;console就是前台程序的虚拟终端<br>console&#x3D;ttyN时：&#x2F;dev&#x2F;console就是&#x2F;dev&#x2F;ttyN<br>console有多个取值时，使用最后一个取值来判断</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Drivers/" rel="tag"># Drivers</a>
+              <a href="/tags/TTY/" rel="tag"># TTY</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/02/16/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-signal%E6%9C%BA%E5%88%B6%E6%B5%85%E6%9E%90/" rel="prev" title="Linux - signal机制浅析（基于 Linux 2.4.22）">
+                  <i class="fa fa-angle-left"></i> Linux - signal机制浅析（基于 Linux 2.4.22）
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2024/03/13/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E5%AF%B9poll()%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E7%9A%84%E6%B5%85%E6%9E%90/" rel="next" title="Linux - 对poll()实现原理的浅析（内核版本 4.9.88）">
+                  Linux - 对poll()实现原理的浅析（内核版本 4.9.88） <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

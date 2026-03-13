@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="参考参考文档：https:&#x2F;&#x2F;blog.csdn.net&#x2F;wending1986&#x2F;article&#x2F;details&#x2F;106837597https:&#x2F;&#x2F;blog.csdn.net&#x2F;hexiaolong2009&#x2F;article&#x2F;details&#x2F;79190789https:&#x2F;&#x2F;blog.csdn.net&#x2F;hexiaolong2009&#x2F;article&#x2F;details&#x2F;79319512">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="LCD学习笔记">
+<meta property="og:url" content="http://example.com/2024/05/14/Hardware/device/LCD%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="参考参考文档：https:&#x2F;&#x2F;blog.csdn.net&#x2F;wending1986&#x2F;article&#x2F;details&#x2F;106837597https:&#x2F;&#x2F;blog.csdn.net&#x2F;hexiaolong2009&#x2F;article&#x2F;details&#x2F;79190789https:&#x2F;&#x2F;blog.csdn.net&#x2F;hexiaolong2009&#x2F;article&#x2F;details&#x2F;79319512">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/Hardware/device/LCD%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/lcd_pixels.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/LCD%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/rgb.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/LCD%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/framebuffer.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/LCD%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/lcd_hardware_block.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/LCD%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/8080.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/LCD%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/tft_rgb_sch.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/LCD%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/area_proch.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/LCD%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/h_timing.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/LCD%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/v_timing.png">
+<meta property="og:image" content="http://example.com/images/Hardware/device/LCD%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/tear_effect1.gif">
+<meta property="og:image" content="http://example.com/images/Hardware/device/LCD%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/tear_effect2.gif">
+<meta property="article:published_time" content="2024-05-13T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-05-13T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Device">
+<meta property="article:tag" content="Hardware">
+<meta property="article:tag" content="LCD">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/Hardware/device/LCD%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/lcd_pixels.png">
+
+
+<link rel="canonical" href="http://example.com/2024/05/14/Hardware/device/LCD%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2024/05/14/Hardware/device/LCD%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/","path":"2024/05/14/Hardware/device/LCD学习笔记/","title":"LCD学习笔记"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>LCD学习笔记 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">1.</span> <span class="nav-text">参考</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%83%8F%E7%B4%A0%E7%82%B9%EF%BC%88%E5%88%86%E8%BE%A8%E7%8E%87%EF%BC%89"><span class="nav-number">2.</span> <span class="nav-text">像素点（分辨率）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%83%8F%E7%B4%A0%E9%A2%9C%E8%89%B2%E7%9A%84%E8%A1%A8%E7%A4%BA"><span class="nav-number">3.</span> <span class="nav-text">像素颜色的表示</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%8E%E4%B9%88%E6%8A%8A%E9%A2%9C%E8%89%B2%E5%8F%91%E7%BB%99LCD"><span class="nav-number">4.</span> <span class="nav-text">怎么把颜色发给LCD</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TFT-RGB-%E6%8E%A5%E5%8F%A3%E5%AE%9E%E4%BE%8B"><span class="nav-number">5.</span> <span class="nav-text">TFT-RGB 接口实例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#LCD-%E6%B6%88%E9%9A%90%E5%8C%BA"><span class="nav-number">6.</span> <span class="nav-text">LCD 消隐区</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Display-Timings-for-LCD"><span class="nav-number">7.</span> <span class="nav-text">Display Timings for LCD</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#LCD%E6%98%BE%E7%A4%BA%E5%BC%82%E5%B8%B8%E5%88%86%E6%9E%90-%E2%80%94%E2%80%94-%E6%92%95%E8%A3%82-tear-effect"><span class="nav-number">8.</span> <span class="nav-text">LCD显示异常分析 —— 撕裂(tear effect)</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2024/05/14/Hardware/device/LCD%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="LCD学习笔记 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          LCD学习笔记
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2024-05-14 00:00:00" itemprop="dateCreated datePublished" datetime="2024-05-14T00:00:00+08:00">2024-05-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Hardware/" itemprop="url" rel="index"><span itemprop="name">Hardware</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2.2k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>8 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>参考文档：<br><a target="_blank" rel="noopener" href="https://blog.csdn.net/wending1986/article/details/106837597">https://blog.csdn.net/wending1986/article/details/106837597</a><br><a target="_blank" rel="noopener" href="https://blog.csdn.net/hexiaolong2009/article/details/79190789">https://blog.csdn.net/hexiaolong2009/article/details/79190789</a><br><a target="_blank" rel="noopener" href="https://blog.csdn.net/hexiaolong2009/article/details/79319512">https://blog.csdn.net/hexiaolong2009/article/details/79319512</a></p>
+<span id="more"></span>
+
+<h2 id="像素点（分辨率）"><a href="#像素点（分辨率）" class="headerlink" title="像素点（分辨率）"></a>像素点（分辨率）</h2><p>LCD由一个一个像素组成：每行有xres个像素，有yres行，它的分辨率是：xres * yres。</p>
+<div align="center"><img src="/images/Hardware/device/LCD学习笔记/lcd_pixels.png"></div>
+
+<h2 id="像素颜色的表示"><a href="#像素颜色的表示" class="headerlink" title="像素颜色的表示"></a>像素颜色的表示</h2><p>用红绿蓝三颜色来表示，可以用24位数据来表示红绿蓝，也可以用16位等等格式，比如：</p>
+<ul>
+<li>bpp：bits per pixel，每个像素用多少位来表示</li>
+<li>24bpp：实际上会用到32位，其中8位未使用，其余24位中分别用8位表示红(R)、绿(G)、蓝(B)<blockquote>
+<p>目的是 4 字节对齐。</p>
+</blockquote>
+</li>
+<li>16bpp：有rbg565，rgb555<ul>
+<li>rgb565：用5位表示红、6位表示绿、5位表示蓝</li>
+<li>rgb555：16位数据中用5位表示红、5位表示绿、5位表示蓝，浪费一位</li>
+</ul>
+</li>
+</ul>
+<div align="center"><img src="/images/Hardware/device/LCD学习笔记/rgb.png"></div>
+
+<blockquote>
+<p>rgb555 基本不用了。</p>
+</blockquote>
+<h2 id="怎么把颜色发给LCD"><a href="#怎么把颜色发给LCD" class="headerlink" title="怎么把颜色发给LCD"></a>怎么把颜色发给LCD</h2><p>假设每个像素的颜色用16位来表示，那么一个LCD的所有像素点假设有xres * y res个，<br>需要的内存为：xres * yres * 16 &#x2F; 8，也就是要设置所有像素的颜色，需要这么大小的内存。<br>这块内存就被称为framebuffer：</p>
+<ul>
+<li>Framebuffer中每块数据对应一个像素</li>
+<li>每块数据的大小可能是16位、32位，这跟LCD上像素的颜色格式有关</li>
+<li>设置好LCD硬件后，只需要把颜色数据写入Framebuffer即可</li>
+</ul>
+<div align="center"><img src="/images/Hardware/device/LCD学习笔记/framebuffer.png"></div>
+
+<p>lcd 设备的接口有很多，比如：LVDS 接口、RGB 接口和 MIPI-DSI 接口等。但是现在有一个标准：</p>
+<div align="center"><img src="/images/Hardware/device/LCD学习笔记/lcd_hardware_block.png"></div>
+
+<p>在 MCU&#x2F;MPU 芯片中，这个标准，或者说叫框架被集成在一起，它被称为 LCM 。MCU&#x2F;MPU 使用 CS、RD、WR、Data Bus 和 CMD 引脚连接 LCM ，这些引脚被集合在一起，称为 8080 接口。</p>
+<div align="center"><img src="/images/Hardware/device/LCD学习笔记/8080.png"></div>
+
+<p>由图可知，LCD 显示内存（显存）和 LCD 控制器集成为芯片。<br>这种硬件框架有一个缺点，就是分辨率不能太高，因为传输速率有限。</p>
+<p>在 SoC 芯片中，这个框架是分开来的，其中，内存可以是 DDR ，仅需为 LCD 芯片提供基地址和内存大小即可；LCD 控制器可以在 SoC 芯片的核心板内。<br>这个标准在 SoC 芯片被称为 TFT-RGB 。</p>
+<blockquote>
+<p>下列重点说明在 SoC 芯片的 LCD ，即 TFT-RGB。</p>
+</blockquote>
+<h2 id="TFT-RGB-接口实例"><a href="#TFT-RGB-接口实例" class="headerlink" title="TFT-RGB 接口实例"></a>TFT-RGB 接口实例</h2><div align="center"><img src="/images/Hardware/device/LCD学习笔记/tft_rgb_sch.png"></div>
+
+<p>如图所示，这是 RGB 接口的硬件图。其中：</p>
+<ul>
+<li>D_LCD_DATA0~D_LCD_DATA23 是 <strong>RGB 三组线</strong> 。</li>
+<li>B_LCD_HSYNC 是水平同步引脚，又或者说是行同步引脚。</li>
+<li>B_LCD_VSYNC 是垂直同步引脚，又或者说是场同步引脚（换句话说就是：一场 &#x3D; 一帧）。</li>
+<li>B_LCD_PCLK 是像素时钟信号引脚。</li>
+<li>B_LCD_DE 是数据使能引脚。</li>
+</ul>
+<p>从<strong>像素时钟信号</strong>详细说起，从显存每读取一个像素点（如 24bpp ，4字节）后，LCD 控制器每传输一个像素点到 LCD 屏幕，都会耗费一个像素时钟信号。它传输像素点是先从行开始，每传输完一行像素点后，即 xres 个像素点后，发出 HSYNC 信号，表示跳到下一行继续传输；还有发出 DE 信号，表示这一行的像素点传输完成，LCD 屏幕可以使能这一行的像素点。当传输完 yres 行像素点后，此时会发出 VSYNC 信号，表示一帧的图像传输完成，此时需要为下一帧做准备，即从第 0 行的第 0 个像素点再次开始传输，这一操作叫作“复位”。</p>
+<h2 id="LCD-消隐区"><a href="#LCD-消隐区" class="headerlink" title="LCD 消隐区"></a>LCD 消隐区</h2><p>通过以上的讲解可知，把像素点传输到 LCD 屏幕是很简单的，先从左到右，再从上到下传输像素点到 LCD 屏幕。但是“理想是美好的，现实是骨感的”。LCD 控制器把像素点传输到 LCD 屏幕是一回事，LCD 屏幕显示这些像素点又是另一回事了。<br>所以由此可知，每传输一行像素点后，都需要一段等待时间确保 LCD 屏幕显示一行像素完毕，即同步 LCD 屏幕显示像素完成。等等待时间过去后再传输下一行的像素点到 LCD 屏幕。<br>其中，等待时间的单位是像素时钟 PCLK 。<br>还有，传输完一帧的像素点后也需要等待时间进行同步，这是确保复位完成。</p>
+<blockquote>
+<p>还有其它作用，比如亮度调节信号，或对比度调节信号在 LCD 屏幕接受并使能完成。</p>
+</blockquote>
+<p>上诉的操作用一个专业术语描述：消隐区。英文名为 porch area 。<br>根据上述的解释，下列贴出一张图片：</p>
+<div align="center"><img src="/images/Hardware/device/LCD学习笔记/area_proch.png"></div>
+
+<p>消隐区分为水平消隐区和垂直消隐区。水平消隐区是针对行像素的同步，而垂直消隐区是针对帧像素的同步。<br>这里对图中的术语做解释：</p>
+<ul>
+<li>水平消隐区：<ol>
+<li>HBP：hback-porch，注意单词 “back” ，它更多地表示它是属于上一行像素的等待时间。用于确保上一行像素在 LCD 屏幕显示完成以及确保 LCD 控制器已跳转到当前行开始传输像素。</li>
+<li>HActive Pixel：对应 xres 。</li>
+<li>HFP：hfront-porch，注意单词 “front” ，表示它是属于当前一行像素的等待时间，确保当前行像素已经传输到 LCD 屏幕。 </li>
+<li>HSYNC：行同步信号使能的时间段。</li>
+</ol>
+</li>
+<li>垂直消隐区：<ol>
+<li>VBP：vback-porch，与 HBP 类似，它的作用是确保上一帧的像素在 LCD 屏幕显示完成，还有确保复位完成。</li>
+<li>VActive Pixel：对应 yres。</li>
+<li>VFP：vfront-porch，与 BFP 类似，它的作用是确保当前帧像素已经传输到 LCD 屏幕。</li>
+<li>VSYNC：场同步信号使能的时间段。</li>
+</ol>
+</li>
+</ul>
+<blockquote>
+<p>后续在下列的图可知道，DE 信号在 HFP+HSYNC+HBP 期间使能。</p>
+</blockquote>
+<h2 id="Display-Timings-for-LCD"><a href="#Display-Timings-for-LCD" class="headerlink" title="Display Timings for LCD"></a>Display Timings for LCD</h2><p>知道消隐区之后，我们继续思考。前文说过，一个像素对应的一个像素时钟信号。那么消隐区中的 HBP、HFP 和 HSYNC 等是否也是需要 PCLK 来驱动？这是肯定的。见下列 LCD 时序图：</p>
+<ul>
+<li>水平时序图：</li>
+</ul>
+<div align="center"><img src="/images/Hardware/device/LCD学习笔记/h_timing.png"></div>
+
+<ul>
+<li>垂直时序图：</li>
+</ul>
+<div align="center"><img src="/images/Hardware/device/LCD学习笔记/v_timing.png"></div>
+
+<blockquote>
+<p>上述图示的信号极性都为 0 有效。</p>
+</blockquote>
+<p>在水平时序图中，ENAB 对应的是 DE 引脚发出的信号。而且在消隐阶段，RGB 三组引脚都被拉低。</p>
+<p>在 Linux 设备树中，LCD 的时序这样表示的：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">disp_timings: display-timings &#123;</span><br><span class="line">	native-mode = &lt;&amp;timing0&gt;;</span><br><span class="line">	timing0: timing0 &#123;</span><br><span class="line">		clock-frequency = &lt;<span class="number">65000000</span>&gt;;</span><br><span class="line">		hactive = &lt;<span class="number">720</span>&gt;;</span><br><span class="line">		vactive = &lt;<span class="number">1280</span>&gt;;</span><br><span class="line"></span><br><span class="line">		hfront-porch = &lt;<span class="number">48</span>&gt;;</span><br><span class="line">		hsync-len = &lt;<span class="number">8</span>&gt;;</span><br><span class="line">		hback-porch = &lt;<span class="number">52</span>&gt;;</span><br><span class="line"></span><br><span class="line">		vfront-porch = &lt;<span class="number">16</span>&gt;;</span><br><span class="line">		vsync-len = &lt;<span class="number">6</span>&gt;;</span><br><span class="line">		vback-porch = &lt;<span class="number">15</span>&gt;;</span><br><span class="line"></span><br><span class="line">		hsync-active = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">		vsync-active = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">		de-active = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">		pixelclk-active = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>看节点 timing0 的属性，<br>属性 <code>clock-frequency</code> 表示一秒内的发出多少像素时钟信号。<br>水平消隐区的 <code>HFP</code>、<code>HL</code> 和 <code>HBP</code> 根据一行的像素点个数调整；垂直消隐区的 <code>VFP</code>、<code>VL</code> 和 <code>VBP</code> 根据一帧的像素行个数调整。这些属性的数值的单位都是像素时钟信号。<br>属性 <code>hsync-active</code>、<code>vsync-active</code>、<code>de-active</code> 和 <code>pixelclk-active</code> 表示各类信号的极性。</p>
+<h2 id="LCD显示异常分析-——-撕裂-tear-effect"><a href="#LCD显示异常分析-——-撕裂-tear-effect" class="headerlink" title="LCD显示异常分析 —— 撕裂(tear effect)"></a>LCD显示异常分析 —— 撕裂(tear effect)</h2><p>屏幕撕裂的原因是：CPU 在 GRAM 写像素（如：bpp24，4字节）的速率，与 LCD 控制器从该 GRAM 读像素的速率不匹配。<br>通常来说，实际情况是 LCD 控制器从 GRAM 读的速率 R 与 CPU 往 GRAM 写的速率 W 更快。</p>
+<blockquote>
+<p>W 和 R 的速率最少保持：W &gt; 1&#x2F;2*R</p>
+</blockquote>
+<div align="center"><img src="/images/Hardware/device/LCD学习笔记/tear_effect1.gif"></div>
+
+<p>在 LCD 控制器与 CPU 之间，有一个引脚 TE ，这个引脚由 LCD 控制器控制。当 LCD 显示完一帧的图像后，通过 TE 引脚发出信号，告诉驱动程序可以在 GRAM 更新下一帧图像。<br>但是这样还是不够，为了解决上述问题，预留了 TE Output Line寄存器，该寄存器的作用就是用来调节 TE 信号（又叫 FMARK 信号）的输出位置。默认情况下，该寄存器的值为 0 ，即 DriverIC 内部刷新时的 VSYNC 期间。那么对于上述情况，我们只需要将 TE Output Line 的值设置为 VSYNC+VBP 的值即可。</p>
+<div align="center"><img src="/images/Hardware/device/LCD学习笔记/tear_effect2.gif"></div>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Hardware/" rel="tag"># Hardware</a>
+              <a href="/tags/Device/" rel="tag"># Device</a>
+              <a href="/tags/LCD/" rel="tag"># LCD</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/05/13/Skill/normal/Linux-vi%E5%92%8Cvim%E6%93%8D%E4%BD%9C/" rel="prev" title="Linux - vi和vim操作记录">
+                  <i class="fa fa-angle-left"></i> Linux - vi和vim操作记录
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2024/05/18/Hardware/device/%E5%B7%AE%E5%88%86%E4%BF%A1%E5%8F%B7LVDS%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="next" title="差分信号LVDS学习笔记">
+                  差分信号LVDS学习笔记 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

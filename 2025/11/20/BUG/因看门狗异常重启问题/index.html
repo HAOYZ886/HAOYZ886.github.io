@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="应用环境硬件配置套板有一个外部看门狗 SGM706 ，要求在 1.6 秒内喂狗，喂狗方式是上升沿和下降沿，SoC 仅用 GPIO PA6 与看门狗连接，该 pin 脚用于喂狗：">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="因看门狗异常重启问题">
+<meta property="og:url" content="http://example.com/2025/11/20/BUG/%E5%9B%A0%E7%9C%8B%E9%97%A8%E7%8B%97%E5%BC%82%E5%B8%B8%E9%87%8D%E5%90%AF%E9%97%AE%E9%A2%98/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="应用环境硬件配置套板有一个外部看门狗 SGM706 ，要求在 1.6 秒内喂狗，喂狗方式是上升沿和下降沿，SoC 仅用 GPIO PA6 与看门狗连接，该 pin 脚用于喂狗：">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/BUG/%E5%9B%A0%E7%9C%8B%E9%97%A8%E7%8B%97%E5%BC%82%E5%B8%B8%E9%87%8D%E5%90%AF%E9%97%AE%E9%A2%98/SGM706%E7%BB%93%E6%9E%84.png">
+<meta property="og:image" content="http://example.com/images/BUG/%E5%9B%A0%E7%9C%8B%E9%97%A8%E7%8B%97%E5%BC%82%E5%B8%B8%E9%87%8D%E5%90%AF%E9%97%AE%E9%A2%98/user_program.png">
+<meta property="og:image" content="http://example.com/images/BUG/%E5%9B%A0%E7%9C%8B%E9%97%A8%E7%8B%97%E5%BC%82%E5%B8%B8%E9%87%8D%E5%90%AF%E9%97%AE%E9%A2%98/system_program.png">
+<meta property="og:image" content="http://example.com/images/BUG/%E5%9B%A0%E7%9C%8B%E9%97%A8%E7%8B%97%E5%BC%82%E5%B8%B8%E9%87%8D%E5%90%AF%E9%97%AE%E9%A2%98/interrupts.png">
+<meta property="article:published_time" content="2025-11-20T05:09:55.000Z">
+<meta property="article:modified_time" content="2025-11-30T06:01:17.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Allwinner">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="Tina5.0">
+<meta property="article:tag" content="Watchdog">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/BUG/%E5%9B%A0%E7%9C%8B%E9%97%A8%E7%8B%97%E5%BC%82%E5%B8%B8%E9%87%8D%E5%90%AF%E9%97%AE%E9%A2%98/SGM706%E7%BB%93%E6%9E%84.png">
+
+
+<link rel="canonical" href="http://example.com/2025/11/20/BUG/%E5%9B%A0%E7%9C%8B%E9%97%A8%E7%8B%97%E5%BC%82%E5%B8%B8%E9%87%8D%E5%90%AF%E9%97%AE%E9%A2%98/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2025/11/20/BUG/%E5%9B%A0%E7%9C%8B%E9%97%A8%E7%8B%97%E5%BC%82%E5%B8%B8%E9%87%8D%E5%90%AF%E9%97%AE%E9%A2%98/","path":"2025/11/20/BUG/因看门狗异常重启问题/","title":"因看门狗异常重启问题"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>因看门狗异常重启问题 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BA%94%E7%94%A8%E7%8E%AF%E5%A2%83"><span class="nav-number">1.</span> <span class="nav-text">应用环境</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A1%AC%E4%BB%B6%E9%85%8D%E7%BD%AE"><span class="nav-number">1.1.</span> <span class="nav-text">硬件配置</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%BD%AF%E4%BB%B6%E9%85%8D%E7%BD%AE"><span class="nav-number">2.</span> <span class="nav-text">软件配置</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9C%8B%E9%97%A8%E7%8B%97%E5%9C%A8%E8%AE%BE%E5%A4%87%E6%A0%91%E7%9A%84%E8%A1%A8%E7%A4%BA"><span class="nav-number">2.1.</span> <span class="nav-text">看门狗在设备树的表示</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Linux%E7%9A%84%E9%A2%9D%E5%A4%96%E9%85%8D%E7%BD%AE"><span class="nav-number">2.2.</span> <span class="nav-text">Linux的额外配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BA%94%E7%94%A8%E7%8E%AF%E5%A2%83-1"><span class="nav-number">2.3.</span> <span class="nav-text">应用环境</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BA%94%E7%94%A8%E9%97%AE%E9%A2%98"><span class="nav-number">3.</span> <span class="nav-text">应用问题</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%9B%B8%E5%85%B3%E6%8A%80%E6%9C%AF%E7%9A%84%E7%AE%80%E8%BF%B0"><span class="nav-number">4.</span> <span class="nav-text">相关技术的简述</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Linux%E7%9A%84%E8%B0%83%E5%BA%A6%E7%AD%96%E7%95%A5"><span class="nav-number">4.1.</span> <span class="nav-text">Linux的调度策略</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RT%E8%8A%82%E6%B5%81%EF%BC%88RT-throttling%EF%BC%89"><span class="nav-number">4.2.</span> <span class="nav-text">RT节流（RT throttling）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9C%8B%E9%97%A8%E7%8B%97%E7%9A%84%E5%96%82%E7%8B%97%E6%B5%81%E7%A8%8B"><span class="nav-number">4.3.</span> <span class="nav-text">看门狗的喂狗流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#select%E7%9A%84%E5%AE%9A%E6%97%B6"><span class="nav-number">4.4.</span> <span class="nav-text">select的定时</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B0%9D%E8%AF%95%E8%A7%A3%E5%86%B3"><span class="nav-number">5.</span> <span class="nav-text">尝试解决</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%8Asched-rt-runtime-us%E8%AE%BE%E4%B8%BA-1"><span class="nav-number">5.1.</span> <span class="nav-text">把sched_rt_runtime_us设为-1</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%9A%94%E7%A6%BB%E4%B8%80%E4%B8%AA%E6%A0%B8"><span class="nav-number">5.2.</span> <span class="nav-text">隔离一个核</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BA%94%E7%94%A8%E6%89%8B%E5%8A%A8%E5%96%82%E7%8B%97"><span class="nav-number">5.3.</span> <span class="nav-text">应用手动喂狗</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%8Asched-rt-runtime-us%E6%94%B9%E4%B8%BA990000"><span class="nav-number">5.4.</span> <span class="nav-text">把sched_rt_runtime_us改为990000</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%87%8F%E5%B0%91%E5%96%82%E7%8B%97%E9%97%B4%E9%9A%94"><span class="nav-number">5.5.</span> <span class="nav-text">减少喂狗间隔</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#schedule-delayed-work"><span class="nav-number">5.6.</span> <span class="nav-text">schedule_delayed_work</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8hrtimer%E7%9A%84HRTIMER-MODE-REL-HARD"><span class="nav-number">5.7.</span> <span class="nav-text">使用hrtimer的HRTIMER_MODE_REL_HARD</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9C%80%E7%BB%88%E7%9A%84%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95"><span class="nav-number">6.</span> <span class="nav-text">最终的解决方法</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%8A%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E7%9A%84FIFO%E8%B0%83%E5%BA%A6%E7%AD%96%E7%95%A5%E6%94%B9%E5%9B%9ENormal%E8%B0%83%E5%BA%A6%E7%AD%96%E7%95%A5"><span class="nav-number">6.1.</span> <span class="nav-text">把应用程序的FIFO调度策略改回Normal调度策略</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8A%8Asched-rt-runtime-us%E8%AE%BE%E4%B8%BA-1%EF%BC%88%E8%A6%81%E6%B1%82%E5%BA%94%E7%94%A8%E5%81%A5%E5%A3%AE%E6%80%A7%E9%AB%98%EF%BC%89"><span class="nav-number">6.2.</span> <span class="nav-text">把sched_rt_runtime_us设为-1（要求应用健壮性高）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A2%9D%E5%A4%96%E5%AE%9A%E6%97%B6%E5%99%A8%E5%8E%BB%E5%96%82%E7%8B%97%EF%BC%88%E6%9C%80%E7%BB%88%E9%80%89%E6%8B%A9%EF%BC%89"><span class="nav-number">6.3.</span> <span class="nav-text">额外定时器去喂狗（最终选择）</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/11/20/BUG/%E5%9B%A0%E7%9C%8B%E9%97%A8%E7%8B%97%E5%BC%82%E5%B8%B8%E9%87%8D%E5%90%AF%E9%97%AE%E9%A2%98/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="因看门狗异常重启问题 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          因看门狗异常重启问题
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2025-11-20 13:09:55" itemprop="dateCreated datePublished" datetime="2025-11-20T13:09:55+08:00">2025-11-20</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2025-11-30 14:01:17" itemprop="dateModified" datetime="2025-11-30T14:01:17+08:00">2025-11-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/BUG/" itemprop="url" rel="index"><span itemprop="name">BUG</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2.4k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>9 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="应用环境"><a href="#应用环境" class="headerlink" title="应用环境"></a>应用环境</h1><h2 id="硬件配置"><a href="#硬件配置" class="headerlink" title="硬件配置"></a>硬件配置</h2><p>套板有一个外部看门狗 SGM706 ，要求在 1.6 秒内喂狗，喂狗方式是上升沿和下降沿，SoC 仅用 GPIO PA6 与看门狗连接，该 pin 脚用于喂狗：</p>
+<span id="more"></span>
+
+<div align="center"><img src="/images/BUG/因看门狗异常重启问题/SGM706结构.png"></div>
+
+<h1 id="软件配置"><a href="#软件配置" class="headerlink" title="软件配置"></a>软件配置</h1><h2 id="看门狗在设备树的表示"><a href="#看门狗在设备树的表示" class="headerlink" title="看门狗在设备树的表示"></a>看门狗在设备树的表示</h2><figure class="highlight dts"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="symbol">wtd0:</span> <span class="title class_">sgm706@0</span> <span class="punctuation">&#123;</span></span><br><span class="line">	<span class="attr">compatible</span> <span class="operator">=</span> <span class="string">&quot;linux,wdt-gpio&quot;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">status</span> <span class="operator">=</span> <span class="string">&quot;okay&quot;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">gpios</span> <span class="operator">=</span> <span class="params">&lt;<span class="variable">&amp;pio</span> PA <span class="number">6</span> GPIO_ACTIVE_LOW&gt;</span><span class="punctuation">;</span></span><br><span class="line">	hw_<span class="attr">algo</span> <span class="operator">=</span> <span class="string">&quot;toggle&quot;</span><span class="punctuation">;</span>	<span class="comment">// 上升沿喂一次狗，下升沿在喂一次狗</span></span><br><span class="line">	hw_margin_<span class="attr">ms</span> <span class="operator">=</span> <span class="params">&lt;<span class="number">1000</span>&gt;</span><span class="punctuation">;</span>	<span class="comment">// 实际是 500ms 喂狗一次</span></span><br><span class="line">	<span class="attr">always-running</span><span class="punctuation">;</span>		<span class="comment">// 初始化完成后立即喂狗</span></span><br><span class="line"><span class="punctuation">&#125;;</span></span><br></pre></td></tr></table></figure>
+<p>这里使用 Linux 自带的驱动 gpio_wdt 来驱动该看门狗。<br>另外，属性 <code>hw_margin_ms</code> 表示多久喂一次狗。在 Watchdog 框架中，该属性对应描述符 <code>watchdog_device</code> 的字段 <code>max_hw_heartbeat_ms</code> 。一般来说，该数值除以 2 来作为喂狗的定时周期，即每 hw_margin_ms&#x2F;2 喂狗一次。</p>
+<h2 id="Linux的额外配置"><a href="#Linux的额外配置" class="headerlink" title="Linux的额外配置"></a>Linux的额外配置</h2><p>添加以下内核配置项，当 CPU 进入 IDLE 时减少 tick 触发中断来减少功耗。该功能是用于在一个 CPU 核心跑一两个任务时效果好。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">CONFIG_NO_HZ_FULL=y</span><br></pre></td></tr></table></figure>
+<p>添加以下内核参数，隔离了 CPU3 用于运行特定的线程：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">isolcpus=3 nohz_full=3 rcu_nocbs=3</span><br></pre></td></tr></table></figure>
+
+<h2 id="应用环境-1"><a href="#应用环境-1" class="headerlink" title="应用环境"></a>应用环境</h2><p>客户在 Linux 5.10 origin（非实时内核），跑一个应用程序，里面有十几个线程。其中有三个是实时线程，调度策略为 FIFO ，实时优先级为 48 和 49 。其余线程的调度策略都为 normal 。以下是它的线程组：</p>
+<div align="center"><img src="/images/BUG/因看门狗异常重启问题/user_program.png"></div>
+
+<p>这三个实时线程分别用于：通过 rpmsg 读取 E907 的数据；读取 RTC 时间；使用 Uart3 与整机的其它 MCU 通信。<br>以下是整体系统的任务：</p>
+<div align="center"><img src="/images/BUG/因看门狗异常重启问题/system_program.png"></div>
+
+<p>以下是系统的中断记录：</p>
+<div align="center"><img src="/images/BUG/因看门狗异常重启问题/interrupts.png"></div>
+
+<p>另外，应用实时进程阻塞让出 CPU ，但是用 select() ，并非去用 sleep() 。</p>
+<h1 id="应用问题"><a href="#应用问题" class="headerlink" title="应用问题"></a>应用问题</h1><p>经过一天的时间稳定性测试，发现：</p>
+<ol>
+<li>确定短接核心板外部硬件看门狗（硬件阻断，不喂狗不重启），应用正常运行，未出现重启；</li>
+<li>外部看门狗正常启动（不短接），应用未启动，系统运行未出现重启；</li>
+<li>应用正常启动，外部看门狗正常启动，出现重启。<br>还有，在跑应用程序的过程中，有概率出现以下报错：</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[13242.824050] sched: RT throttling activated</span><br></pre></td></tr></table></figure>
+
+<p>这里就能得知是不给看门狗喂狗导致的系统重启，是因为什么让 kwatchdog 得不到 CPU 的执行权？这与应用程序的调度策略和内核的调度子系统有关。</p>
+<h1 id="相关技术的简述"><a href="#相关技术的简述" class="headerlink" title="相关技术的简述"></a>相关技术的简述</h1><h2 id="Linux的调度策略"><a href="#Linux的调度策略" class="headerlink" title="Linux的调度策略"></a>Linux的调度策略</h2><p>先了解一下 Linux 的调度策略：</p>
+<ul>
+<li>SCHED_DEADLINE ：优先级最高的调度策略，没有时间片机制，仅用在内核线程。</li>
+<li>SCHED_FIFO ：先进先出调度策略，没有时间片机制，高优先级的任务优先执行，低优先级的任务会被高优先级的任务抢占，当睡眠或 IO 操作才会主动让出 CPU 。</li>
+<li>SCHED_RR ：优先级实时调度，有时间片机制，当时间片为 0 后让出 CPU ，但只有在相同优先级下进行时间片调度。</li>
+<li>SCHED_NORMAL 和 SCHED_BATCH ：Fair 调度策略，有时间片机制，当时间片为 0 后让出 CPU ，通常用于批处理任务，可以使用 nice 值调整优先级</li>
+<li>SCHED_IDLE ：空闲调度策略，当 CPU 无任何任务调度后，调度 IDLE 进程，进入低功耗模式。</li>
+</ul>
+<p>其中：</p>
+<ul>
+<li>SCHED_FIFO 和 SCHED_RR 的实时优先级的范围是 1~99 ，数值越大表示优先级越高。</li>
+<li>SCHED_NORMAL 和 SCHED_BATCH 的优先级通过 nice 值调整，nice 值的范围是 -20~19 ，数字越小表示优先级越大。</li>
+</ul>
+<p>另外，在这些调度策略中，有一个机制来表示这些调度策略之间的优先级，它就是 PRIO ，它的范围是 -1~139 ，数字越小表示优先级越高。其中：</p>
+<ul>
+<li>-1~0 代表 SCHED_DEADLINE ；</li>
+<li>1~99 代表 SCHED_FIFO 和 SCHED_RR ；</li>
+<li>100~139 代表 SCHED_NORMAL 和 SCHED_BATCH 。</li>
+</ul>
+<blockquote>
+<p>这些优先级范围的定义和计算在：include&#x2F;linux&#x2F;sched&#x2F;prio.h 和 include&#x2F;linux&#x2F;sched&#x2F;deadline.h</p>
+</blockquote>
+<p>在内核中，调用 __sched_setscheduler() 来指定进程调整调度策略和优先级。该函数涉及两个函数的调用，分别为该进程计算和更新 PRIO ：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">__sched_setscheduler()</span><br><span class="line">	__normal_prio()</span><br><span class="line">	__setscheduler_prio()</span><br></pre></td></tr></table></figure>
+
+<h2 id="RT节流（RT-throttling）"><a href="#RT节流（RT-throttling）" class="headerlink" title="RT节流（RT throttling）"></a>RT节流（RT throttling）</h2><p>参考以下文档,了解 RT throttling 机制：</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://docs.redhat.com/en/documentation/red_hat_enterprise_linux_for_real_time/7/html/tuning_guide/real_time_throttling">https://docs.redhat.com/en/documentation/red_hat_enterprise_linux_for_real_time/7/html/tuning_guide/real_time_throttling</a></li>
+<li><a target="_blank" rel="noopener" href="https://developers.redhat.com/articles/2025/03/26/rhel-real-time-cpu-throttling-and-risks#diagnosing_the_latency_problem">https://developers.redhat.com/articles/2025/03/26/rhel-real-time-cpu-throttling-and-risks#diagnosing_the_latency_problem</a></li>
+<li><a target="_blank" rel="noopener" href="https://pwl999.github.io/2017/12/16/linux_scheduler/">https://pwl999.github.io/2017/12/16/linux_scheduler/</a></li>
+</ul>
+<p>变量 <code>sched_rt_runtime_us</code> 和 <code>sched_rt_period_us</code> 都是属于 RT throttling 机制的一部分。<br>其中，变量 <code>sched_rt_period_us</code> 定义了实时任务的时间周期，变量 <code>sched_rt_runtime_us</code> 定义了实时任务在 <code>sched_rt_period_us</code> 内的可运行时间周期。<br>一般来说，变量 <code>sched_rt_runtime_us</code> 为 950000，变量 <code>sched_rt_period_us</code> 为 1000000 。意思是在一秒的时间，有 0.95 秒的时间给实时任务执行，剩余的 0.05 秒给非实时任务。</p>
+<h2 id="看门狗的喂狗流程"><a href="#看门狗的喂狗流程" class="headerlink" title="看门狗的喂狗流程"></a>看门狗的喂狗流程</h2><p>在 watchdog 框架的初始化阶段，调用 watchdog_dev_init() ，创建名为 watchdogd 的内核工作线程，调度策略为 SCHED_FIFO ，实时优先级为 50 。<br>在 watchdog 驱动的初始化阶段，必须为它的设备描述符 watchdog_device 的字段 <code>max_hw_heartbeat_ms</code> 设置数值，表示喂狗的间隙。如果开启了配置项 <code>CONFIG_WATCHDOG_HANDLE_BOOT_ENABLED</code> 来指定初始化后就需要喂狗，立即使用 hrtimer 准备喂狗，要求在<strong>中断上下文</strong>调用回调函数（模式为：HRTIMER_MODE_REL_HARD），其回调函数是 watchdog_timer_expired() ，以下是它的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">enum</span> hrtimer_restart <span class="title function_">watchdog_timer_expired</span><span class="params">(<span class="keyword">struct</span> hrtimer *timer)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">watchdog_core_data</span> *<span class="title">wd_data</span>;</span></span><br><span class="line"></span><br><span class="line">	wd_data = container_of(timer, <span class="keyword">struct</span> watchdog_core_data, timer);</span><br><span class="line"></span><br><span class="line">	kthread_queue_work(watchdog_kworker, &amp;wd_data-&gt;work);</span><br><span class="line">	<span class="keyword">return</span> HRTIMER_NORESTART;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>定时到了之后，就把喂狗操作加入到工作队列中，由 watchdogd 内核工作线程处理。<br>喂狗操作对应的统一入口函数是 watchdog_ping_work() 。该函数有两个作用，一是调用看门狗驱动的回调函数 <code>-&gt;ping()</code> 来喂狗，二是再次使用 hrtimer 设置定时（同样要求在中断上下文调用回调函数）。</p>
+<h2 id="select的定时"><a href="#select的定时" class="headerlink" title="select的定时"></a>select的定时</h2><p>虽然 select() 使用 hrtimer 去定时睡眠，能准时触发中断，但并不意味着能准时回调 hrtimer_wakeup() 来唤醒对应的进程。见系统调用 select() 到内核层后的调用栈：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">schedule_hrtimeout_range</span><br><span class="line">poll_schedule_timeout</span><br><span class="line">do_select</span><br><span class="line">core_sys_select</span><br><span class="line">kern_select</span><br><span class="line">SYSCALL_DEFINE5(select, ...)</span><br></pre></td></tr></table></figure>
+<p>见 poll_schedule_timeout() 的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">poll_schedule_timeout</span><span class="params">(<span class="keyword">struct</span> poll_wqueues *pwq, <span class="type">int</span> state,</span></span><br><span class="line"><span class="params">			  <span class="type">ktime_t</span> *expires, <span class="type">unsigned</span> <span class="type">long</span> slack)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> rc = -EINTR;</span><br><span class="line"></span><br><span class="line">	set_current_state(state);</span><br><span class="line">	<span class="keyword">if</span> (!pwq-&gt;triggered)</span><br><span class="line">		rc = schedule_hrtimeout_range(expires, slack, HRTIMER_MODE_ABS);</span><br><span class="line">	__set_current_state(TASK_RUNNING);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Prepare for the next iteration.</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * The following smp_store_mb() serves two purposes.  First, it&#x27;s</span></span><br><span class="line"><span class="comment">	 * the counterpart rmb of the wmb in pollwake() such that data</span></span><br><span class="line"><span class="comment">	 * written before wake up is always visible after wake up.</span></span><br><span class="line"><span class="comment">	 * Second, the full barrier guarantees that triggered clearing</span></span><br><span class="line"><span class="comment">	 * doesn&#x27;t pass event check of the next iteration.  Note that</span></span><br><span class="line"><span class="comment">	 * this problem doesn&#x27;t exist for the first iteration as</span></span><br><span class="line"><span class="comment">	 * add_wait_queue() has full barrier semantics.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	smp_store_mb(pwq-&gt;triggered, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> rc;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>schedule_hrtimeout_range() 的参数 <code>mode</code> 是 HRTIMER_MODE_ABS ，仅表示时间数值必须是绝对值，并没有指定 hrtimer 回调函数是在中断上下文，还是在软中断上下文。那么就意味着该回调函数，会在这两种场景中的任意一个被调用。</p>
+<h1 id="尝试解决"><a href="#尝试解决" class="headerlink" title="尝试解决"></a>尝试解决</h1><h2 id="把sched-rt-runtime-us设为-1"><a href="#把sched-rt-runtime-us设为-1" class="headerlink" title="把sched_rt_runtime_us设为-1"></a>把sched_rt_runtime_us设为-1</h2><p>在启动内核完成后，使用以下命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> -1 &gt; /proc/sys/kernel/sched_rt_runtime_us</span><br></pre></td></tr></table></figure>
+<p>然后应用正常启动，外部看门狗正常启动，测试一天，未发现重启，而且没有出现 “RT throttling” 报错。</p>
+<p>但如果把 <code>sched_rt_runtime_us</code> 设为 -1 ，则表示 FIFO 任务则可以永远占用 CPU ，不给其它策略的进程占用。这会导致一个问题，如果 FIFO 任务因为某些原因处于死循环阶段，则出现一直占用着 CPU ，不让出 CPU 给其它任务执行，最终可能会导致系统崩溃。</p>
+<p>而且这里出现一个疑问，为什么把 <code>sched_rt_runtime_us</code> 设为 -1 就能让 kwatchdog 正常执行？</p>
+<h2 id="隔离一个核"><a href="#隔离一个核" class="headerlink" title="隔离一个核"></a>隔离一个核</h2><p>把 <code>sched_rt_runtime_us</code> 还原，现在怀疑是因为 RT 节流导致 kwatchdog 线程无法得到执行，而且它的实时优先级比应用程序的高。现在把它的 CPU 亲和性设置为 CPU3 ，即仅在 CPU3 运行。<br>但经过测试发现还是会重启。</p>
+<h2 id="应用手动喂狗"><a href="#应用手动喂狗" class="headerlink" title="应用手动喂狗"></a>应用手动喂狗</h2><p>让客户在应用层新建一个线程用于喂狗，并放在隔离核上。发现还是会重启，但这是不应该的，大概率是客户的应用程序没有写好。</p>
+<h2 id="把sched-rt-runtime-us改为990000"><a href="#把sched-rt-runtime-us改为990000" class="headerlink" title="把sched_rt_runtime_us改为990000"></a>把sched_rt_runtime_us改为990000</h2><p>把 <code>sched_rt_runtime_us</code> ，从 950000 改为 990000 ，经过测试发现也会重启。</p>
+<h2 id="减少喂狗间隔"><a href="#减少喂狗间隔" class="headerlink" title="减少喂狗间隔"></a>减少喂狗间隔</h2><p>默认喂狗的间隔为 500ms ，则把间隔改为 300ms ，但经过测试也会重启。</p>
+<h2 id="schedule-delayed-work"><a href="#schedule-delayed-work" class="headerlink" title="schedule_delayed_work"></a>schedule_delayed_work</h2><p>原厂建议改为以下定时，其实也会重启：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">schedule_delayed_work(&amp;wdev-&gt;work, msecs_to_jiffies(<span class="number">1000</span>));</span><br></pre></td></tr></table></figure>
+<p>因为它也是调度，没法从根源解决。</p>
+<h2 id="使用hrtimer的HRTIMER-MODE-REL-HARD"><a href="#使用hrtimer的HRTIMER-MODE-REL-HARD" class="headerlink" title="使用hrtimer的HRTIMER_MODE_REL_HARD"></a>使用hrtimer的HRTIMER_MODE_REL_HARD</h2><p>或者使用 hrtimer 的模式 HRTIMER_MODE_REL_HARD ，把喂狗操作放在中断上下文。</p>
+<h1 id="最终的解决方法"><a href="#最终的解决方法" class="headerlink" title="最终的解决方法"></a>最终的解决方法</h1><h2 id="把应用程序的FIFO调度策略改回Normal调度策略"><a href="#把应用程序的FIFO调度策略改回Normal调度策略" class="headerlink" title="把应用程序的FIFO调度策略改回Normal调度策略"></a>把应用程序的FIFO调度策略改回Normal调度策略</h2><p>客户考虑实时性没有考虑采用。</p>
+<h2 id="把sched-rt-runtime-us设为-1（要求应用健壮性高）"><a href="#把sched-rt-runtime-us设为-1（要求应用健壮性高）" class="headerlink" title="把sched_rt_runtime_us设为-1（要求应用健壮性高）"></a>把sched_rt_runtime_us设为-1（要求应用健壮性高）</h2><p>经过测试是可以解决这个问题，但我们无法了解客户应用程序的全貌，真的无法查明问题所在。而且由于时间关系，把它设为-1，仅经过一天时间去测试，还未必就是可以的，起码要 7x24 小时测试。</p>
+<h2 id="额外定时器去喂狗（最终选择）"><a href="#额外定时器去喂狗（最终选择）" class="headerlink" title="额外定时器去喂狗（最终选择）"></a>额外定时器去喂狗（最终选择）</h2><p>这个方法只是绕过任务调度的问题，因为客户不会提供他们的应用程序。<br>因为 SoC 有额外的定时器，则可以在对应的驱动中，实现直接在中断处理相关任务，不分上下两部分，当时间一到就执行喂狗操作。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Allwinner/" rel="tag"># Allwinner</a>
+              <a href="/tags/Tina5-0/" rel="tag"># Tina5.0</a>
+              <a href="/tags/Watchdog/" rel="tag"># Watchdog</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/11/19/Skill/device/Linux-%E6%9F%A5%E7%9C%8BeMMC%E4%BF%A1%E6%81%AF/" rel="prev" title="Linux - 查看eMMC信息">
+                  <i class="fa fa-angle-left"></i> Linux - 查看eMMC信息
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2025/11/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-MIPI-DSI%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/" rel="next" title="Linux - MIPI-DSI开发要点">
+                  Linux - MIPI-DSI开发要点 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

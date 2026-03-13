@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="伙伴位图分配器什么是伙伴位图分配器伙伴位图分配器是 Linux 内核从位图分配器过渡的第二款物理页面分配器。“伙伴”是指它把 2^order 个连续且相邻的内存页面作为一个块（ order &gt;&#x3D;0 &amp; order &lt; MAXORDER ），且把两个相邻的，页面数相同的块互相作为伙伴（一个新的整体）。而“位图”指的是一个位代表着一个伙伴（两个块）。当伙伴全为空闲或被分配">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - 伙伴位图分配器（内核版本 2.4.22，32位x86）">
+<meta property="og:url" content="http://example.com/2022/10/28/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E4%BC%99%E4%BC%B4%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="伙伴位图分配器什么是伙伴位图分配器伙伴位图分配器是 Linux 内核从位图分配器过渡的第二款物理页面分配器。“伙伴”是指它把 2^order 个连续且相邻的内存页面作为一个块（ order &gt;&#x3D;0 &amp; order &lt; MAXORDER ），且把两个相邻的，页面数相同的块互相作为伙伴（一个新的整体）。而“位图”指的是一个位代表着一个伙伴（两个块）。当伙伴全为空闲或被分配">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E4%BC%99%E4%BC%B4%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8/BuddyAllocator.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E4%BC%99%E4%BC%B4%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8/BuddyAllocator-AllocPage.png">
+<meta property="article:published_time" content="2022-10-27T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-12-29T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Kernel">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="Memory">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E4%BC%99%E4%BC%B4%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8/BuddyAllocator.png">
+
+
+<link rel="canonical" href="http://example.com/2022/10/28/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E4%BC%99%E4%BC%B4%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2022/10/28/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E4%BC%99%E4%BC%B4%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8/","path":"2022/10/28/原理及实现/Kernel/Linux-伙伴位图分配器/","title":"Linux - 伙伴位图分配器（内核版本 2.4.22，32位x86）"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - 伙伴位图分配器（内核版本 2.4.22，32位x86） | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BC%99%E4%BC%B4%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8"><span class="nav-number">1.</span> <span class="nav-text">伙伴位图分配器</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E4%BC%99%E4%BC%B4%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8"><span class="nav-number">1.1.</span> <span class="nav-text">什么是伙伴位图分配器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BC%99%E4%BC%B4%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8%E6%8F%8F%E8%BF%B0%E7%AC%A6"><span class="nav-number">1.2.</span> <span class="nav-text">伙伴位图分配器描述符</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E9%85%8D%E9%A1%B5%E9%9D%A2"><span class="nav-number">1.3.</span> <span class="nav-text">分配页面</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A6%82%E8%AE%BA"><span class="nav-number">1.3.1.</span> <span class="nav-text">概论</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E5%87%BD%E6%95%B0"><span class="nav-number">1.3.2.</span> <span class="nav-text">核心函数</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-alloc-pages"><span class="nav-number">1.3.2.1.</span> <span class="nav-text">函数 alloc_pages()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-alloc-pages-1"><span class="nav-number">1.3.2.2.</span> <span class="nav-text">函数 _alloc_pages()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-alloc-pages-2"><span class="nav-number">1.3.2.3.</span> <span class="nav-text">函数 __alloc_pages()</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8E%A5%E5%8F%A3%E5%87%BD%E6%95%B0"><span class="nav-number">1.3.3.</span> <span class="nav-text">接口函数</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-alloc-page"><span class="nav-number">1.3.3.1.</span> <span class="nav-text">函数 alloc_page()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-get-free-page"><span class="nav-number">1.3.3.2.</span> <span class="nav-text">函数 __get_free_page()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-get-free-pages"><span class="nav-number">1.3.3.3.</span> <span class="nav-text">函数 __get_free_pages()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-get-free-page-1"><span class="nav-number">1.3.3.4.</span> <span class="nav-text">函数 __get_free_page()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-get-free-pages-1"><span class="nav-number">1.3.3.5.</span> <span class="nav-text">函数 __get_free_pages()</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%87%8A%E6%94%BE%E9%A1%B5%E9%9D%A2"><span class="nav-number">1.4.</span> <span class="nav-text">释放页面</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A6%82%E8%AE%BA-1"><span class="nav-number">1.4.1.</span> <span class="nav-text">概论</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E5%87%BD%E6%95%B0-1"><span class="nav-number">1.4.2.</span> <span class="nav-text">核心函数</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-free-pages-ok"><span class="nav-number">1.4.2.1.</span> <span class="nav-text">函数 __free_pages_ok()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-free-pages"><span class="nav-number">1.4.2.2.</span> <span class="nav-text">函数 __free_pages()</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8E%A5%E5%8F%A3%E5%87%BD%E6%95%B0-1"><span class="nav-number">1.4.3.</span> <span class="nav-text">接口函数</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-free-pages-1"><span class="nav-number">1.4.3.1.</span> <span class="nav-text">函数 free_pages()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-free-page"><span class="nav-number">1.4.3.2.</span> <span class="nav-text">函数 __free_page()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-free-page-1"><span class="nav-number">1.4.3.3.</span> <span class="nav-text">函数 free_page()</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8E%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8%E8%BF%87%E6%B8%A1%E5%88%B0%E4%BC%99%E4%BC%B4%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8"><span class="nav-number">1.5.</span> <span class="nav-text">从位图分配器过渡到伙伴位图分配器</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E7%BB%A7%E7%BB%AD%E4%BD%BF%E7%94%A8%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8%EF%BC%9F%E4%B8%8E%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8%E7%9B%B8%E6%AF%94%EF%BC%8C%E4%BC%99%E4%BC%B4%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8%E6%9C%89%E5%93%AA%E4%BA%9B%E4%BC%98%E5%8A%BF"><span class="nav-number">1.5.1.</span> <span class="nav-text">为什么不继续使用位图分配器？与位图分配器相比，伙伴位图分配器有哪些优势</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%A3%E7%A0%81%E5%AE%9E%E7%8E%B0"><span class="nav-number">1.5.2.</span> <span class="nav-text">代码实现</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-mem-init"><span class="nav-number">1.5.2.1.</span> <span class="nav-text">函数 mem_init()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-set-max-mapnr-init"><span class="nav-number">1.5.2.2.</span> <span class="nav-text">函数 set_max_mapnr_init()</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-free-pages-init"><span class="nav-number">1.5.2.3.</span> <span class="nav-text">函数 free_pages_init()</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BC%99%E4%BC%B4%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8%E7%9A%84%E7%BC%BA%E7%82%B9%EF%BC%88%E5%86%85%E5%AD%98%E7%A2%8E%E7%89%87%EF%BC%89"><span class="nav-number">1.6.</span> <span class="nav-text">伙伴位图分配器的缺点（内存碎片）</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/10/28/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E4%BC%99%E4%BC%B4%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - 伙伴位图分配器（内核版本 2.4.22，32位x86） | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - 伙伴位图分配器（内核版本 2.4.22，32位x86）
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2022-10-28 00:00:00" itemprop="dateCreated datePublished" datetime="2022-10-28T00:00:00+08:00">2022-10-28</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2022-12-30 00:00:00" itemprop="dateModified" datetime="2022-12-30T00:00:00+08:00">2022-12-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>4.1k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>15 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="伙伴位图分配器"><a href="#伙伴位图分配器" class="headerlink" title="伙伴位图分配器"></a>伙伴位图分配器</h1><h2 id="什么是伙伴位图分配器"><a href="#什么是伙伴位图分配器" class="headerlink" title="什么是伙伴位图分配器"></a>什么是伙伴位图分配器</h2><p>伙伴位图分配器是 Linux 内核从位图分配器过渡的第二款物理页面分配器。“伙伴”是指它把 2^order 个连续且相邻的内存页面作为一个块（ order &gt;&#x3D;0 &amp; order &lt; MAXORDER ），且把两个相邻的，页面数相同的块互相作为伙伴（一个新的整体）。而“位图”指的是一个位代表着一个伙伴（两个块）。当伙伴全为空闲或被分配时，它对应的位就被清除；当伙伴当中的其中一个块被分配，它对应的位就被置位。把 order 当做层数，每一层都代表着块是由 2^当前层层数 个连续内存页面组成。比如 order&#x3D;0 ，表示第0层，表示一个块对应的连续页面数是 2^0&#x3D;1 ；比如 order&#x3D;1，表示第一层，表示一个块对应的连续页面数是 2^1&#x3D;2 ；以此类推，直到 order&#x3D;MAXORDER-1 停止。每一层都有它们自己的空闲链表还有伙伴位图，其中，空闲链表存储的是一个块，它的另一伴已被分配而“苦苦地等待它回来”的块（该块对应的位被置1）。当伙伴里面块都是空闲时，可以“往上一层楼”。意思是指把两个相邻且连续的块组成一个块，作为在上一层与它连续相邻的块作为伙伴。当我们需要在某一层获取一个块时，是优先从空闲链表获取。如果在当前层的空闲链表为空，我们就请求从上层的空闲链表获取更大的块，在高层获取到更大的块之后，把这个块按下层对应连续页面数拆分两个块，把两个块当中的右边块往下传给下一层（对应的伙伴位被置位），左边放在所处层的空闲链表，按此方式一直到在我们想要获取块的层的层数。把从上一层获取到的块被拆分成两个小块，一块放在所处层的空闲链表，另一个给需要获取该层的块的进程（对应的伙伴位被置位）。</p>
+<span id="more"></span>
+<blockquote>
+<p>This is an allocation scheme that combines a normal power-of-two allocator with free buffer coalescing, and the basic concept behind it is quite simple. Memory is broken up into large blocks of pages where each block is a power of two number of pages. If a block of the desired size is not available, a large block is broken up in half, and the two blocks are buddies to each other. One half is used for the allocation, and the other is free. The blocks are continuously halved as necessary until a block of the desired size is available. When a block is later freed, the buddy is examined, and the two are coalesced if it is free.</p>
+</blockquote>
+<h2 id="伙伴位图分配器描述符"><a href="#伙伴位图分配器描述符" class="headerlink" title="伙伴位图分配器描述符"></a>伙伴位图分配器描述符</h2><p>根据上文，对应的伙伴位图分配器描述符是：</p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-伙伴位图分配器/BuddyAllocator.png"></div>   
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">free_area_struct</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>    <span class="title">free_list</span>;</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>       *<span class="built_in">map</span>;</span><br><span class="line">&#125; <span class="type">free_area_t</span>;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>free_list ：连接空闲块的链表</li>
+<li>map ：记录伙伴状态的位图</li>
+</ul>
+<p>该描述符存储在每一个内存管理区当中。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">zone_struct</span> &#123;</span></span><br><span class="line">    ...</span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 不同大小的可用空闲内存区域</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">free_area_t</span>         free_area[MAX_ORDER];</span><br><span class="line">    ...</span><br><span class="line">&#125; <span class="type">zone_t</span>;</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">ifndef</span> CONFIG_FORCE_MAX_ZONEORDER</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MAX_ORDER   10  </span></span><br><span class="line"><span class="meta">#<span class="keyword">else</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MAX_ORDER   CONFIG_FORCE_MAX_ZONEORDER</span></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+
+<p>前面提过，位图内的一位就代表着两个块（一个伙伴），那么块的起始地址（PFN）和 order 组合成什么公式才能在每一层中的位图内定位到对应的位？</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> MARK_USED(index, order, area)   \</span></span><br><span class="line"><span class="meta">    __change_bit(((index) &gt;&gt; ((order) + 1)), (area)-&gt;map)</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="分配页面"><a href="#分配页面" class="headerlink" title="分配页面"></a>分配页面</h2><h3 id="概论"><a href="#概论" class="headerlink" title="概论"></a>概论</h3><p>分配页面之前，我们需要知道要在哪个管理区获取页面。在 UMA 系统，由于仅有一个内存节点 contig_page_data ，所以仅针对它里面的管理区。根据内存节点描述符的字段 node_zonelists[] 以及函数 build_zonelists() 可知，我们需要参数指定先从哪个管理区获取内存页面，所指定的管理区被称为 classzone ，如果 classzone 无多余的空闲页面，则退回到下一个管理区尝试获取。比如 classzone 是 ZONE_HIGHMEM，如果无多余的空闲页面，则退回到 ZONE_NORMAL ，如果还是没有，就退回到 ZONE_DMA 。在 NUMA 系统，有多个内存节点，当有一个进程申请获取内存，根据本地分配策略（<a href="./2_%E8%A7%A3%E6%9E%90E820%E5%9B%BE.md">解析E820图</a>有说明），优先从执行该进程的 CPU 内核对应的内存节点，指定管理区获取内存（虽然 NUMA 也支持 Remote-Access ，但暂未详细了解该概念）。<br>另外，执行分配内存页面操作前，一般来说，你还需设置影响它操作的标志 GFP_* 。比如 GFP_ATOMIC ，表示执行该函数的进程：在此期间是不允许睡眠、不可被重新调度的。有关于标志 GFP_* 的详细内容在 <a href="../../../src/include/eleos/mm.h">eleos&#x2F;mm.h</a> 有详细说明，这里就不赘述了。<br>指定好从哪个管理区获取内存页面后，还需要执行内存页面的数量，这里一般是指定参数 order ，即指定从哪一层获取内存块。请根据小节 <a href="#%E4%BB%80%E4%B9%88%E6%98%AF%E4%BC%99%E4%BC%B4%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8">什么是伙伴位图分配器</a> 以及以下的图例理解。</p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-伙伴位图分配器/BuddyAllocator-AllocPage.png"></div>   
+
+<h3 id="核心函数"><a href="#核心函数" class="headerlink" title="核心函数"></a>核心函数</h3><h4 id="函数-alloc-pages"><a href="#函数-alloc-pages" class="headerlink" title="函数 alloc_pages()"></a>函数 <a href="../../../src/include/eleos/mm.h">alloc_pages()</a></h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="keyword">struct</span> page * </span><br><span class="line"><span class="title function_">alloc_pages</span><span class="params">(<span class="type">unsigned</span> <span class="type">int</span> gfp_mask, <span class="type">unsigned</span> <span class="type">int</span> order)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (order &gt;= MAX_ORDER)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line">    <span class="keyword">return</span> _alloc_pages(gfp_mask, order);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>函数 alloc_pages() 仅做一个简单检查：查看参数 order 是否大于 MAX_ORDER 。是则返回 NULL ，否则到下一层函数 _alloc_pages() 。</p>
+<h4 id="函数-alloc-pages-1"><a href="#函数-alloc-pages-1" class="headerlink" title="函数 _alloc_pages()"></a>函数 _alloc_pages()</h4><p>函数分为两个版本，一个是 UMA 的，另一个是 NUMA 的。它们之间的区别就是，UMA 直接使用内存节点 contig_page_data 内的管理区分配内存块；NUMA 的则是获取执行该进程的 CPU 内核对应内存节点，在该内存节点内的管理区获取内存块。<br>由于 EleOS 内核目前仅支持 UMA ，所以仅说明 UMA 的 <a href="../../../src/mm/page_alloc.c">_alloc_pages()</a>  </p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 可以发现，为什么分配内存页都要调用三次函数才到核心函数 __alloc</span></span><br><span class="line"><span class="comment"> * _pages() ? 把 _alloc_pages() 去掉可以吗？ </span></span><br><span class="line"><span class="comment"> * 首先需要知道一个概念，就是内存访问大致分为两种：1、一致内存访问 </span></span><br><span class="line"><span class="comment"> * UMA ；2、非一致内存访问 NUMA 。</span></span><br><span class="line"><span class="comment"> * 一致内存访问就是指多个处理器对应一个内存；非一致内存访问就是一个</span></span><br><span class="line"><span class="comment"> *  CPU 有它各自的本地内存，用结构体 struct pglist_data 去描述，</span></span><br><span class="line"><span class="comment"> * 即一个处理器对应一个内存节点（ UMA 仅有一个内存节点 contig_</span></span><br><span class="line"><span class="comment"> * page_data ）。</span></span><br><span class="line"><span class="comment"> * 所以呢，分配内存页，我们也需要去当前进程所在的处理器的内存节点去</span></span><br><span class="line"><span class="comment"> * 分配内存页。所以 _alloc_pages() 有两个版本，一个是 UMA 版本</span></span><br><span class="line"><span class="comment"> * 的（下面的就是），一个是在 NUMA 版本的（在 numa.c ）。在编译内</span></span><br><span class="line"><span class="comment"> * 核期间，根据硬件环境去配置宏 CONFIG_DISCONTIGMEM 去配置 </span></span><br><span class="line"><span class="comment"> * _alloc_pages() 是 UMA 版本的，还是 NUMA 版本的。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifndef</span> CONFIG_DISCONTIGMEM</span></span><br><span class="line">fastcall <span class="class"><span class="keyword">struct</span> <span class="title">page</span> * </span></span><br><span class="line"><span class="class">_<span class="title">alloc_pages</span>(<span class="title">unsigned</span> <span class="title">int</span> <span class="title">gfp_mask</span>, <span class="title">unsigned</span> <span class="title">int</span> <span class="title">order</span>)</span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    <span class="keyword">return</span> __alloc_pages(gfp_mask, order, </span><br><span class="line">        contig_page_data.node_zonelists + (gfp_mask &amp; GFP_ZONEMASK));</span><br><span class="line">&#125;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br></pre></td></tr></table></figure>
+
+<h4 id="函数-alloc-pages-2"><a href="#函数-alloc-pages-2" class="headerlink" title="函数 __alloc_pages()"></a>函数 <a href="../../../src/mm/page_alloc.c">__alloc_pages()</a></h4><p>函数 __alloc_pages() 是核心函数，该函数有很多详细的注释，可直接在源码页查看，这里没有必要再赘述了。</p>
+<h3 id="接口函数"><a href="#接口函数" class="headerlink" title="接口函数"></a>接口函数</h3><p>伙伴位图分配器的分配页面接口函数有很多，都是方便程序员使用而添加的。</p>
+<table>
+<thead>
+<tr>
+<th align="center">函数</th>
+<th align="left">功能</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">alloc_page()</td>
+<td align="left">获取一个页，返回 struct page *</td>
+</tr>
+<tr>
+<td align="center">__get_free_page()</td>
+<td align="left">获取一个页，返回虚拟地址（3GB+物理地址）</td>
+</tr>
+<tr>
+<td align="center">__get_free_pages()</td>
+<td align="left">获取 2^order 个连续页，返回虚拟地址（3GB+物理地址）</td>
+</tr>
+<tr>
+<td align="center">__get_dma_pages()</td>
+<td align="left">获取在管理区 ZONE_DMA 的 2^order 个连续页，返回虚拟地址（3GB+物理地址）</td>
+</tr>
+<tr>
+<td align="center">get_zeroed_page()</td>
+<td align="left">获取一个页，并把该页里面的数据全初始化为0，返回虚拟地址（3GB+物理地址）</td>
+</tr>
+</tbody></table>
+<h4 id="函数-alloc-page"><a href="#函数-alloc-page" class="headerlink" title="函数 alloc_page()"></a>函数 <a href="../../../src/include/eleos/mm.h">alloc_page()</a></h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 获取一个已被初始化为0的页，成功返回页的虚拟地址（3GB+物理</span></span><br><span class="line"><span class="comment"> * 地址），否则返回0 </span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> alloc_page(gfp_mask)    alloc_pages(gfp_mask, 0)</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="函数-get-free-page"><a href="#函数-get-free-page" class="headerlink" title="函数 __get_free_page()"></a>函数 <a href="../../../src/include/eleos/mm.h">__get_free_page()</a></h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 获取一个页，成功返回页的虚拟地址（3GB+物理地址），否则返回0 </span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> __get_free_page(gfp_mask)   \</span></span><br><span class="line"><span class="meta">        __get_free_pages((gfp_mask), 0)</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="函数-get-free-pages"><a href="#函数-get-free-pages" class="headerlink" title="函数 __get_free_pages()"></a>函数 <a href="../../../src/mm/page_alloc.c">__get_free_pages()</a></h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 获取 2^order 个连续页面，成功返回页的虚拟地址（3GB+物理</span></span><br><span class="line"><span class="comment"> * 地址），否则返回 0 。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">fastcall <span class="type">unsigned</span> <span class="type">long</span> </span><br><span class="line">__get_free_pages(<span class="type">unsigned</span> <span class="type">int</span> gfp_mask, <span class="type">unsigned</span> <span class="type">int</span> order)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">page</span> * <span class="title">page</span>;</span></span><br><span class="line"></span><br><span class="line">    page = alloc_pages(gfp_mask, order);</span><br><span class="line">    <span class="keyword">if</span> (!page) </span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">return</span> (<span class="type">unsigned</span> <span class="type">long</span>) page_address(page);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="函数-get-free-page-1"><a href="#函数-get-free-page-1" class="headerlink" title="函数 __get_free_page()"></a>函数 <a href="../../../src/include/eleos/mm.h">__get_free_page()</a></h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 获取一个在 DMA_ZONE 的页，成功返回页的虚拟地址（3GB+物理</span></span><br><span class="line"><span class="comment"> * 地址），否则返回0 </span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> __get_dma_pages(gfp_mask, order)    \</span></span><br><span class="line"><span class="meta">        __get_free_pages((gfp_mask) | GFP_DMA, (order))</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="函数-get-free-pages-1"><a href="#函数-get-free-pages-1" class="headerlink" title="函数 __get_free_pages()"></a>函数 <a href="../../../src/mm/page_alloc.c">__get_free_pages()</a></h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** </span></span><br><span class="line"><span class="comment"> * 获取一个页，并把该页里面的数据全初始化为0，返回虚拟</span></span><br><span class="line"><span class="comment"> * 地址（3GB+物理地址）</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">fastcall <span class="type">unsigned</span> <span class="type">long</span> </span><br><span class="line"><span class="title function_">get_zeroed_page</span><span class="params">(<span class="type">unsigned</span> <span class="type">int</span> gfp_mask)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">page</span> * <span class="title">page</span>;</span></span><br><span class="line"></span><br><span class="line">    page = alloc_pages(gfp_mask, <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">if</span> (page) &#123;</span><br><span class="line">        <span class="type">void</span> *address = (<span class="type">void</span> *)page_address(page);</span><br><span class="line">        clear_page(address);</span><br><span class="line">        <span class="keyword">return</span> (<span class="type">unsigned</span> <span class="type">long</span>) address;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="释放页面"><a href="#释放页面" class="headerlink" title="释放页面"></a>释放页面</h2><h3 id="概论-1"><a href="#概论-1" class="headerlink" title="概论"></a>概论</h3><p>释放页面的核心函数是 __free_pages_ok() ，我们先从该函数讲起为好。当我们释放页面前，我们首先要知道它的 struct page * 或页面的起始虚拟地址、和 order 。注意 order ，该值必须和分配页面时 order 一致，否则会有大麻烦！<br>在对该页面释放期间，我们不会立刻把它放到 order 对应的空闲链表，而是检查它在该层数的位图的位。如果该位被清除，表示它的另一伴正在处于被使用的状态，则我们把该位置位（表示伙伴内的其中一块处于空闲状态），并把它放到空闲链表当中（头插法）；如果该位被置位，表示它的另一半处于空闲状态，则我们把该位清除，并把空闲块从所处层的空闲链表移出，它和另一半组合在一起，跳转到上一层。然后在上一层的操作和刚刚讲述的是一致的，直到另一伴还处于使用状态或达到 MAX_ORDER-1 层。</p>
+<blockquote>
+<p>注意：MAX_ORDER-1 层仅有空闲链表，无 map 。</p>
+</blockquote>
+<h3 id="核心函数-1"><a href="#核心函数-1" class="headerlink" title="核心函数"></a>核心函数</h3><h4 id="函数-free-pages-ok"><a href="#函数-free-pages-ok" class="headerlink" title="函数 __free_pages_ok()"></a>函数 <a href="../../../src/mm/page_alloc.c">__free_pages_ok()</a></h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br></pre></td><td class="code"><pre><span class="line">fastcall <span class="type">void</span> </span><br><span class="line">__free_pages_ok(<span class="keyword">struct</span> page * page, <span class="type">unsigned</span> <span class="type">int</span> order)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> page_idx, index, mask, flags;</span><br><span class="line">    <span class="type">zone_t</span> * zone;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">page</span> *<span class="title">base</span>;</span></span><br><span class="line">    <span class="type">free_area_t</span> * area;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * A dirty page on the LRU will still have the LRU bit</span></span><br><span class="line"><span class="comment">     * set when pinned for I/O. On I/O completion, it is </span></span><br><span class="line"><span class="comment">     * freed, so it must now be removed from the LRU list.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">if</span> (PageLRU(page)) &#123;</span><br><span class="line">        <span class="comment">/**</span></span><br><span class="line"><span class="comment">         * 当 page-&gt;flags 的 LRU 位被置位，说明该页是脏的，说不定要准</span></span><br><span class="line"><span class="comment">         * 备进行或正在进行对该页面的 I/O 操作（I/O操作多数是在中断期间执行）</span></span><br><span class="line"><span class="comment">         * 。如果该函数在中断期间执行，即有中断处理程序调用该函数，不管</span></span><br><span class="line"><span class="comment">         * 该中断处理程序是否是对该页面进行 I/O 操作，总之对该页面 I/O </span></span><br><span class="line"><span class="comment">         * 操作前/执行中调用该函数是不可取的，必须要 I/O 操作完成后再</span></span><br><span class="line"><span class="comment">         * 调用该函数。</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="keyword">if</span> (unlikely(in_interrupt()))</span><br><span class="line">            BUG();</span><br><span class="line">        lru_cache_del(page);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (page-&gt;buffers)</span><br><span class="line">        BUG();</span><br><span class="line">    <span class="keyword">if</span> (page-&gt;mapping)</span><br><span class="line">        BUG();</span><br><span class="line">    <span class="keyword">if</span> (!VALID_PAGE(page))</span><br><span class="line">        BUG();</span><br><span class="line">    <span class="keyword">if</span> (PageLocked(page))</span><br><span class="line">        BUG();</span><br><span class="line">    <span class="keyword">if</span> (PageActive(page))</span><br><span class="line">        BUG();</span><br><span class="line">    page-&gt;flags &amp;= ~((<span class="number">1</span> &lt;&lt; PG_referenced) | (<span class="number">1</span> &lt;&lt; PG_dirty));</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (current-&gt;flags &amp; PF_FREE_PAGES)</span><br><span class="line">        <span class="keyword">goto</span> local_freelist;</span><br><span class="line"></span><br><span class="line">back_local_freelist:</span><br><span class="line"></span><br><span class="line">    zone = page_zone(page);</span><br><span class="line"></span><br><span class="line">    mask = (~<span class="number">0UL</span>) &lt;&lt; order;</span><br><span class="line">    base = zone-&gt;zone_mem_map;</span><br><span class="line">    page_idx = page - base;</span><br><span class="line">    <span class="keyword">if</span> (page_idx &amp; ~mask)</span><br><span class="line">        BUG();</span><br><span class="line">    index = page_idx &gt;&gt; (<span class="number">1</span> + order);</span><br><span class="line"></span><br><span class="line">    area = zone-&gt;free_area + order;</span><br><span class="line"></span><br><span class="line">    spin_lock_irqsave(&amp;zone-&gt;lock, flags);</span><br><span class="line"></span><br><span class="line">    zone-&gt;free_pages -= mask;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span> (order++ &lt; (MAX_ORDER<span class="number">-1</span>)) </span><br><span class="line">    &#123;</span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">page</span> *<span class="title">buddy1</span>, *<span class="title">buddy2</span>;</span></span><br><span class="line">        <span class="keyword">if</span> (unlikely(area &gt;= zone-&gt;free_area + MAX_ORDER))</span><br><span class="line">            BUG();</span><br><span class="line">        <span class="keyword">if</span> (!test_and_change_bit(index, area-&gt;<span class="built_in">map</span>))</span><br><span class="line">            <span class="comment">/**</span></span><br><span class="line"><span class="comment">             * the buddy page is still allocated.</span></span><br><span class="line"><span class="comment">             */</span></span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/**</span></span><br><span class="line"><span class="comment">		 * Move the buddy up one level.</span></span><br><span class="line"><span class="comment">		 * This code is taking advantage of the identity:</span></span><br><span class="line"><span class="comment">		 * 	-mask = 1+~mask</span></span><br><span class="line"><span class="comment">		 */</span></span><br><span class="line">        buddy1 = base + (page_idx ^ -mask);</span><br><span class="line">        buddy2 = base + page_idx;</span><br><span class="line">        <span class="keyword">if</span> (BAD_RANGE(zone, buddy1))</span><br><span class="line">            BUG();</span><br><span class="line">        <span class="keyword">if</span> (BAD_RANGE(zone, buddy2))</span><br><span class="line">            BUG();</span><br><span class="line"></span><br><span class="line">        list_del(&amp;buddy1-&gt;<span class="built_in">list</span>);</span><br><span class="line">        mask &lt;&lt;= <span class="number">1</span>;</span><br><span class="line">        index &gt;&gt;= <span class="number">1</span>;</span><br><span class="line">        page_idx &amp;= mask;</span><br><span class="line">        area++;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    list_add(&amp;(base + page_idx)-&gt;<span class="built_in">list</span>, &amp;area-&gt;free_list);</span><br><span class="line">    spin_unlock_irqrestore(&amp;zone-&gt;lock, flags);</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">local_freelist:</span><br><span class="line">    <span class="keyword">if</span> (current-&gt;nr_local_pages)</span><br><span class="line">        <span class="keyword">goto</span> back_local_freelist;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (in_interrupt())</span><br><span class="line">		<span class="keyword">goto</span> back_local_freelist;		</span><br><span class="line"></span><br><span class="line">	list_add(&amp;page-&gt;<span class="built_in">list</span>, &amp;current-&gt;local_pages);</span><br><span class="line">	page-&gt;index = order;</span><br><span class="line">	current-&gt;nr_local_pages++;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="函数-free-pages"><a href="#函数-free-pages" class="headerlink" title="函数 __free_pages()"></a>函数 <a href="../../../src/mm/page_alloc.c">__free_pages()</a></h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">fastcall <span class="type">void</span> </span><br><span class="line">__free_pages(<span class="keyword">struct</span> page * page, <span class="type">unsigned</span> <span class="type">int</span> order)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (!PageReserved(page) &amp;&amp; put_page_testzero(page))</span><br><span class="line">        __free_pages_ok(page, order);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="接口函数-1"><a href="#接口函数-1" class="headerlink" title="接口函数"></a>接口函数</h3><p>伙伴位图分配器的释放页面接口函数有很多，都是方便程序员使用而添加的。</p>
+<table>
+<thead>
+<tr>
+<th align="center">函数</th>
+<th align="left">功能</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">free_pages()</td>
+<td align="left">在指定的 ORDER 释放虚拟内存地址对应的块</td>
+</tr>
+<tr>
+<td align="center">__free_page()</td>
+<td align="left">根据 struct page * 释放一个页面数为1的块</td>
+</tr>
+<tr>
+<td align="center">free_page()</td>
+<td align="left">根据虚拟内存地址释放一个页面数为1的块</td>
+</tr>
+</tbody></table>
+<h4 id="函数-free-pages-1"><a href="#函数-free-pages-1" class="headerlink" title="函数 free_pages()"></a>函数 <a href="../../../src/mm/page_alloc.c">free_pages()</a></h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">fastcall <span class="type">void</span> </span><br><span class="line"><span class="title function_">free_pages</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> addr, <span class="type">unsigned</span> <span class="type">int</span> order)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (addr != <span class="number">0</span>)</span><br><span class="line">        __free_pages(virt_to_page(addr), order);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="函数-free-page"><a href="#函数-free-page" class="headerlink" title="函数 __free_page()"></a>函数 <a href="../../../src/include/eleos/mm.h">__free_page()</a></h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> __free_page(page)   __free_pages((page), 0)</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="函数-free-page-1"><a href="#函数-free-page-1" class="headerlink" title="函数 free_page()"></a>函数 <a href="../../../src/include/eleos/mm.h">free_page()</a></h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> free_page(addr)     free_pages((addr), 0)</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="从位图分配器过渡到伙伴位图分配器"><a href="#从位图分配器过渡到伙伴位图分配器" class="headerlink" title="从位图分配器过渡到伙伴位图分配器"></a>从位图分配器过渡到伙伴位图分配器</h2><h3 id="为什么不继续使用位图分配器？与位图分配器相比，伙伴位图分配器有哪些优势"><a href="#为什么不继续使用位图分配器？与位图分配器相比，伙伴位图分配器有哪些优势" class="headerlink" title="为什么不继续使用位图分配器？与位图分配器相比，伙伴位图分配器有哪些优势"></a>为什么不继续使用位图分配器？与位图分配器相比，伙伴位图分配器有哪些优势</h3><p>不继续使用位图分配器，主要原因是位图分配器的分配页面机制。假设继续使用位图分配器，如果想要获取一个相对较大的连续页面，从头去遍历找出这类型的页面是需要花费很多时间的，而且还有可能获取不了，到头来一场空。毕竟执行位图分配器期间，会产生较多的内存碎片。且后续较难更新，上限较低。<br>伙伴位图分配器和它相比，优势有：内存页面根据 order 被组成多个块，分层管理不同大小的块，使得分配内存时效率快速。每个块有它自己的伙伴，使用位图记录每个伙伴的状态，能够组成更大的块供给上层，尽可能地使需要获取大块内存的进程获取到。  </p>
+<blockquote>
+<p>虽然伙伴位图分配器在初始化阶段较为耗时（看下节源码），但是后续使用它分配&#x2F;释放页面的效率快。这是属于置换时间耗费吧。</p>
+</blockquote>
+<h3 id="代码实现"><a href="#代码实现" class="headerlink" title="代码实现"></a>代码实现</h3><h4 id="函数-mem-init"><a href="#函数-mem-init" class="headerlink" title="函数 mem_init()"></a>函数 mem_init()</h4><p>每个平台都有它自己的 mem_init() ，这里贴出 i386 平台的 mem_init()</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> __init <span class="title function_">mem_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> reservedpages;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> codesize, datasize, initsize;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!mem_map)</span><br><span class="line">        BUG();</span><br><span class="line"></span><br><span class="line">    set_max_mapnr_init();</span><br><span class="line"></span><br><span class="line">    high_memory = (<span class="type">void</span> *)__va(max_low_pfn * PAGE_SIZE);</span><br><span class="line"></span><br><span class="line">    __constant_c_memset((<span class="type">void</span> *)(&amp;empty_zero_page), <span class="number">0</span>, PAGE_SIZE);</span><br><span class="line"></span><br><span class="line">    reservedpages = free_pages_init();</span><br><span class="line"></span><br><span class="line">    codesize = (<span class="type">unsigned</span> <span class="type">long</span>)(&amp;_etext - &amp;_text);</span><br><span class="line">    datasize = (<span class="type">unsigned</span> <span class="type">long</span>)(&amp;_edata - &amp;_etext);</span><br><span class="line">    initsize = (<span class="type">unsigned</span> <span class="type">long</span>)(&amp;__init_end - &amp;__init_begin);</span><br><span class="line"></span><br><span class="line">    printk(PRINT_INFO <span class="string">&quot;Memory: %luk/%luk available (%dk kernel code, %dk reserved, %dk data, %dk init, %ldk highmem)\n&quot;</span>,</span><br><span class="line">            (<span class="type">unsigned</span> <span class="type">long</span>)nr_free_pages() &lt;&lt; (PAGE_SHIFT - <span class="number">10</span>),</span><br><span class="line">            max_mapnr &lt;&lt; (PAGE_SHIFT - <span class="number">10</span>),</span><br><span class="line">            codesize &gt;&gt; <span class="number">10</span>,</span><br><span class="line">            reservedpages &lt;&lt; (PAGE_SHIFT - <span class="number">10</span>),</span><br><span class="line">            datasize &gt;&gt; <span class="number">10</span>,</span><br><span class="line">            initsize &gt;&gt; <span class="number">10</span>,</span><br><span class="line">            (<span class="type">unsigned</span> <span class="type">long</span>)(totalhigh_pages &lt;&lt; (PAGE_SHIFT - <span class="number">10</span>))</span><br><span class="line">    );</span><br><span class="line">&#125;  </span><br></pre></td></tr></table></figure>
+<p>简而言之，mem_init() 的操作是：</p>
+<ol>
+<li>记录与内存相关的全局变量，看 set_max_mapnr_init()。</li>
+<li>把 empty_zero_page 初始化为0。</li>
+<li>摧毁引导内存分配器，初始化伙伴位图分配器。</li>
+<li>输出内存的信息到屏幕。</li>
+</ol>
+<h4 id="函数-set-max-mapnr-init"><a href="#函数-set-max-mapnr-init" class="headerlink" title="函数 set_max_mapnr_init()"></a>函数 set_max_mapnr_init()</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">void</span> __init <span class="title function_">set_max_mapnr_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_HIGHMEM</span></span><br><span class="line"></span><br><span class="line">    highmem_start_page = mem_map + highstart_pfn;</span><br><span class="line">    max_mapnr = num_physpages = highend_pfn;</span><br><span class="line">    num_mappedpages = max_low_pfn;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">else</span> <span class="comment">/* CONFIG_HIGHMEM */</span></span></span><br><span class="line"></span><br><span class="line">    max_mapnr = num_physpages = num_mappedpages = max_low_pfn;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span> <span class="comment">/* CONFIG_HIGHMEM */</span></span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="函数-free-pages-init"><a href="#函数-free-pages-init" class="headerlink" title="函数 free_pages_init()"></a>函数 free_pages_init()</h4><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> __init <span class="title function_">free_pages_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> reservedpages, pfn;</span><br><span class="line"></span><br><span class="line">    totalram_pages += free_all_bootmem();</span><br><span class="line">    reservedpages = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">for</span> (pfn = <span class="number">0</span>; pfn &lt; max_low_pfn; pfn++)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (page_is_ram(pfn) &amp;&amp; PageReserved(mem_map + pfn))</span><br><span class="line">            reservedpages++;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_HIGHMEM</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (pfn = highend_pfn - <span class="number">1</span>; pfn &gt;= highstart_pfn; pfn--)</span><br><span class="line">        <span class="keyword">if</span> (one_highpage_init((mem_map + pfn), pfn))</span><br><span class="line">            reservedpages++;</span><br><span class="line">    totalram_pages += totalhigh_pages;</span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> reservedpages;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>函数 <a href="../../../src/mm/bootmem.c">free_all_bootmem()</a> 的作用是检查内存节点的引导内存分配器描述符的位图，找出为0位对应的页，清除该页的 Reserved 位，并把它的 count 设为1，调用 __free_page() 释放页。最后把位图所在的页释放（方式和上一句一样）。<br>函数 <a href="../../../src/arch/i386/mm/init.c">one_highpage_init()</a> 是把在高端内存所处的页释放（清除 Reserved 位，设置 highmem 位，count 设为1，调用 __free_page() 释放页）。</p>
+<h2 id="伙伴位图分配器的缺点（内存碎片）"><a href="#伙伴位图分配器的缺点（内存碎片）" class="headerlink" title="伙伴位图分配器的缺点（内存碎片）"></a>伙伴位图分配器的缺点（内存碎片）</h2><p>执行伙伴位图分配器期间还是会有内存碎片的。为了减少内存碎片，还是需要另外的操作。内存碎片被分为内部碎片和外部碎片。<br>内部碎片是在直接映射到内核空间的 0～896MB 内产生的内存碎片。由于是直接映射的，那么如果想要获取较大的连续页会比较困难。但这里新增了 slab 分配器来缓解内部碎片（ slab 分配器下节讲解）。<br>外部碎片是指在 896MB 以外产生的内存碎片。内核空间的 896MB～1GB 不是直接映射区域，可使用非连续内存分配器解决。</p>
+<blockquote>
+<p>One important problem that must be addressed with any allocator is the problem of internal and external fragmentation. External fragmentation is the inability to service a request because the available memory exists only in small blocks. Internal fragmentation is deﬁned as the wasted space where a large block had to be assigned to service a small request. In Linux, external fragmentation is not a serious problem because large requests for contiguous pages are rare, and usually vmalloc() is suﬃcient to service the request. The lists of free blocks ensure that large blocks do not have to be split unnecessarily.<br>Internal fragmentation is the single-most serious failing of the binary buddy system. Although fragmentation is expected to be in the region of 28 per-cent, it has been shown that it can be in the region of 60 percent, in comparison to just 1 percent with the ﬁrst ﬁt allocator. It has also been shown that using variations of the buddy system will not help the situation signiﬁ-cantly. To address this problem, Linux uses a slab allocator to carve up pages into small blocks of memory for allocation. With this combination of allocators, the kernel can ensure that the amount of memory wasted due to internal fragmentation is kept to a minimum.<br>–截自《内存管理》第六章第六节</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Kernel/" rel="tag"># Kernel</a>
+              <a href="/tags/Memory/" rel="tag"># Memory</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/10/13/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-SLAB%E5%88%86%E9%85%8D%E5%99%A8/" rel="prev" title="Linux - SLAB分配器（内核版本 2.4.22，32位x86）">
+                  <i class="fa fa-angle-left"></i> Linux - SLAB分配器（内核版本 2.4.22，32位x86）
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6_i386/" rel="next" title="Linux - 任务调度（内核版本 2.4.22，32位x86）">
+                  Linux - 任务调度（内核版本 2.4.22，32位x86） <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

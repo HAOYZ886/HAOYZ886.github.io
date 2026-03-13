@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="以下是本人经常使用到的 bochs 调试指令，记录一下。">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="bochs指令集">
+<meta property="og:url" content="http://example.com/2022/12/30/Skill/debug/bochs%E6%8C%87%E4%BB%A4%E9%9B%86/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="以下是本人经常使用到的 bochs 调试指令，记录一下。">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2022-12-29T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-12-29T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="bochs">
+<meta property="article:tag" content="debug">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2022/12/30/Skill/debug/bochs%E6%8C%87%E4%BB%A4%E9%9B%86/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2022/12/30/Skill/debug/bochs%E6%8C%87%E4%BB%A4%E9%9B%86/","path":"2022/12/30/Skill/debug/bochs指令集/","title":"bochs指令集"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>bochs指令集 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Breakpoint"><span class="nav-number">1.</span> <span class="nav-text">Breakpoint</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%99%9A%E6%8B%9F%E5%9C%B0%E5%9D%80%E6%96%AD%E7%82%B9%E6%8C%87%E4%BB%A4"><span class="nav-number">1.1.</span> <span class="nav-text">虚拟地址断点指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BA%BF%E6%80%A7%E5%9C%B0%E5%9D%80%E6%96%AD%E7%82%B9%E6%8C%87%E4%BB%A4"><span class="nav-number">1.2.</span> <span class="nav-text">线性地址断点指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%89%A9%E7%90%86%E5%9C%B0%E5%9D%80%E6%96%AD%E7%82%B9%E6%8C%87%E4%BB%A4"><span class="nav-number">1.3.</span> <span class="nav-text">物理地址断点指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8C%87%E4%BB%A4%E6%95%B0%E6%89%93%E6%96%AD%E7%82%B9%E6%8C%87%E4%BB%A4"><span class="nav-number">1.4.</span> <span class="nav-text">指令数打断点指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%BB%E6%96%AD%E7%82%B9%E6%8C%87%E4%BB%A4"><span class="nav-number">1.5.</span> <span class="nav-text">读断点指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%99%E6%96%AD%E7%82%B9%E6%8C%87%E4%BB%A4"><span class="nav-number">1.6.</span> <span class="nav-text">写断点指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%98%BE%E7%A4%BA%E6%89%80%E6%9C%89%E8%AF%BB%E5%86%99%E6%96%AD%E7%82%B9%E6%8C%87%E4%BB%A4"><span class="nav-number">1.7.</span> <span class="nav-text">显示所有读写断点指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B8%85%E9%99%A4%E6%89%80%E6%9C%89%E6%96%AD%E7%82%B9%E6%8C%87%E4%BB%A4"><span class="nav-number">1.8.</span> <span class="nav-text">清除所有断点指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B8%85%E9%99%A4%E5%9C%A8%E6%AD%A4%E5%9C%B0%E5%9D%80%E4%B8%8A%E7%9A%84%E8%AF%BB%E5%86%99%E6%96%AD%E7%82%B9%E6%8C%87%E4%BB%A4"><span class="nav-number">1.9.</span> <span class="nav-text">清除在此地址上的读写断点指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%98%BE%E7%A4%BA%E6%89%80%E6%9C%89%E6%96%AD%E7%82%B9%E4%BF%A1%E6%81%AF%E6%8C%87%E4%BB%A4"><span class="nav-number">1.10.</span> <span class="nav-text">显示所有断点信息指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A6%81%E7%94%A8-%E5%90%AF%E7%94%A8%E6%96%AD%E7%82%B9%E6%8C%87%E4%BB%A4"><span class="nav-number">1.11.</span> <span class="nav-text">禁用&#x2F;启用断点指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%A0%E9%99%A4%E6%9F%90%E6%96%AD%E7%82%B9%E6%8C%87%E4%BB%A4"><span class="nav-number">1.12.</span> <span class="nav-text">删除某断点指令</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#debugger"><span class="nav-number">2.</span> <span class="nav-text">debugger</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%80%80%E5%87%BA%E8%B0%83%E8%AF%95%E5%91%BD%E4%BB%A4"><span class="nav-number">2.1.</span> <span class="nav-text">退出调试命令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#set%E5%91%BD%E4%BB%A4%E9%9B%86"><span class="nav-number">2.2.</span> <span class="nav-text">set命令集</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%BE%E7%BD%AE%E9%80%9A%E7%94%A8-%E6%AE%B5%E5%AF%84%E5%AD%98%E5%99%A8%E7%9A%84%E5%80%BC"><span class="nav-number">2.2.1.</span> <span class="nav-text">设置通用&#x2F;段寄存器的值</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%BE%E7%BD%AE%E6%AF%8F%E6%AC%A1%E5%81%9C%E6%AD%A2%E6%89%A7%E8%A1%8C%E5%90%8E%EF%BC%8C%E6%98%AF%E5%90%A6%E5%8F%8D%E6%B1%87%E7%BC%96%E6%8C%87%E4%BB%A4"><span class="nav-number">2.2.2.</span> <span class="nav-text">设置每次停止执行后，是否反汇编指令</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#show%E5%91%BD%E4%BB%A4%E9%9B%86"><span class="nav-number">2.3.</span> <span class="nav-text">show命令集</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#CPU%E5%8F%98%E6%9B%B4%E6%A8%A1%E5%BC%8F%E6%97%B6%E6%8F%90%E7%A4%BA"><span class="nav-number">2.3.1.</span> <span class="nav-text">CPU变更模式时提示</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%91%E7%94%9F%E5%87%BD%E6%95%B0%E8%B0%83%E7%94%A8%EF%BC%88%E8%B0%83%E7%94%A8%E8%BF%87%E7%A8%8B%EF%BC%89%E6%97%B6%E6%8F%90%E7%A4%BA"><span class="nav-number">2.3.2.</span> <span class="nav-text">发生函数调用（调用过程）时提示</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%AD%E6%96%AD%E5%8F%91%E7%94%9F%E6%97%B6%E6%8F%90%E7%A4%BA%EF%BC%8C%E6%98%BE%E7%A4%BA%E4%B8%89%E7%A7%8D%E7%B1%BB%E5%9E%8B%E7%9A%84%E4%B8%AD%E6%96%AD%EF%BC%8C%E8%BD%AF%E4%B8%AD%E6%96%AD%E3%80%81%E7%A1%AC%E4%BB%B6%E4%B8%AD%E6%96%AD%E3%80%81iret"><span class="nav-number">2.3.3.</span> <span class="nav-text">中断发生时提示，显示三种类型的中断，软中断、硬件中断、iret</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AF%E4%B8%AD%E6%96%AD%E5%8F%91%E7%94%9F%E6%97%B6%E6%8F%90%E7%A4%BA"><span class="nav-number">2.3.4.</span> <span class="nav-text">软中断发生时提示</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A1%AC%E4%BB%B6%E4%B8%AD%E6%96%AD%E5%8F%91%E7%94%9F%E6%97%B6%E6%8F%90%E7%A4%BA"><span class="nav-number">2.3.5.</span> <span class="nav-text">硬件中断发生时提示</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%98%BE%E7%A4%BAiret%E6%8C%87%E4%BB%A4%E6%9C%89%E5%85%B3%E7%9A%84%E4%BF%A1%E6%81%AF"><span class="nav-number">2.3.6.</span> <span class="nav-text">显示iret指令有关的信息</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%AF%8F%E6%AC%A1%E6%89%A7%E8%A1%8C%E4%B8%80%E6%9D%A1%E6%8C%87%E4%BB%A4%EF%BC%8C%E6%98%AF%E5%90%A6%E5%B0%86%E8%BF%99%E6%9D%A1%E6%8C%87%E4%BB%A4%E5%8F%8D%E6%B1%87%E7%BC%96%E5%B9%B6%E6%98%BE%E7%A4%BA%E5%88%B0%E6%8E%A7%E5%88%B6%E5%8F%B0"><span class="nav-number">2.4.</span> <span class="nav-text">每次执行一条指令，是否将这条指令反汇编并显示到控制台</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A0%B9%E6%8D%AE%E6%9C%BA%E5%99%A8%E4%BB%A3%E7%A0%81%E7%94%9F%E6%88%90%E5%8F%AF%E8%AF%BB%E7%9A%84%E6%B1%87%E7%BC%96%E4%BB%A3%E7%A0%81%E6%8C%87%E4%BB%A4"><span class="nav-number">2.5.</span> <span class="nav-text">根据机器代码生成可读的汇编代码指令</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#execution"><span class="nav-number">3.</span> <span class="nav-text">execution</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%A7%E7%BB%AD%E6%89%A7%E8%A1%8C%E6%8C%87%E4%BB%A4"><span class="nav-number">3.1.</span> <span class="nav-text">继续执行指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%95%E6%AD%A5-n%E6%AD%A5%E6%89%A7%E8%A1%8C%E6%8C%87%E4%BB%A4"><span class="nav-number">3.2.</span> <span class="nav-text">单步&#x2F;n步执行指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%A7%E8%A1%8C%E4%B8%80%E6%9D%A1%E6%8C%87%E4%BB%A4"><span class="nav-number">3.3.</span> <span class="nav-text">执行一条指令</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#information"><span class="nav-number">4.</span> <span class="nav-text">information</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E6%8C%87%E4%BB%A4%E7%9A%84%E6%8F%8F%E8%BF%B0%E6%8C%87%E4%BB%A4"><span class="nav-number">4.1.</span> <span class="nav-text">查看指令的描述指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%98%BE%E7%A4%BA%E9%80%9A%E7%94%A8%E5%AF%84%E5%AD%98%E5%99%A8%E5%86%85%E5%AE%B9%E6%8C%87%E4%BB%A4"><span class="nav-number">4.2.</span> <span class="nav-text">显示通用寄存器内容指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%A7%E8%A1%8C%E5%BE%AA%E7%8E%AF%E6%8C%87%E4%BB%A4"><span class="nav-number">4.3.</span> <span class="nav-text">执行循环指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%98%BE%E7%A4%BA%E7%BA%BF%E6%80%A7%E5%9C%B0%E5%9D%80%E7%9A%84%E5%86%85%E5%AE%B9%E6%8C%87%E4%BB%A4"><span class="nav-number">4.4.</span> <span class="nav-text">显示线性地址的内容指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%98%BE%E7%A4%BA%E7%89%A9%E7%90%86%E5%9C%B0%E5%9D%80%E7%9A%84%E5%86%85%E5%AE%B9%E6%8C%87%E4%BB%A4"><span class="nav-number">4.5.</span> <span class="nav-text">显示物理地址的内容指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%BE%E7%BD%AE%E8%BF%9E%E7%BB%AD%E7%9A%84%E7%9B%B8%E5%90%8C%E7%9A%84%E5%80%BC%E6%8C%87%E4%BB%A4"><span class="nav-number">4.6.</span> <span class="nav-text">设置连续的相同的值指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%98%BE%E7%A4%BA%E9%80%9A%E7%94%A8%E5%AF%84%E5%AD%98%E5%99%A8%E3%80%81eflags%E3%80%81eip%E7%9A%84%E5%80%BC%E6%8C%87%E4%BB%A4"><span class="nav-number">4.7.</span> <span class="nav-text">显示通用寄存器、eflags、eip的值指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E6%A0%88%E5%86%85%E7%9A%84%E6%95%B0%E6%8D%AE%E6%8C%87%E4%BB%A4"><span class="nav-number">4.8.</span> <span class="nav-text">查看栈内的数据指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#info%E6%8C%87%E4%BB%A4%E9%9B%86"><span class="nav-number">4.9.</span> <span class="nav-text">info指令集</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8BCPU%E6%89%80%E6%9C%89%E7%9A%84%E5%AF%84%E5%AD%98%E5%99%A8%E7%9A%84%E5%80%BC%EF%BC%8C%E5%8C%85%E6%8B%AC%E4%B8%8D%E5%8F%AF%E8%A7%81%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-number">4.9.1.</span> <span class="nav-text">查看CPU所有的寄存器的值，包括不可见寄存器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%98%BE%E7%A4%BAfpu%E7%8A%B6%E6%80%81"><span class="nav-number">4.9.2.</span> <span class="nav-text">显示fpu状态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E6%A0%87%E5%BF%97%E4%BD%8D"><span class="nav-number">4.9.3.</span> <span class="nav-text">查看标志位</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E5%BD%93%E5%89%8D%E4%BB%BB%E5%8A%A1%E7%9A%84%E9%A1%B5%E8%A1%A8%E4%BF%A1%E6%81%AF"><span class="nav-number">4.9.4.</span> <span class="nav-text">查看当前任务的页表信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8BIDT%E7%9A%84%E6%89%80%E6%9C%89%E5%86%85%E5%AE%B9"><span class="nav-number">4.9.5.</span> <span class="nav-text">查看IDT的所有内容</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8BGDT%E7%9A%84%E6%89%80%E6%9C%89%E5%86%85%E5%AE%B9"><span class="nav-number">4.9.6.</span> <span class="nav-text">查看GDT的所有内容</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8BLDT%E7%9A%84%E6%89%80%E6%9C%89%E5%86%85%E5%AE%B9"><span class="nav-number">4.9.7.</span> <span class="nav-text">查看LDT的所有内容</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8BTSS%E7%9A%84%E5%86%85%E5%AE%B9"><span class="nav-number">4.9.8.</span> <span class="nav-text">查看TSS的内容</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%98%BE%E7%A4%BA%E4%B8%AD%E6%96%AD%E5%90%91%E9%87%8F%E8%A1%A8"><span class="nav-number">4.9.9.</span> <span class="nav-text">显示中断向量表</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%98%BE%E7%A4%BA%E6%AE%B5%E5%AF%84%E5%AD%98%E5%99%A8%E5%86%85%E5%AE%B9%E6%8C%87%E4%BB%A4"><span class="nav-number">4.10.</span> <span class="nav-text">显示段寄存器内容指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%98%BE%E7%A4%BA%E6%8E%A7%E5%88%B6%E5%AF%84%E5%AD%98%E5%99%A8%E6%8C%87%E4%BB%A4"><span class="nav-number">4.11.</span> <span class="nav-text">显示控制寄存器指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%98%BE%E7%A4%BA%E8%B0%83%E8%AF%95%E5%AF%84%E5%AD%98%E5%99%A8%E6%8C%87%E4%BB%A4"><span class="nav-number">4.12.</span> <span class="nav-text">显示调试寄存器指令</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%98%BE%E7%A4%BA%E7%BA%BF%E6%80%A7%E5%9C%B0%E5%9D%80%E5%88%B0%E7%89%A9%E7%90%86%E5%9C%B0%E5%9D%80%E9%97%B4%E7%9A%84%E6%98%A0%E5%B0%84%E6%8C%87%E4%BB%A4"><span class="nav-number">4.13.</span> <span class="nav-text">显示线性地址到物理地址间的映射指令</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/12/30/Skill/debug/bochs%E6%8C%87%E4%BB%A4%E9%9B%86/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="bochs指令集 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          bochs指令集
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2022-12-30 00:00:00" itemprop="dateCreated datePublished" datetime="2022-12-30T00:00:00+08:00">2022-12-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Skill/" itemprop="url" rel="index"><span itemprop="name">Skill</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>1.1k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>4 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>以下是本人经常使用到的 bochs 调试指令，记录一下。</p>
+<span id="more"></span>
+<h1 id="Breakpoint"><a href="#Breakpoint" class="headerlink" title="Breakpoint"></a>Breakpoint</h1><h2 id="虚拟地址断点指令"><a href="#虚拟地址断点指令" class="headerlink" title="虚拟地址断点指令"></a>虚拟地址断点指令</h2><p>vb|vbreak 段:偏移</p>
+<h2 id="线性地址断点指令"><a href="#线性地址断点指令" class="headerlink" title="线性地址断点指令"></a>线性地址断点指令</h2><p>lb|lbreak 线性地址</p>
+<h2 id="物理地址断点指令"><a href="#物理地址断点指令" class="headerlink" title="物理地址断点指令"></a>物理地址断点指令</h2><p>b|break 物理地址</p>
+<h2 id="指令数打断点指令"><a href="#指令数打断点指令" class="headerlink" title="指令数打断点指令"></a>指令数打断点指令</h2><p>sb delta</p>
+<blockquote>
+<p>再执行delta条指令程序就中断</p>
+</blockquote>
+<p>sba time</p>
+<blockquote>
+<p>CPU从运行开始，执行time条指令时中断，从0开始的指令数</p>
+</blockquote>
+<h2 id="读断点指令"><a href="#读断点指令" class="headerlink" title="读断点指令"></a>读断点指令</h2><p>watch r 物理地址</p>
+<blockquote>
+<p>设置读断点，如物理地址有读操作就停止执行</p>
+</blockquote>
+<h2 id="写断点指令"><a href="#写断点指令" class="headerlink" title="写断点指令"></a>写断点指令</h2><p>watch w 物理地址</p>
+<blockquote>
+<p>设置写断点，如物理地址写操作就停止执行</p>
+</blockquote>
+<h2 id="显示所有读写断点指令"><a href="#显示所有读写断点指令" class="headerlink" title="显示所有读写断点指令"></a>显示所有读写断点指令</h2><p>watch</p>
+<h2 id="清除所有断点指令"><a href="#清除所有断点指令" class="headerlink" title="清除所有断点指令"></a>清除所有断点指令</h2><p>unwatch</p>
+<h2 id="清除在此地址上的读写断点指令"><a href="#清除在此地址上的读写断点指令" class="headerlink" title="清除在此地址上的读写断点指令"></a>清除在此地址上的读写断点指令</h2><p>unwatch 物理地址</p>
+<h2 id="显示所有断点信息指令"><a href="#显示所有断点信息指令" class="headerlink" title="显示所有断点信息指令"></a>显示所有断点信息指令</h2><p>blist</p>
+<h2 id="禁用-启用断点指令"><a href="#禁用-启用断点指令" class="headerlink" title="禁用&#x2F;启用断点指令"></a>禁用&#x2F;启用断点指令</h2><p>bpd|bpe n</p>
+<blockquote>
+<p>bpd是禁用，bpe是启用，n是断点号，可用blist查询获取断点号</p>
+</blockquote>
+<h2 id="删除某断点指令"><a href="#删除某断点指令" class="headerlink" title="删除某断点指令"></a>删除某断点指令</h2><p>d|del n</p>
+<blockquote>
+<p>n是断点号</p>
+</blockquote>
+<h1 id="debugger"><a href="#debugger" class="headerlink" title="debugger"></a>debugger</h1><h2 id="退出调试命令"><a href="#退出调试命令" class="headerlink" title="退出调试命令"></a>退出调试命令</h2><p>q | quit | exit</p>
+<h2 id="set命令集"><a href="#set命令集" class="headerlink" title="set命令集"></a>set命令集</h2><h3 id="设置通用-段寄存器的值"><a href="#设置通用-段寄存器的值" class="headerlink" title="设置通用&#x2F;段寄存器的值"></a>设置通用&#x2F;段寄存器的值</h3><p>set reg &#x3D; val</p>
+<h3 id="设置每次停止执行后，是否反汇编指令"><a href="#设置每次停止执行后，是否反汇编指令" class="headerlink" title="设置每次停止执行后，是否反汇编指令"></a>设置每次停止执行后，是否反汇编指令</h3><p>set u on|off</p>
+<h2 id="show命令集"><a href="#show命令集" class="headerlink" title="show命令集"></a>show命令集</h2><h3 id="CPU变更模式时提示"><a href="#CPU变更模式时提示" class="headerlink" title="CPU变更模式时提示"></a>CPU变更模式时提示</h3><p>show mode</p>
+<h3 id="发生函数调用（调用过程）时提示"><a href="#发生函数调用（调用过程）时提示" class="headerlink" title="发生函数调用（调用过程）时提示"></a>发生函数调用（调用过程）时提示</h3><p>show call</p>
+<h3 id="中断发生时提示，显示三种类型的中断，软中断、硬件中断、iret"><a href="#中断发生时提示，显示三种类型的中断，软中断、硬件中断、iret" class="headerlink" title="中断发生时提示，显示三种类型的中断，软中断、硬件中断、iret"></a>中断发生时提示，显示三种类型的中断，软中断、硬件中断、iret</h3><p>show int</p>
+<h3 id="软中断发生时提示"><a href="#软中断发生时提示" class="headerlink" title="软中断发生时提示"></a>软中断发生时提示</h3><p>show softint</p>
+<h3 id="硬件中断发生时提示"><a href="#硬件中断发生时提示" class="headerlink" title="硬件中断发生时提示"></a>硬件中断发生时提示</h3><p>show extint</p>
+<h3 id="显示iret指令有关的信息"><a href="#显示iret指令有关的信息" class="headerlink" title="显示iret指令有关的信息"></a>显示iret指令有关的信息</h3><p>show iret</p>
+<h2 id="每次执行一条指令，是否将这条指令反汇编并显示到控制台"><a href="#每次执行一条指令，是否将这条指令反汇编并显示到控制台" class="headerlink" title="每次执行一条指令，是否将这条指令反汇编并显示到控制台"></a>每次执行一条指令，是否将这条指令反汇编并显示到控制台</h2><p>trace on|off</p>
+<h2 id="根据机器代码生成可读的汇编代码指令"><a href="#根据机器代码生成可读的汇编代码指令" class="headerlink" title="根据机器代码生成可读的汇编代码指令"></a>根据机器代码生成可读的汇编代码指令</h2><p>u &#x2F;num start end</p>
+<h1 id="execution"><a href="#execution" class="headerlink" title="execution"></a>execution</h1><h2 id="继续执行指令"><a href="#继续执行指令" class="headerlink" title="继续执行指令"></a>继续执行指令</h2><p>continue|c</p>
+<h2 id="单步-n步执行指令"><a href="#单步-n步执行指令" class="headerlink" title="单步&#x2F;n步执行指令"></a>单步&#x2F;n步执行指令</h2><p>step|s count</p>
+<blockquote>
+<p>执行count条指令，不使用参数则默认为1</p>
+</blockquote>
+<h2 id="执行一条指令"><a href="#执行一条指令" class="headerlink" title="执行一条指令"></a>执行一条指令</h2><p>p|n|next</p>
+<blockquote>
+<p>若执行的指令是函数调用（调用过程），会把整个函数当作整体来执行</p>
+</blockquote>
+<h1 id="information"><a href="#information" class="headerlink" title="information"></a>information</h1><h2 id="查看指令的描述指令"><a href="#查看指令的描述指令" class="headerlink" title="查看指令的描述指令"></a>查看指令的描述指令</h2><p>help+命令</p>
+<h2 id="显示通用寄存器内容指令"><a href="#显示通用寄存器内容指令" class="headerlink" title="显示通用寄存器内容指令"></a>显示通用寄存器内容指令</h2><p>register|r</p>
+<h2 id="执行循环指令"><a href="#执行循环指令" class="headerlink" title="执行循环指令"></a>执行循环指令</h2><p>n</p>
+<h2 id="显示线性地址的内容指令"><a href="#显示线性地址的内容指令" class="headerlink" title="显示线性地址的内容指令"></a>显示线性地址的内容指令</h2><p>x &#x2F;nuf 线性地址</p>
+<blockquote>
+<p>n表示显示单元数（默认为1），u表示显示单元大小（b 1字节；h 2字节；w 4字节；g 8字节），f表示使用哪种进制表示内存单元（默认十六进制）</p>
+</blockquote>
+<h2 id="显示物理地址的内容指令"><a href="#显示物理地址的内容指令" class="headerlink" title="显示物理地址的内容指令"></a>显示物理地址的内容指令</h2><p>xp &#x2F;nuf 物理地址</p>
+<blockquote>
+<p>n表示显示单元数（默认为1），u表示显示单元大小（b 1字节；h 2字节；w 4字节；g 8字节），f表示使用哪种进制表示内存单元（默认十六进制）</p>
+</blockquote>
+<h2 id="设置连续的相同的值指令"><a href="#设置连续的相同的值指令" class="headerlink" title="设置连续的相同的值指令"></a>设置连续的相同的值指令</h2><p>setpmem 物理地址 size val</p>
+<blockquote>
+<p>设置以物理地址为起始，连续size个字节的内容为val。PS：size最多只能设置4字节，超过会报错</p>
+</blockquote>
+<h2 id="显示通用寄存器、eflags、eip的值指令"><a href="#显示通用寄存器、eflags、eip的值指令" class="headerlink" title="显示通用寄存器、eflags、eip的值指令"></a>显示通用寄存器、eflags、eip的值指令</h2><p>r|reg</p>
+<h2 id="查看栈内的数据指令"><a href="#查看栈内的数据指令" class="headerlink" title="查看栈内的数据指令"></a>查看栈内的数据指令</h2><p>print-stack num</p>
+<blockquote>
+<p>num用于指定显示多少数据。不使用，则默认显示16个字<br>PS：输出的栈内容是栈顶在上，低地址在上，高地址在下。</p>
+</blockquote>
+<h2 id="info指令集"><a href="#info指令集" class="headerlink" title="info指令集"></a>info指令集</h2><h3 id="查看CPU所有的寄存器的值，包括不可见寄存器"><a href="#查看CPU所有的寄存器的值，包括不可见寄存器" class="headerlink" title="查看CPU所有的寄存器的值，包括不可见寄存器"></a>查看CPU所有的寄存器的值，包括不可见寄存器</h3><p>info CPU</p>
+<h3 id="显示fpu状态"><a href="#显示fpu状态" class="headerlink" title="显示fpu状态"></a>显示fpu状态</h3><p>info fpu</p>
+<h3 id="查看标志位"><a href="#查看标志位" class="headerlink" title="查看标志位"></a>查看标志位</h3><p>info eflags</p>
+<blockquote>
+<p>标志名称大写表示标志为1，小写为0</p>
+</blockquote>
+<h3 id="查看当前任务的页表信息"><a href="#查看当前任务的页表信息" class="headerlink" title="查看当前任务的页表信息"></a>查看当前任务的页表信息</h3><p>info tab</p>
+<blockquote>
+<p>显示线性地址和物理地址（页）的全部映射关系</p>
+</blockquote>
+<h3 id="查看IDT的所有内容"><a href="#查看IDT的所有内容" class="headerlink" title="查看IDT的所有内容"></a>查看IDT的所有内容</h3><p>info idt</p>
+<blockquote>
+<p>显示内容前，ldtr寄存器先获取IDT的物理地址和表界限</p>
+</blockquote>
+<h3 id="查看GDT的所有内容"><a href="#查看GDT的所有内容" class="headerlink" title="查看GDT的所有内容"></a>查看GDT的所有内容</h3><p>info gdt num</p>
+<blockquote>
+<p>如果加了num参数，则显示第num条描述符。<br>PS：显示内容前，gdtr寄存器先获取GDT的物理地址和表界限</p>
+</blockquote>
+<h3 id="查看LDT的所有内容"><a href="#查看LDT的所有内容" class="headerlink" title="查看LDT的所有内容"></a>查看LDT的所有内容</h3><p>info ldt</p>
+<blockquote>
+<p>PS：显示内容前，ldtr寄存器先获取到LDT的基地址和段信息</p>
+</blockquote>
+<h3 id="查看TSS的内容"><a href="#查看TSS的内容" class="headerlink" title="查看TSS的内容"></a>查看TSS的内容</h3><p>info tss</p>
+<blockquote>
+<p>PS：显示内容前，tr寄存器先获取到TSS的基地址和段信息</p>
+</blockquote>
+<h3 id="显示中断向量表"><a href="#显示中断向量表" class="headerlink" title="显示中断向量表"></a>显示中断向量表</h3><p>info ivt</p>
+<blockquote>
+<p>如果加了num参数，则显示第num条中断向量。</p>
+</blockquote>
+<h2 id="显示段寄存器内容指令"><a href="#显示段寄存器内容指令" class="headerlink" title="显示段寄存器内容指令"></a>显示段寄存器内容指令</h2><p>sreg</p>
+<h2 id="显示控制寄存器指令"><a href="#显示控制寄存器指令" class="headerlink" title="显示控制寄存器指令"></a>显示控制寄存器指令</h2><p>creg</p>
+<h2 id="显示调试寄存器指令"><a href="#显示调试寄存器指令" class="headerlink" title="显示调试寄存器指令"></a>显示调试寄存器指令</h2><p>dreg</p>
+<h2 id="显示线性地址到物理地址间的映射指令"><a href="#显示线性地址到物理地址间的映射指令" class="headerlink" title="显示线性地址到物理地址间的映射指令"></a>显示线性地址到物理地址间的映射指令</h2><p>page line_addr</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/debug/" rel="tag"># debug</a>
+              <a href="/tags/bochs/" rel="tag"># bochs</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%BB%BB%E5%8A%A1%E8%AE%A9%E5%87%BA%E5%92%8C%E7%9D%A1%E7%9C%A0_i386/" rel="prev" title="Linux - 任务让出和睡眠（内核版本 2.4.22，32位x86）">
+                  <i class="fa fa-angle-left"></i> Linux - 任务让出和睡眠（内核版本 2.4.22，32位x86）
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2023/04/01/Skill/normal/KConfig%E4%BD%BF%E7%94%A8%E7%AC%94%E8%AE%B0/" rel="next" title="KConfig 使用笔记">
+                  KConfig 使用笔记 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

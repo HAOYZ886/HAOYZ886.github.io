@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="MESI 的作用在 SMP 系统内，确保 CPU 之间对同一个内存地址访问时，数据是一致的，是最新的。https:&#x2F;&#x2F;www.scss.tcd.ie&#x2F;Jeremy.Jones&#x2F;VivioJS&#x2F;caches&#x2F;MESIHelp.htm">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="推理 MESI 协议的由来">
+<meta property="og:url" content="http://example.com/2024/06/23/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="MESI 的作用在 SMP 系统内，确保 CPU 之间对同一个内存地址访问时，数据是一致的，是最新的。https:&#x2F;&#x2F;www.scss.tcd.ie&#x2F;Jeremy.Jones&#x2F;VivioJS&#x2F;caches&#x2F;MESIHelp.htm">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI1.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI2.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI3.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI4.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI5.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI6.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI7.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI8.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI9.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI10.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI11.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI12.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI13.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI14.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI15.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI-ChangeStatus.png">
+<meta property="article:published_time" content="2024-06-22T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-06-22T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Architecture">
+<meta property="article:tag" content="Hardware">
+<meta property="article:tag" content="MESI">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/MESI1.drawio.png">
+
+
+<link rel="canonical" href="http://example.com/2024/06/23/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2024/06/23/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/","path":"2024/06/23/Hardware/arch/推理MESI协议的由来/","title":"推理 MESI 协议的由来"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>推理 MESI 协议的由来 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#MESI-%E7%9A%84%E4%BD%9C%E7%94%A8"><span class="nav-number">1.</span> <span class="nav-text">MESI 的作用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%9D%E6%AD%A5%E6%8E%A8%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">初步推理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MESI-%E7%9A%84%E7%8A%B6%E6%80%81%E8%BD%AC%E6%8D%A2"><span class="nav-number">3.</span> <span class="nav-text">MESI 的状态转换</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2024/06/23/Hardware/arch/%E6%8E%A8%E7%90%86MESI%E5%8D%8F%E8%AE%AE%E7%9A%84%E7%94%B1%E6%9D%A5/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="推理 MESI 协议的由来 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          推理 MESI 协议的由来
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2024-06-23 00:00:00" itemprop="dateCreated datePublished" datetime="2024-06-23T00:00:00+08:00">2024-06-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Hardware/" itemprop="url" rel="index"><span itemprop="name">Hardware</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2.2k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>8 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="MESI-的作用"><a href="#MESI-的作用" class="headerlink" title="MESI 的作用"></a>MESI 的作用</h2><p>在 SMP 系统内，确保 CPU 之间对同一个内存地址访问时，数据是一致的，是最新的。<br><a target="_blank" rel="noopener" href="https://www.scss.tcd.ie/Jeremy.Jones/VivioJS/caches/MESIHelp.htm">https://www.scss.tcd.ie/Jeremy.Jones/VivioJS/caches/MESIHelp.htm</a></p>
+<span id="more"></span>
+
+<h2 id="初步推理"><a href="#初步推理" class="headerlink" title="初步推理"></a>初步推理</h2><p>比如说现在处于下列的 SMP 系统模型（暂定一个缓存行为 1 字节）：</p>
+<div align="center"><img src="/images/Hardware/arch/推理MESI协议的由来/MESI1.drawio.png"></div>
+
+<p>当 CPU0 从内存地址 a0 读取数据时，会把该地址对应的值放到 CPU0 的 Cache0：</p>
+<div align="center"><img src="/images/Hardware/arch/推理MESI协议的由来/MESI2.drawio.png"></div>
+
+<blockquote>
+<p>注意：每在 Cache 使用一个 Cache Line 时，其实有一个类似于名为 Exist 标签表示当前 Cache Line 被占用的，最起码在 UP 系统是这样的。在 SMP 系统的 MESI 协议已有标签去间接表示当前 Cache Line 被占用了。所以本文章的图示都没有用 Exist 标签表示 Cache Line 被占用，但是仅把 Cache Line 中的 Address 和 Data 项被填充，Flag 项为空，来表示这个缓存行是被占用的。</p>
+</blockquote>
+<p>然后 CPU0 往 a0 写入数据 1 ，此时 Cache Line 0 的 Flag 标记被标记为 Modified 或 Dirty ：</p>
+<div align="center"><img src="/images/Hardware/arch/推理MESI协议的由来/MESI3.drawio.png"></div>
+
+<p>因为 CPU 的时钟频率总是比内存的高，即 CPU 的运行速率比内存快，所以当缓存行内的被修改时，通常来说是不会立即把最新值<strong>写回</strong>到内存中。当这个缓存行有一段时间没有被它对应的 CPU 访问时，才把它写回到内存中。而这个缓存刷新机制所使用到的算法是 LRU 。</p>
+<blockquote>
+<p>缓存刷新机制的算法不只是 LRU ，还有很多。</p>
+</blockquote>
+<p>此时，CPU1 也来读 a0 地址的值（此时它的 Cache1 没有该地址的值）。如果直接从内存中读，而且此前 Cache0 的 Cache Line 0 没有写回到内存，所以 CPU1 读到的数值必然是 0 。导致此时的 CPU 之间在同一内存地址的数值将会不一致，根本无法保证 SMP 系统的缓存一致性。<br>为了使 CPU 之间在同一内存地址的数值一致，在 BUS 额外添加一个观察者 Observer 。当 CPU1 往内存发送读请求时，Observer 发现该请求，找出该 Cache0 的 Cache Line 0 的数值是最新的。则命令 Cache0 控制器把 Cache Line 0 的值写回到内存地址 a0（并清除标记 M ），Observer 再把该 a0 的数值从内存发送到 Cache1 的 Cache Line 0 。</p>
+<div align="center"><img src="/images/Hardware/arch/推理MESI协议的由来/MESI4.drawio.png"></div>
+
+<p>如果现在 CPU0 和 CPU1 任意一个去写它自己的 Cache Line 0 ，此时对应的 flag 已为 M ，然后另一个 CPU 去读它自己的 Cache Line 0。Observer 去找出哪个或哪些 CacheX 的数值是最新的，并写回，再把数值从内存发送到 Cache1 的 Cache Line 0 。<br>但是 Observer 的作用还是微乎其微，因为当某一个地址已在当前 CPU 的 Cache 缓存，且状态为 M 时，是直接在 Cache 读写的，缓存的内容也不会立即写回到内存，Observer 也不可能隔三岔五地主动检查哪些缓存是最新的。<strong>应该触发某种条件才能运行 Observer 主动去把最新缓存值写回到内存当中</strong>。</p>
+<p>回到最初的起点，当下图中的所有 CPU 按次序对内存地址 a0 发送读操作，每当一个 CPU 向同一个内存地址发送此操作，Observer 都会根据此地址去检查所有的 CPU 的 Cache ，确认是否有最新的数值。</p>
+<div align="center"><img src="/images/Hardware/arch/推理MESI协议的由来/MESI5.drawio.png"></div>
+
+<p>然后，当 CPU0 往 a0 写入 1 时，对应 Cache 0 的 Cache Line 0 被标记为 M ；当 CPU1 往 a0 写入 2 时，对应 Cache 1 的 Cache Line 0 被标记为 M 。</p>
+<div align="center"><img src="/images/Hardware/arch/推理MESI协议的由来/MESI6.drawio.png"></div>
+
+<p>这出现了严重的问题，就是缓存一致性失效。而且以后 CPU0 或 CPU1 再次向 a0 发出读操作时，仅向它们自己的 Cache 的 Cache Line 0 读数据，Observer 如同摆设一般了。<br>这时就需要新增一个标签去表示哪些 Cache Line 是一致的。标记 M 已经用于表示某一个内存地址的数值在本地 Cache 是最新的，这个就不能用来表示其它作用了。现在新增一个标签，名为 Shared ，简写为 S 。表示在多个 CPU 当中，凡是在它们自己的 Cache 内有对同一个内存地址缓存的，而且数值都是一致的，则对应的 Cache Line 都被标记为 S 。</p>
+<p>让我们好好了解 Share for Cache Line 的作用，当下图中的 CPU0 和 CPU1 按次序对内存地址 a0 发送读操作时，相应的 Cache Line 都会被标记为 S ：</p>
+<div align="center"><img src="/images/Hardware/arch/推理MESI协议的由来/MESI7.drawio.png"></div>
+
+<p>这些操作，也需要 Observer 去辅助。当 CPU2 也向 a0 发出读操作时，Observer 会检查 a0 在各 Cache 的情况，如果发现它处于 S 状态时，会把 a0 的数值同步到 Cache2 的 Cache Line 0 中，并把它置为 S 。</p>
+<div align="center"><img src="/images/Hardware/arch/推理MESI协议的由来/MESI8.drawio.png"></div>
+
+<p>如果上图中的任意一个 CPU 对 a0 发出写操作时，此时对应 Cache Line 0 内的数值是最新的，这时应主动通知 Observer 对其余存储 a0 数值的 Cache（Share状态）发出通知，说在 a0 Shared 状态组内的某一个 CPU 修改了 a0 的数值，a0 Shared 组就地解散。<br>那么解散过后，这些存储 a0 的 Cache Line 又该如何表面它们自己的身份？而且 a0 的最新数值是否需要及时写回到内存中？</p>
+<div align="center"><img src="/images/Hardware/arch/推理MESI协议的由来/MESI9.drawio.png"></div>
+
+<p>假设把存储最新数值的 Cache Line 标记为 M ，注意最新数值并没有写回内存。其余的被标记为 Invalid ，失效的。</p>
+<div align="center"><img src="/images/Hardware/arch/推理MESI协议的由来/MESI10.drawio.png"></div>
+
+<blockquote>
+<p>其实 CPU 上电后，缓存内的 Cache Line 都为空，可以把它们的标志位都置为 Invalid ，与上文提到的标志位 Exist 是对立的。</p>
+</blockquote>
+<p>如果此前 CPU1 访问 a0 时，Observer 发现此行为，然后再把 CPU0 的 Cache Line 0 写回到内存中，然后再让 CPU1 访问 a0 ，更新 Cache1 的 Cache Line 0 此时它们的状态为 S 。</p>
+<div align="center"><img src="/images/Hardware/arch/推理MESI协议的由来/MESI11.drawio.png"></div>
+
+<p>这是可行的，但是还能做得更好。回到所有 Cache 的 Cache Line 0 都为 Shared 状态。当 CPU0 对 a0 发出写操作时，主动通知 Observer 会更改其余 Cache 的 Cache Line 0 为 I ，这段操作应该再加上一个操作，就是把最新数值写回到内存中。然后 Observer 收到通知并更改它们的状态。但是 Cache0 的 Cache Line 0 和内存中的 a0 的数值一致了，不能用 M 标记，应该用 Exclusive 去标记此 Cache Line 。</p>
+<div align="center"><img src="/images/Hardware/arch/推理MESI协议的由来/MESI12.drawio.png"></div>
+
+<p>就这样，在这种状态下，CPU1 和 CPU2 就可以直接访问内存 a0 ，不用让 Cache0 先写回到内存再从内存读出，这叫时间消耗置换。</p>
+<p>但是，如果此时 CPU0 再次对 a0 发出写操作，对应的 Cache Line 0 的状态从 E 变换为 M 。</p>
+<div align="center"><img src="/images/Hardware/arch/推理MESI协议的由来/MESI13.drawio.png"></div>
+
+<p>CPU1 或 CPU2 访问 a0 时，Observer 还是会让 Cache0 的 Cache Line 0 写回到内存，然后再让它们访问。</p>
+<div align="center"><img src="/images/Hardware/arch/推理MESI协议的由来/MESI14.drawio.png"></div>
+
+<div align="center"><img src="/images/Hardware/arch/推理MESI协议的由来/MESI15.drawio.png"></div>
+
+<h2 id="MESI-的状态转换"><a href="#MESI-的状态转换" class="headerlink" title="MESI 的状态转换"></a>MESI 的状态转换</h2><div align="center"><img src="/images/Hardware/arch/推理MESI协议的由来/MESI-ChangeStatus.png"></div>
+
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><ul>
+<li>Modified：指当前 CPU 对它自己的本地 Cache 的 Cache Line 发出修改操作。</li>
+<li>Shared：表示多个 CPU 的指向同一个内存地址的 Cache Line 内的数值是一致的。而且任意一方发出修改操作时，Observer 还能根据此状态找出与它共享的 Cache Line ，并修改状态为 Invalid 。</li>
+<li>Exclusive：表示仅有一个 CPU 的 Cache 记录着某一个内存地址的数值，而且<strong>和缓存中记录的数值是一致的</strong>。</li>
+<li>Invalid：表明缓存行不可用，就算缓存行记录着某一个内存地址的数值，但是是旧数值，不可用。</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Hardware/" rel="tag"># Hardware</a>
+              <a href="/tags/Architecture/" rel="tag"># Architecture</a>
+              <a href="/tags/MESI/" rel="tag"># MESI</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/06/23/Skill/device/Linux-%E8%B0%83%E8%AF%95i2c%E6%8A%80%E5%B7%A7/" rel="prev" title="Linux - 调试i2c技巧">
+                  <i class="fa fa-angle-left"></i> Linux - 调试i2c技巧
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2024/07/27/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-IMX8MP_LOGO%E5%BB%B6%E7%BB%AD/" rel="next" title="Linux - IMX8MP LOGO延续">
+                  Linux - IMX8MP LOGO延续 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

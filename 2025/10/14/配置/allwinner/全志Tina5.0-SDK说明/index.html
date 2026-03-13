@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="SDK框架说明整体目录Tina SDK目录结构，主要有构建工具、构建系统、配置工具、工具链、芯片配置目录、内核及 boot 目录等组成, 下面按照目录顺序做简单介绍。">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="全志Tina5.0 - SDK说明">
+<meta property="og:url" content="http://example.com/2025/10/14/%E9%85%8D%E7%BD%AE/allwinner/%E5%85%A8%E5%BF%97Tina5.0-SDK%E8%AF%B4%E6%98%8E/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="SDK框架说明整体目录Tina SDK目录结构，主要有构建工具、构建系统、配置工具、工具链、芯片配置目录、内核及 boot 目录等组成, 下面按照目录顺序做简单介绍。">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E9%85%8D%E7%BD%AE/allwinner/%E5%85%A8%E5%BF%97Tina5.0-SDK%E8%AF%B4%E6%98%8E/1760077981589-e388a40b-3462-4460-a421-5eb4025891a2.png">
+<meta property="og:image" content="http://example.com/images/%E9%85%8D%E7%BD%AE/allwinner/%E5%85%A8%E5%BF%97Tina5.0-SDK%E8%AF%B4%E6%98%8E/1760078073854-c28fb450-962a-4ed3-ad19-6a9d5793a93a.png">
+<meta property="og:image" content="http://example.com/images/%E9%85%8D%E7%BD%AE/allwinner/%E5%85%A8%E5%BF%97Tina5.0-SDK%E8%AF%B4%E6%98%8E/1760078147534-8596dc8e-c9f7-4932-9d43-af65ba3274f2.png">
+<meta property="og:image" content="http://example.com/images/%E9%85%8D%E7%BD%AE/allwinner/%E5%85%A8%E5%BF%97Tina5.0-SDK%E8%AF%B4%E6%98%8E/1760078219946-f3fac395-d524-4527-bf17-4f6e09e1c69e.png">
+<meta property="og:image" content="http://example.com/images/%E9%85%8D%E7%BD%AE/allwinner/%E5%85%A8%E5%BF%97Tina5.0-SDK%E8%AF%B4%E6%98%8E/1733800732264-af446c39-6d0a-4fd2-8401-9fec82411408.png">
+<meta property="og:image" content="http://example.com/images/%E9%85%8D%E7%BD%AE/allwinner/%E5%85%A8%E5%BF%97Tina5.0-SDK%E8%AF%B4%E6%98%8E/1744102647521-1e99ca43-3687-4812-9748-db630c9e763e.png">
+<meta property="og:image" content="http://example.com/images/%E9%85%8D%E7%BD%AE/allwinner/%E5%85%A8%E5%BF%97Tina5.0-SDK%E8%AF%B4%E6%98%8E/1744102725327-eb31686b-1376-4f7b-acb4-bbb00c1b1df2.png">
+<meta property="og:image" content="http://example.com/images/%E9%85%8D%E7%BD%AE/allwinner/%E5%85%A8%E5%BF%97Tina5.0-SDK%E8%AF%B4%E6%98%8E/1760595690753-ae373b71-06be-41bc-9ac5-38bf3dc55bde.png">
+<meta property="og:image" content="http://example.com/images/%E9%85%8D%E7%BD%AE/allwinner/%E5%85%A8%E5%BF%97Tina5.0-SDK%E8%AF%B4%E6%98%8E/1723693459463-b59874b1-fded-4e48-8d0e-6f0b620adfa5.png">
+<meta property="article:published_time" content="2025-10-13T16:00:00.000Z">
+<meta property="article:modified_time" content="2025-10-13T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Allwinner">
+<meta property="article:tag" content="SDK">
+<meta property="article:tag" content="Tina5.0">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E9%85%8D%E7%BD%AE/allwinner/%E5%85%A8%E5%BF%97Tina5.0-SDK%E8%AF%B4%E6%98%8E/1760077981589-e388a40b-3462-4460-a421-5eb4025891a2.png">
+
+
+<link rel="canonical" href="http://example.com/2025/10/14/%E9%85%8D%E7%BD%AE/allwinner/%E5%85%A8%E5%BF%97Tina5.0-SDK%E8%AF%B4%E6%98%8E/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2025/10/14/%E9%85%8D%E7%BD%AE/allwinner/%E5%85%A8%E5%BF%97Tina5.0-SDK%E8%AF%B4%E6%98%8E/","path":"2025/10/14/配置/allwinner/全志Tina5.0-SDK说明/","title":"全志Tina5.0 - SDK说明"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>全志Tina5.0 - SDK说明 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#SDK%E6%A1%86%E6%9E%B6%E8%AF%B4%E6%98%8E"><span class="nav-number">1.</span> <span class="nav-text">SDK框架说明</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B4%E4%BD%93%E7%9B%AE%E5%BD%95"><span class="nav-number">1.1.</span> <span class="nav-text">整体目录</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Brandy%EF%BC%88U-Boot%EF%BC%89"><span class="nav-number">1.2.</span> <span class="nav-text">Brandy（U-Boot）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Kernel%E5%92%8CBSP"><span class="nav-number">1.3.</span> <span class="nav-text">Kernel和BSP</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Kernel"><span class="nav-number">1.3.1.</span> <span class="nav-text">Kernel</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#BSP"><span class="nav-number">1.3.2.</span> <span class="nav-text">BSP</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Buildroot%E5%92%8Cplatform"><span class="nav-number">1.4.</span> <span class="nav-text">Buildroot和platform</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Buildroot"><span class="nav-number">1.4.1.</span> <span class="nav-text">Buildroot</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#platform"><span class="nav-number">1.4.2.</span> <span class="nav-text">platform</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RTOS"><span class="nav-number">1.5.</span> <span class="nav-text">RTOS</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#device"><span class="nav-number">1.6.</span> <span class="nav-text">device</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#out"><span class="nav-number">1.7.</span> <span class="nav-text">out</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B6%E5%AE%83"><span class="nav-number">1.8.</span> <span class="nav-text">其它</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#prebuilt"><span class="nav-number">1.8.1.</span> <span class="nav-text">prebuilt</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#build%E5%92%8Ctool"><span class="nav-number">1.8.2.</span> <span class="nav-text">build和tool</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%BC%96%E8%AF%91%E8%AF%B4%E6%98%8E"><span class="nav-number">2.</span> <span class="nav-text">编译说明</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BC%96%E8%AF%91%E5%89%8D%E9%85%8D%E7%BD%AE"><span class="nav-number">2.1.</span> <span class="nav-text">编译前配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#SDK%E6%95%B4%E4%BD%93%E7%BC%96%E8%AF%91%EF%BC%88%E5%8C%85%E6%8B%AC%E6%89%93%E5%8C%85%E9%95%9C%E5%83%8F%EF%BC%89"><span class="nav-number">2.2.</span> <span class="nav-text">SDK整体编译（包括打包镜像）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%95%E7%8B%AC%E7%BC%96%E8%AF%91"><span class="nav-number">2.3.</span> <span class="nav-text">单独编译</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8D%95%E7%8B%AC%E7%BC%96%E8%AF%91-U-Boot"><span class="nav-number">2.3.1.</span> <span class="nav-text">单独编译 U-Boot</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8D%95%E7%8B%AC%E7%BC%96%E8%AF%91%E5%86%85%E6%A0%B8"><span class="nav-number">2.3.2.</span> <span class="nav-text">单独编译内核</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8D%95%E7%8B%AC%E7%BC%96%E8%AF%91-Buildroot"><span class="nav-number">2.3.3.</span> <span class="nav-text">单独编译 Buildroot</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E6%B8%85%E9%99%A4"><span class="nav-number">2.4.</span> <span class="nav-text">环境清除</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%85%E6%B8%85%E9%99%A4-U-Boot-%E5%92%8C%E5%86%85%E6%A0%B8"><span class="nav-number">2.4.1.</span> <span class="nav-text">仅清除 U-Boot 和内核</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%8C%E5%85%A8%E6%B8%85%E9%99%A4"><span class="nav-number">2.4.2.</span> <span class="nav-text">完全清除</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%95%9C%E5%83%8F%E8%AF%B4%E6%98%8E"><span class="nav-number">3.</span> <span class="nav-text">镜像说明</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%95%9C%E5%83%8F%E8%B7%AF%E5%BE%84%E5%88%86%E5%B8%83"><span class="nav-number">3.1.</span> <span class="nav-text">镜像路径分布</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%95%9C%E5%83%8F%E7%83%A7%E5%BD%95"><span class="nav-number">3.2.</span> <span class="nav-text">镜像烧录</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%95%9C%E5%83%8F%E5%88%86%E5%8C%BA%E8%A1%A8"><span class="nav-number">3.3.</span> <span class="nav-text">镜像分区表</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#U-Boot%E5%BC%80%E5%8F%91"><span class="nav-number">4.</span> <span class="nav-text">U-Boot开发</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Kconfig"><span class="nav-number">4.1.</span> <span class="nav-text">Kconfig</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E8%B7%AF%E5%BE%84"><span class="nav-number">4.1.1.</span> <span class="nav-text">配置文件路径</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E6%96%B9%E6%B3%95"><span class="nav-number">4.1.2.</span> <span class="nav-text">配置方法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%BE%E5%A4%87%E6%A0%91"><span class="nav-number">4.2.</span> <span class="nav-text">设备树</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F"><span class="nav-number">4.3.</span> <span class="nav-text">环境变量</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B3%A8%E6%84%8F%E7%82%B9"><span class="nav-number">4.4.</span> <span class="nav-text">注意点</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E6%A0%B8%E5%BC%80%E5%8F%91"><span class="nav-number">5.</span> <span class="nav-text">内核开发</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Kconfig-1"><span class="nav-number">5.1.</span> <span class="nav-text">Kconfig</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E8%B7%AF%E5%BE%84-1"><span class="nav-number">5.1.1.</span> <span class="nav-text">配置文件路径</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E6%96%B9%E6%B3%95-1"><span class="nav-number">5.1.2.</span> <span class="nav-text">配置方法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%BE%E5%A4%87%E6%A0%91-1"><span class="nav-number">5.2.</span> <span class="nav-text">设备树</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%BE%E5%A4%87%E6%A0%91%E6%96%87%E4%BB%B6%E8%B7%AF%E5%BE%84"><span class="nav-number">5.2.1.</span> <span class="nav-text">设备树文件路径</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GPIO%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.2.</span> <span class="nav-text">GPIO配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LED%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.3.</span> <span class="nav-text">LED配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#UART%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.4.</span> <span class="nav-text">UART配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#I2C%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.5.</span> <span class="nav-text">I2C配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SPI%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.6.</span> <span class="nav-text">SPI配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#PWM%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.7.</span> <span class="nav-text">PWM配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CAN%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.8.</span> <span class="nav-text">CAN配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GMAC%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.9.</span> <span class="nav-text">GMAC配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#PCIe%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.10.</span> <span class="nav-text">PCIe配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LocalBus%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.11.</span> <span class="nav-text">LocalBus配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#GPADC%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.12.</span> <span class="nav-text">GPADC配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RTC%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.13.</span> <span class="nav-text">RTC配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9C%8B%E9%97%A8%E7%8B%97%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.14.</span> <span class="nav-text">看门狗配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#WIFI%E5%92%8C%E8%93%9D%E7%89%99%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.15.</span> <span class="nav-text">WIFI和蓝牙配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%98%BE%E7%A4%BA%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.16.</span> <span class="nav-text">显示配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%9F%B3%E9%A2%91%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.17.</span> <span class="nav-text">音频配置</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Buildroot%E5%BC%80%E5%8F%91"><span class="nav-number">6.</span> <span class="nav-text">Buildroot开发</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Kconfig-2"><span class="nav-number">6.1.</span> <span class="nav-text">Kconfig</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E8%B7%AF%E5%BE%84-2"><span class="nav-number">6.1.1.</span> <span class="nav-text">配置文件路径</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E6%96%B9%E6%B3%95-2"><span class="nav-number">6.1.2.</span> <span class="nav-text">配置方法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#fstab"><span class="nav-number">6.2.</span> <span class="nav-text">fstab</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%B8%B8%E7%94%A8%E8%B0%83%E8%AF%95%E5%91%BD%E4%BB%A4"><span class="nav-number">7.</span> <span class="nav-text">常用调试命令</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8Bpinctrl%E8%8A%AF%E7%89%87%E7%9A%84%E5%A4%8D%E7%94%A8%E6%83%85%E5%86%B5"><span class="nav-number">7.1.</span> <span class="nav-text">查看pinctrl芯片的复用情况</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8BMMC%E7%9A%84%E4%BD%BF%E7%94%A8%E6%83%85%E5%86%B5"><span class="nav-number">7.2.</span> <span class="nav-text">查看MMC的使用情况</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8BPMIC%E7%94%B5%E6%BA%90%E5%9F%9F%E7%9A%84%E4%BD%BF%E7%94%A8%E6%83%85%E5%86%B5"><span class="nav-number">7.3.</span> <span class="nav-text">查看PMIC电源域的使用情况</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9F%A5%E7%9C%8B%E6%97%B6%E9%92%9F%E6%A0%91"><span class="nav-number">7.4.</span> <span class="nav-text">查看时钟树</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E8%83%BD%E5%92%8C%E5%85%B3%E9%97%ADUSB%E6%80%BB%E7%BA%BF"><span class="nav-number">7.5.</span> <span class="nav-text">使能和关闭USB总线</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E8%83%BD%E5%92%8C%E5%85%B3%E9%97%ADrkfill"><span class="nav-number">7.6.</span> <span class="nav-text">使能和关闭rkfill</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/10/14/%E9%85%8D%E7%BD%AE/allwinner/%E5%85%A8%E5%BF%97Tina5.0-SDK%E8%AF%B4%E6%98%8E/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="全志Tina5.0 - SDK说明 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          全志Tina5.0 - SDK说明
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2025-10-14 00:00:00" itemprop="dateCreated datePublished" datetime="2025-10-14T00:00:00+08:00">2025-10-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E9%85%8D%E7%BD%AE/" itemprop="url" rel="index"><span itemprop="name">配置</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>5.7k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>21 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="SDK框架说明"><a href="#SDK框架说明" class="headerlink" title="SDK框架说明"></a>SDK框架说明</h1><h2 id="整体目录"><a href="#整体目录" class="headerlink" title="整体目录"></a>整体目录</h2><p>Tina SDK目录结构，主要有构建工具、构建系统、配置工具、工具链、芯片配置目录、内核及 boot 目录等组成, 下面按照目录顺序做简单介绍。</p>
+<span id="more"></span>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">SDK/</span><br><span class="line">├── brandy</span><br><span class="line">├── bsp</span><br><span class="line">├── build</span><br><span class="line">├── buildroot</span><br><span class="line">├── build.sh -&gt; build/top_build.sh</span><br><span class="line">├── device</span><br><span class="line">├── kernel</span><br><span class="line">├── out</span><br><span class="line">├── platform</span><br><span class="line">├── prebuilt</span><br><span class="line">├── rtos</span><br><span class="line">├── target</span><br><span class="line">└── tools</span><br><span class="line"></span><br><span class="line">12 directories, 1 file</span><br></pre></td></tr></table></figure>
+
+<h2 id="Brandy（U-Boot）"><a href="#Brandy（U-Boot）" class="headerlink" title="Brandy（U-Boot）"></a>Brandy（U-Boot）</h2><p><font style="color:rgb(0,0,0);">brandy 目录下主要存放 boot0，uboot 等代码：</font></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">brandy/</span><br><span class="line">├── arisc</span><br><span class="line">│   └── ...</span><br><span class="line">├── brandy-2.0</span><br><span class="line">│   ├── build.sh -&gt; tools/build.sh</span><br><span class="line">│   ├── tools</span><br><span class="line">│   ├── u-boot-2023</span><br><span class="line">│   └── u-boot-bsp</span><br><span class="line">└── dramlib</span><br><span class="line">    └── ...</span><br></pre></td></tr></table></figure>
+
+<p>目录 u-boot-2023 和 u-boot-bsp 是我们主要的开发对象。</p>
+<p>在新版 Tina 5.0 ，全志把他们自己开发的<strong>驱动源码文件</strong>和<strong>配置文件</strong>等，存储到目录 u-boot-bsp 。</p>
+<p>而目录 u-boot-2023 存储的是原生 U-Boot 。</p>
+<h2 id="Kernel和BSP"><a href="#Kernel和BSP" class="headerlink" title="Kernel和BSP"></a>Kernel和BSP</h2><p>kernel 和 BSP 是一体的，目录 bsp 内有全志自己的驱动源码和配置文件。</p>
+<h3 id="Kernel"><a href="#Kernel" class="headerlink" title="Kernel"></a>Kernel</h3><p>kernel 目录主要存放不同版本的内核代码：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">kernel/</span><br><span class="line">├── linux-5.10-origin</span><br><span class="line">├── linux-5.10-rt</span><br><span class="line">└── linux-5.10-xenomai</span><br></pre></td></tr></table></figure>
+
+<p>目录名前缀“linux-5.10”表示内核版本，后缀“-origin”、“-rt”和“-xenomai”等表示内核特性。</p>
+<ul>
+<li>origin ：表示原生稳定版本的内核</li>
+<li>rt ：打了实时补丁的内核（软实时，还达不到硬实时要求）</li>
+<li>xenomai ：打了实时补丁的内核（接近硬实时的精度，但配置繁琐，非常依赖于原厂驱动和应用层 xenomai 的支持）</li>
+</ul>
+<p>我们一般使用 linux-5.10-rt 内核，其次是 linux-5.10-origin 。</p>
+<h3 id="BSP"><a href="#BSP" class="headerlink" title="BSP"></a>BSP</h3><p>bsp 目录下存放着 Allwinner 的驱动，以及对内核的改动，保证着原生内核 (kernel&#x2F;linux‑X.X) 比较干净的状态，并且能够快速移植适配到新内核中。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">bsp/</span><br><span class="line">├── configs</span><br><span class="line">├── drivers</span><br><span class="line">├── include</span><br><span class="line">├── Kconfig</span><br><span class="line">├── lib</span><br><span class="line">├── Makefile</span><br><span class="line">├── modules</span><br><span class="line">├── platform</span><br><span class="line">├── ramfs</span><br><span class="line">└── scripts</span><br></pre></td></tr></table></figure>
+
+<p>目录 configs 和 drivers 是我们主要的开发对象。</p>
+<ul>
+<li>目录 configs 存储了内核的配置单和 SoC 设备树文件；</li>
+<li>目录 drivers 存储了全志的驱动源码文件。</li>
+</ul>
+<h2 id="Buildroot和platform"><a href="#Buildroot和platform" class="headerlink" title="Buildroot和platform"></a>Buildroot和platform</h2><p>Buildroot 和 platform 是一体的，目录 platform 内有全志自己的软件构建。</p>
+<h3 id="Buildroot"><a href="#Buildroot" class="headerlink" title="Buildroot"></a>Buildroot</h3><p>buildroot 相关的配置文件以及原生 builroot 代码。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">buildroot/</span><br><span class="line">├── buildroot-202205</span><br><span class="line">├── config</span><br><span class="line">└── package</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>buildroot-202205 是原生 buildroot</li>
+<li>config 和 package 是全志的配置文件</li>
+</ul>
+<h3 id="platform"><a href="#platform" class="headerlink" title="platform"></a>platform</h3><p>platform 目录存放着一些软件包源码，这些软件包的编译方式是通用的，分别可以用在 OpenWrt 或者 Buildroot 等不同构建系统中。这个目录的存在是为了不同构建系统共用软件包提供可能性。<br>目前 platform 目录结构如下，主要根据是否 AW 自研改动，以及类别区分：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">platform/</span><br><span class="line">├── allwinner</span><br><span class="line">│   ├── common</span><br><span class="line">│   ├── display</span><br><span class="line">│   ├── industry</span><br><span class="line">│   ├── multimedia</span><br><span class="line">│   ├── power</span><br><span class="line">│   ├── system</span><br><span class="line">│   ├── usb</span><br><span class="line">│   ├── utils</span><br><span class="line">│   └── wireless</span><br><span class="line">├── Makefile</span><br><span class="line">└── thirdparty</span><br><span class="line">    ├── gui</span><br><span class="line">    ├── libs</span><br><span class="line">    ├── utils</span><br><span class="line">    └── wireless</span><br></pre></td></tr></table></figure>
+
+<h2 id="RTOS"><a href="#RTOS" class="headerlink" title="RTOS"></a>RTOS</h2><p>rtos 目录用于存放异构系统构建环境，不同平台 rtos 构建存在差异，rtos 构建查看《FreeRTOS_RTOS_系统_开发指南》、《{IC}_RTOS_系统_开发指南》：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">rtos</span><br><span class="line">├── board</span><br><span class="line">│   ├── t153</span><br><span class="line">│   └── t153_e907</span><br><span class="line">├── envsetup.sh -&gt; tools/scripts/source_envsetup.sh</span><br><span class="line">├── lichee</span><br><span class="line">│   ├── baremetal</span><br><span class="line">│   ├── hal_v2</span><br><span class="line">│   ├── rtos</span><br><span class="line">│   ├── rtos-components</span><br><span class="line">│   └── rtos-hal</span><br><span class="line">└── tools</span><br><span class="line">    ├── image-file</span><br><span class="line">    ├── scripts</span><br><span class="line">    ├── tool</span><br><span class="line">    ├── win-tools</span><br><span class="line">    └── xradio-tools</span><br></pre></td></tr></table></figure>
+
+<h2 id="device"><a href="#device" class="headerlink" title="device"></a>device</h2><p>device 目录用于存放芯片方案的配置文件，包括内核配置，env 配置， 分区表配置，sys_config.fex，board.dts 等。<br>这里以 t153 为例：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">device/config/chips/t153/</span><br><span class="line">├── bin</span><br><span class="line">│   └── ...</span><br><span class="line">├── boot-resource</span><br><span class="line">│   ├── boot-resource</span><br><span class="line">│   └── boot-resource.ini</span><br><span class="line">├── configs</span><br><span class="line">│   ├── bga_demo_nor</span><br><span class="line">│   ├── default</span><br><span class="line">│   ├── demo</span><br><span class="line">│   ├── demo_nor</span><br><span class="line">│   └── ...</span><br><span class="line">├── dtbo</span><br><span class="line">│   └── ...</span><br><span class="line">├── patch</span><br><span class="line">│   └── ...</span><br><span class="line">└── tools</span><br><span class="line">    └── ...</span><br></pre></td></tr></table></figure>
+
+<p>目录 configs 是我们的主要开发对象，目录 boot-resource 其次。</p>
+<ul>
+<li>目录 configs 里面存放 SoC 板卡方案的配置文件，demo 是我们常用的板卡方案。</li>
+<li>目录 boot-resource 是 U-Boot 的资源分区，U-Boot 的 LOGO 显示就是放在这个目录内。</li>
+</ul>
+<h2 id="out"><a href="#out" class="headerlink" title="out"></a>out</h2><p>out 目录用于保存编译相关的临时文件和最终镜像文件，编译后自动生成此目录，例如编译方案 t153-demo ：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">out/</span><br><span class="line">├── kernel -&gt; t153/kernel</span><br><span class="line">├── pack_out -&gt; t153/demo/pack_out</span><br><span class="line">├── t153</span><br><span class="line">│   ├── demo</span><br><span class="line">│   └── kernel</span><br><span class="line">├── t153_linux_demo_uart0.img</span><br><span class="line">└── toolchain</span><br><span class="line">    └── gcc-linaro-11.3.1-2022.06-x86_64_arm-linux-gnueabihf</span><br></pre></td></tr></table></figure>
+
+<h2 id="其它"><a href="#其它" class="headerlink" title="其它"></a>其它</h2><h3 id="prebuilt"><a href="#prebuilt" class="headerlink" title="prebuilt"></a>prebuilt</h3><p>prebuilt 目录存放着一些预编译好的工具，主要是内核和 Buildroot 的交叉编译链：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">prebuilt/</span><br><span class="line">├── hostbuilt</span><br><span class="line">│   └── ...</span><br><span class="line">├── kernelbuilt</span><br><span class="line">│   └── arm</span><br><span class="line">│       ├── arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz</span><br><span class="line">│       ├── gcc-arm-10.3-2021.07-x86_64-arm-none-linux-gnueabihf.tar.xz</span><br><span class="line">│       ├── gcc-arm-11.2-2022.02-x86_64-arm-none-linux-gnueabihf.tar.xz</span><br><span class="line">│       ├── gcc-linaro-11.3.1-2022.06-x86_64_arm-linux-gnueabihf.tar.xz</span><br><span class="line">│       ├── gcc-linaro-5.3.1-2016.05-x86_64_arm-linux-gnueabi.tar.xz</span><br><span class="line">│       ├── gcc-linaro-arm.tar.xz</span><br><span class="line">│       └── gcc-linaro.tar.bz2</span><br><span class="line">└── rootfsbuilt</span><br><span class="line">    └── arm</span><br><span class="line">        ├── gcc-arm-10.3-2021.07-x86_64-arm-none-linux-gnueabihf</span><br><span class="line">        ├── toolchain-sunxi-glibc-gcc-1020</span><br><span class="line">        ├── toolchain-sunxi-glibc-gcc-1320.tar.xz</span><br><span class="line">        ├── toolchain-sunxi-glibc-gcc-830</span><br><span class="line">        ├── toolchain-sunxi-musl-gcc-1320.tar.xz</span><br><span class="line">        └── toolchain-sunxi-musl-gcc-830</span><br></pre></td></tr></table></figure>
+
+<p>可提取 rootfsbuilt&#x2F;arm&#x2F;gcc-arm-10.3-2021.07-x86_64-arm-none-linux-gnueabihf ，作为应用层软件的编译链。</p>
+<h3 id="build和tool"><a href="#build和tool" class="headerlink" title="build和tool"></a>build和tool</h3><p>build 目录用于存放编译 SDK 的脚本工具。</p>
+<p>tools 目录用于存放一些 host 端工具, 例如打包工具。</p>
+<h1 id="编译说明"><a href="#编译说明" class="headerlink" title="编译说明"></a>编译说明</h1><p>以下操作均在 SDK 主目录内进行。</p>
+<h2 id="编译前配置"><a href="#编译前配置" class="headerlink" title="编译前配置"></a>编译前配置</h2><p>进入以下命令配置：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./build.sh config</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">10-10 14:26:30.862 3015174 D mkcommon  : ========ACTION List: mk_config ;========</span><br><span class="line">10-10 14:26:30.864 3015174 D mkcommon  : options : </span><br><span class="line">All available platform:</span><br><span class="line">   0. android</span><br><span class="line">   1. linux</span><br><span class="line">Choice [linux]: 1</span><br><span class="line">All available linux_dev:</span><br><span class="line">   0. bsp</span><br><span class="line">   1. buildroot</span><br><span class="line">Choice [buildroot]: 1</span><br><span class="line">All available ic:</span><br><span class="line">   0. t153</span><br><span class="line">Choice [t153]: 0</span><br><span class="line">All available board:</span><br><span class="line">   0. bga_demo</span><br><span class="line">   1. bga_demo_amp_nand</span><br><span class="line">   2. bga_demo_nand</span><br><span class="line">   3. bga_demo_nor</span><br><span class="line">   4. demo</span><br><span class="line">   5. demo2_nand</span><br><span class="line">   6. demo_amp_nand</span><br><span class="line">   7. demo_nand</span><br><span class="line">   8. demo_nor</span><br><span class="line">   9. demo_qa</span><br><span class="line">Choice [demo]: 4</span><br><span class="line">All available flash:</span><br><span class="line">   0. default</span><br><span class="line">   1. nor</span><br><span class="line">Choice [default]: 0</span><br><span class="line">All available kern_name:</span><br><span class="line">   0. linux-5.10-origin</span><br><span class="line">   1. linux-5.10-rt</span><br><span class="line">   2. linux-5.10-xenomai</span><br><span class="line">Choice [linux-5.10-origin]: 1</span><br></pre></td></tr></table></figure>
+
+<h2 id="SDK整体编译（包括打包镜像）"><a href="#SDK整体编译（包括打包镜像）" class="headerlink" title="SDK整体编译（包括打包镜像）"></a>SDK整体编译（包括打包镜像）</h2><p>使用以下命令编译并打包：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./build.sh &amp;&amp; ./build.sh pack</span><br></pre></td></tr></table></figure>
+
+<p>以下是类型的输出结果：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/配置/allwinner/全志Tina5.0-SDK说明/1760077981589-e388a40b-3462-4460-a421-5eb4025891a2.png"></div>
+
+<h2 id="单独编译"><a href="#单独编译" class="headerlink" title="单独编译"></a>单独编译</h2><h3 id="单独编译-U-Boot"><a href="#单独编译-U-Boot" class="headerlink" title="单独编译 U-Boot"></a>单独编译 U-Boot</h3><p>以下是编译命令：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./build.sh bootloader</span><br></pre></td></tr></table></figure>
+
+<p>以下是成功的编译结果：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/配置/allwinner/全志Tina5.0-SDK说明/1760078073854-c28fb450-962a-4ed3-ad19-6a9d5793a93a.png"></div>
+
+<h3 id="单独编译内核"><a href="#单独编译内核" class="headerlink" title="单独编译内核"></a>单独编译内核</h3><p>以下是编译命令：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./build.sh kernel</span><br></pre></td></tr></table></figure>
+
+<p>以下是成功的编译结果：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/配置/allwinner/全志Tina5.0-SDK说明/1760078147534-8596dc8e-c9f7-4932-9d43-af65ba3274f2.png"></div>
+
+<h3 id="单独编译-Buildroot"><a href="#单独编译-Buildroot" class="headerlink" title="单独编译 Buildroot"></a>单独编译 Buildroot</h3><p>以下是编译命令：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./build.sh buildroot_rootfs</span><br></pre></td></tr></table></figure>
+
+<p>以下是成功的编译结果：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/配置/allwinner/全志Tina5.0-SDK说明/1760078219946-f3fac395-d524-4527-bf17-4f6e09e1c69e.png"></div>
+
+<h2 id="环境清除"><a href="#环境清除" class="headerlink" title="环境清除"></a>环境清除</h2><h3 id="仅清除-U-Boot-和内核"><a href="#仅清除-U-Boot-和内核" class="headerlink" title="仅清除 U-Boot 和内核"></a>仅清除 U-Boot 和内核</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./build.sh clean</span><br></pre></td></tr></table></figure>
+
+<h3 id="完全清除"><a href="#完全清除" class="headerlink" title="完全清除"></a>完全清除</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./build.sh distclean</span><br></pre></td></tr></table></figure>
+
+<h1 id="镜像说明"><a href="#镜像说明" class="headerlink" title="镜像说明"></a>镜像说明</h1><h2 id="镜像路径分布"><a href="#镜像路径分布" class="headerlink" title="镜像路径分布"></a>镜像路径分布</h2><p>以下是完整镜像的文件路径：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./out/t153_linux_demo_uart0.img</span><br></pre></td></tr></table></figure>
+
+<p>以下是 U-Boot 、Kernel 和 Buildroot 等镜像的文件路径：</p>
+<table>
+<thead>
+<tr>
+<th align="center"><font style="color:#000000;">镜像</font></th>
+<th align="center"><font style="color:#000000;">描述</font></th>
+<th align="center"><font style="color:#000000;">文件路径</font></th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">boot0_sdcard.fex</td>
+<td align="center">boot0</td>
+<td align="center">.&#x2F;out&#x2F;pack_out&#x2F;boot0_sdcard.fex</td>
+</tr>
+<tr>
+<td align="center">boot_package.fex</td>
+<td align="center">U-Boot（又称boot1）</td>
+<td align="center">.&#x2F;out&#x2F;pack_out&#x2F;boot_package.fex</td>
+</tr>
+<tr>
+<td align="center">boot-resource.fex</td>
+<td align="center">U-Boot阶段所用到的资源（包含LOGO）</td>
+<td align="center">.&#x2F;out&#x2F;pack_out&#x2F;boot-resource.fex</td>
+</tr>
+<tr>
+<td align="center">env.fex</td>
+<td align="center">U-Boot环境变量</td>
+<td align="center">.&#x2F;out&#x2F;pack_out&#x2F;env.fex</td>
+</tr>
+<tr>
+<td align="center">sunxi.fex</td>
+<td align="center">内核设备树dtb文件</td>
+<td align="center">.&#x2F;out&#x2F;pack_out&#x2F;sunxi.fex</td>
+</tr>
+<tr>
+<td align="center">boot.img</td>
+<td align="center">kernel镜像</td>
+<td align="center">.&#x2F;out&#x2F;t536&#x2F;TQ536_CoreB&#x2F;buildroot&#x2F;boot.img</td>
+</tr>
+<tr>
+<td align="center">rootfs.ext4</td>
+<td align="center">rootfs镜像</td>
+<td align="center">.&#x2F;out&#x2F;kernel&#x2F;staging&#x2F;boot.img</td>
+</tr>
+<tr>
+<td align="center">amp_rv0.fex</td>
+<td align="center">riscv镜像</td>
+<td align="center">.&#x2F;out&#x2F;pack_out&#x2F;amp_rv0.fex</td>
+</tr>
+</tbody></table>
+<h2 id="镜像烧录"><a href="#镜像烧录" class="headerlink" title="镜像烧录"></a>镜像烧录</h2><p><strong>一键烧录</strong></p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/配置/allwinner/全志Tina5.0-SDK说明/1733800732264-af446c39-6d0a-4fd2-8401-9fec82411408.png"></div>
+
+<p><strong>分镜像烧录</strong></p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/配置/allwinner/全志Tina5.0-SDK说明/1744102647521-1e99ca43-3687-4812-9748-db630c9e763e.png"></div>
+
+<p>其中，boot0 和 boot1 是固定烧录的，剩余镜像可选单个或多个来烧录。比如这里选择烧录 BOOT-RESOURCE 和 ENV ：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/配置/allwinner/全志Tina5.0-SDK说明/1744102725327-eb31686b-1376-4f7b-acb4-bbb00c1b1df2.png"></div>
+
+<p>然后在评估板按 FEL+RESET 键烧录即可。</p>
+<h2 id="镜像分区表"><a href="#镜像分区表" class="headerlink" title="镜像分区表"></a>镜像分区表</h2><p>分区表文件路径：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">device/config/chips/t153/configs/demo/buildroot/sys_partition.fex</span><br></pre></td></tr></table></figure>
+
+<p><font style="color:#DF2A3F;">注意</font>：“t153”转换为实际的 SoC 配置目录；“demo”转换为你实际的板卡配置目录。</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/配置/allwinner/全志Tina5.0-SDK说明/1760595690753-ae373b71-06be-41bc-9ac5-38bf3dc55bde.png"></div>
+
+<h1 id="U-Boot开发"><a href="#U-Boot开发" class="headerlink" title="U-Boot开发"></a>U-Boot开发</h1><h2 id="Kconfig"><a href="#Kconfig" class="headerlink" title="Kconfig"></a>Kconfig</h2><h3 id="配置文件路径"><a href="#配置文件路径" class="headerlink" title="配置文件路径"></a>配置文件路径</h3><p><strong>defconfig：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./brandy/brandy-2.0/u-boot-bsp/configs/sun8iw22p1_t153_mmc_defconfig</span><br></pre></td></tr></table></figure>
+
+<p><strong>.config：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./brandy/brandy-2.0/u-boot-2023/.config</span><br></pre></td></tr></table></figure>
+
+<h3 id="配置方法"><a href="#配置方法" class="headerlink" title="配置方法"></a>配置方法</h3><blockquote>
+<p>以下操作都在<SDK>主目录下进行</p>
+</blockquote>
+<p><strong>进入配置菜单</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./build.sh uboot_menuconfig</span><br></pre></td></tr></table></figure>
+
+<p><strong>保存配置菜单</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./build.sh uboot_saveconfig</span><br></pre></td></tr></table></figure>
+
+<h2 id="设备树"><a href="#设备树" class="headerlink" title="设备树"></a>设备树</h2><p><strong>SoC设备树文件</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./brandy/brandy-2.0/u-boot-bsp/arch/arm/dts/sun8iw22p1.dtsi</span><br></pre></td></tr></table></figure>
+
+<p><strong>板级设备树文件</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">device/config/chips/t153/configs/demo/uboot-board.dts</span><br></pre></td></tr></table></figure>
+
+<p><font style="color:#DF2A3F;">注意</font>：“t153”转换为实际的 SoC 配置目录；“demo”转换为你实际的板卡配置目录。</p>
+<h2 id="环境变量"><a href="#环境变量" class="headerlink" title="环境变量"></a>环境变量</h2><p>相关路径：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./device/config/chips/t153/configs/demo/buildroot/env.cfg</span><br></pre></td></tr></table></figure>
+
+<p>默认环境变量：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./brandy/brandy-2.0/u-boot-bsp/include/configs/sunxi-common.h</span><br></pre></td></tr></table></figure>
+
+<h2 id="注意点"><a href="#注意点" class="headerlink" title="注意点"></a>注意点</h2><p>U-Boot 的全志内置看门狗不能被关闭，因为全志 U-Boot 的软复位功能（如命令 reset ）依赖于它。</p>
+<h1 id="内核开发"><a href="#内核开发" class="headerlink" title="内核开发"></a>内核开发</h1><h2 id="Kconfig-1"><a href="#Kconfig-1" class="headerlink" title="Kconfig"></a>Kconfig</h2><h3 id="配置文件路径-1"><a href="#配置文件路径-1" class="headerlink" title="配置文件路径"></a>配置文件路径</h3><p><strong>defconfig：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./device/config/chips/t153/configs/demo/linux-5.10-rt/buildroot_linux_defconfig</span><br></pre></td></tr></table></figure>
+
+<p><font style="color:#DF2A3F;">注意</font>：“t153”转换为实际的 SoC 配置目录；“demo”转换为你实际的板卡配置目录；“linux-5.10-rt”转换为实际的内核版本。</p>
+<p><strong>.config：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./out/kernel/build/.config</span><br></pre></td></tr></table></figure>
+
+<h3 id="配置方法-1"><a href="#配置方法-1" class="headerlink" title="配置方法"></a>配置方法</h3><blockquote>
+<p>以下操作都在<SDK>主目录下进行</p>
+</blockquote>
+<p><strong>进入配置菜单</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./build.sh menuconfig</span><br></pre></td></tr></table></figure>
+
+<p><strong>保存配置菜单</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./build.sh saveconfig</span><br></pre></td></tr></table></figure>
+
+<h2 id="设备树-1"><a href="#设备树-1" class="headerlink" title="设备树"></a>设备树</h2><h3 id="设备树文件路径"><a href="#设备树文件路径" class="headerlink" title="设备树文件路径"></a>设备树文件路径</h3><p><strong>SoC设备树文件</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./bsp/configs/linux-5.10-rt/sun8iw22p1.dtsi</span><br></pre></td></tr></table></figure>
+
+<p><font style="color:#DF2A3F;">注意</font>：“linux-5.10-rt”转换为实际的内核版本。</p>
+<p><strong>板级设备树文件</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./device/config/chips/t153/configs/demo/linux-5.10-rt/board.dts</span><br></pre></td></tr></table></figure>
+
+<p><font style="color:#DF2A3F;">注意</font>：“t153”转换为实际的 SoC 配置目录；“demo”转换为你实际的板卡配置目录；“linux-5.10-rt”转换为实际的内核版本。</p>
+<h3 id="GPIO配置"><a href="#GPIO配置" class="headerlink" title="GPIO配置"></a>GPIO配置</h3><p>一般在DTS中引脚以以下方式出现：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gpio = &lt;&amp;pio PB 3 GPIO_ACTIVE_HIGH&gt;;</span><br></pre></td></tr></table></figure>
+
+<p>其具体格式为：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">name = &lt;&amp;pio P[A-I] [0-32] value&gt;; </span><br></pre></td></tr></table></figure>
+
+<p>其中：</p>
+<ul>
+<li>name：驱动中使用的名字</li>
+<li><font style="color:#5C8D07;">&amp;pio</font>：表示 gpiochip</li>
+<li><font style="color:#FF0000;">[A-I]</font>：表示端口号</li>
+<li><font style="color:#0C68CA;">[0-32]</font>：表示此端口中的引脚号</li>
+<li><font style="color:#C99103;">value</font>：io的初始值</li>
+</ul>
+<p><font style="color:#C99103;">value</font> 的定义可参考：<strong><font style="color:#DF2A3F;"><SDK>&#x2F;kernel&#x2F;linux-5.10-rt&#x2F;include&#x2F;dt-bindings&#x2F;gpio&#x2F;gpio.h</font></strong></p>
+<h3 id="LED配置"><a href="#LED配置" class="headerlink" title="LED配置"></a>LED配置</h3><p>LED 一般靠 GPIO 驱动，通过的 LED 驱动为 <code>CONFIG_LEDS_GPIO</code> 。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">/&#123;</span><br><span class="line">    leds: leds@<span class="number">0</span> &#123;</span><br><span class="line">        compatible = <span class="string">&quot;gpio-leds&quot;</span>;</span><br><span class="line"></span><br><span class="line">        led1 &#123;</span><br><span class="line">            label = <span class="string">&quot;status&quot;</span>;</span><br><span class="line">            gpios = &lt;&amp;pio PA <span class="number">5</span> GPIO_ACTIVE_HIGH&gt;;</span><br><span class="line">            <span class="keyword">default</span>-state = <span class="string">&quot;on&quot;</span>;</span><br><span class="line">        &#125;;</span><br><span class="line"></span><br><span class="line">        led0 &#123;</span><br><span class="line">            gpios = &lt;&amp;pio PA <span class="number">6</span> GPIO_ACTIVE_HIGH&gt;;</span><br><span class="line">            function = LED_FUNCTION_HEARTBEAT;</span><br><span class="line">            linux,<span class="keyword">default</span>-trigger = <span class="string">&quot;heartbeat&quot;</span>;</span><br><span class="line">            <span class="keyword">default</span>-state = <span class="string">&quot;keep&quot;</span>;</span><br><span class="line">            status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">        &#125;;</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>属性 <code>function</code>和<code>linux,default-trigger</code>用于配置的 LED 的功能，详细请自行搜索。</p>
+<h3 id="UART配置"><a href="#UART配置" class="headerlink" title="UART配置"></a>UART配置</h3><p>以下是全志的 UART 配置，驱动源码<code>bsp/drivers/uart/sunxi-uart-ng-core.c</code>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">&amp;pio &#123;</span><br><span class="line">    uart0_pins_a: uart0_pins@<span class="number">0</span> &#123;</span><br><span class="line">        pins = <span class="string">&quot;PB9&quot;</span>, <span class="string">&quot;PB10&quot;</span>;</span><br><span class="line">        function = <span class="string">&quot;uart0&quot;</span>;</span><br><span class="line">        bias-pull-up;</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    uart0_pins_b: uart0_pins@<span class="number">1</span> &#123;</span><br><span class="line">        pins = <span class="string">&quot;PB9&quot;</span>, <span class="string">&quot;PB10&quot;</span>;</span><br><span class="line">        function = <span class="string">&quot;io_disabled&quot;</span>;</span><br><span class="line">    &#125;;</span><br><span class="line">    ...</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;uart0 &#123;</span><br><span class="line">    pinctrl-names = <span class="string">&quot;default&quot;</span>, <span class="string">&quot;sleep&quot;</span>;</span><br><span class="line">    pinctrl<span class="number">-0</span> = &lt;&amp;uart0_pins_a&gt;;</span><br><span class="line">    pinctrl<span class="number">-1</span> = &lt;&amp;uart0_pins_b&gt;;</span><br><span class="line">    status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>一般来说配置 UART 的 IO 复用即可。</p>
+<h3 id="I2C配置"><a href="#I2C配置" class="headerlink" title="I2C配置"></a>I2C配置</h3><p>以下是全志的 I2C 配置，驱动源码<code>bsp/drivers/twi/twi-sunxi-core.c</code>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">&amp;pio &#123;</span><br><span class="line">    twi0_pins_default: twi0@<span class="number">0</span> &#123;</span><br><span class="line">        pins = <span class="string">&quot;PD22&quot;</span>, <span class="string">&quot;PD23&quot;</span>;</span><br><span class="line">        function = <span class="string">&quot;twi0&quot;</span>;</span><br><span class="line">        drive-strength = &lt;<span class="number">10</span>&gt;;</span><br><span class="line">        bias-pull-up;</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    twi0_pins_sleep: twi0@<span class="number">1</span> &#123;</span><br><span class="line">        pins = <span class="string">&quot;PD22&quot;</span>, <span class="string">&quot;PD23&quot;</span>;</span><br><span class="line">        function = <span class="string">&quot;gpio_in&quot;</span>;</span><br><span class="line">    &#125;;</span><br><span class="line">    ...</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;twi0 &#123;</span><br><span class="line">    clock-frequency = &lt;<span class="number">400000</span>&gt;;</span><br><span class="line">    pinctrl<span class="number">-0</span> = &lt;&amp;twi0_pins_default&gt;;</span><br><span class="line">    pinctrl<span class="number">-1</span> = &lt;&amp;twi0_pins_sleep&gt;;</span><br><span class="line">    pinctrl-names = <span class="string">&quot;default&quot;</span>, <span class="string">&quot;sleep&quot;</span>;</span><br><span class="line">    <span class="comment">/* For stability and backwards compatibility, we recommend setting ‘twi_drv_used’ to 1 */</span></span><br><span class="line">    twi_drv_used = &lt;<span class="number">1</span>&gt;;</span><br><span class="line">    twi-supply = &lt;&amp;reg_dcdc4&gt;;</span><br><span class="line">    status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line"></span><br><span class="line">    twidev@<span class="number">0</span> &#123;</span><br><span class="line">        ...;</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>主要关注以下属性：</p>
+<ul>
+<li>属性<code>clock-frequency</code>：配置 I2C 总线的时钟频率</li>
+<li>属性<code>pinctrl-*</code>：配置 I2C 总线的 IO 复用</li>
+<li>属性<code>twi-supply</code>：IO 的电源来源，根据核心板的硬件原理图的配置去指定使用</li>
+</ul>
+<h3 id="SPI配置"><a href="#SPI配置" class="headerlink" title="SPI配置"></a>SPI配置</h3><p>以下是全志的 SPI 配置，驱动源码<code>bsp/drivers/spi/spi-sunxi.c</code>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line">&amp;pio &#123;</span><br><span class="line">    spi3_pins_default: spi3@<span class="number">0</span> &#123;</span><br><span class="line">        pins = <span class="string">&quot;PH5&quot;</span>, <span class="string">&quot;PH6&quot;</span>, <span class="string">&quot;PH7&quot;</span>; <span class="comment">/* clk, mosi, miso */</span></span><br><span class="line">        function = <span class="string">&quot;spi3&quot;</span>;</span><br><span class="line">        drive-strength = &lt;<span class="number">10</span>&gt;;</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    spi3_pins_cs: spi3@<span class="number">1</span> &#123;</span><br><span class="line">        pins = <span class="string">&quot;PH4&quot;</span>; <span class="comment">/* cs, hold, wp */</span></span><br><span class="line">        function = <span class="string">&quot;spi3&quot;</span>;</span><br><span class="line">        drive-strength = &lt;<span class="number">10</span>&gt;;</span><br><span class="line">        bias-pull-up;</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    spi3_pins_sleep: spi3@<span class="number">2</span> &#123;</span><br><span class="line">        pins = <span class="string">&quot;PH4&quot;</span>, <span class="string">&quot;PH5&quot;</span>, <span class="string">&quot;PH6&quot;</span>, <span class="string">&quot;PH7&quot;</span>;</span><br><span class="line">        function = <span class="string">&quot;io_disabled&quot;</span>;</span><br><span class="line">    &#125;;</span><br><span class="line">    ...</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;spi3 &#123;</span><br><span class="line">    pinctrl<span class="number">-0</span> = &lt;&amp;spi3_pins_default &amp;spi3_pins_cs&gt;;</span><br><span class="line">    pinctrl<span class="number">-1</span> = &lt;&amp;spi3_pins_sleep&gt;;</span><br><span class="line">    pinctrl-names = <span class="string">&quot;default&quot;</span>, <span class="string">&quot;sleep&quot;</span>;</span><br><span class="line">    sunxi,spi-bus-mode = &lt;SUNXI_SPI_BUS_MASTER&gt;;</span><br><span class="line">    sunxi,spi-cs-mode = &lt;SUNXI_SPI_CS_AUTO&gt;;</span><br><span class="line">    <span class="comment">// ready-gpio = &lt;&amp;pio PC 15 GPIO_ACTIVE_LOW&gt;;</span></span><br><span class="line">    status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line"></span><br><span class="line">    spidev@<span class="number">0</span> &#123;</span><br><span class="line">        compatible = <span class="string">&quot;device&quot;</span>;</span><br><span class="line">		reg = &lt;<span class="number">0x0</span>&gt;;</span><br><span class="line">		spi-max-frequency = &lt;<span class="number">10000000</span>&gt;;</span><br><span class="line">		spi-rx-bus-width = &lt;<span class="number">1</span>&gt;;</span><br><span class="line">		spi-tx-bus-width = &lt;<span class="number">1</span>&gt;;</span><br><span class="line">		status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">        ...</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>以下是 SPI-HOST 的主要属性：</p>
+<ul>
+<li>属性<code>pinctrl-*</code>：配置 <em>SPI</em> 总线的 IO 复用。全志的对该总线的 IO 复用分两部分，一是时钟 IO 和数据 IO ；二是功能 IO ，如 CS 。</li>
+<li>属性<code>sunxi,spi-bus-mode</code>：默认为 MASTER 模式，还有<code>SUNXI_SPI_BUS_SLAVE</code>、<code>SUNXI_SPI_BUS_BIT</code>、<code>SUNXI_SPI_BUS_DBI</code>和<code>SUNXI_SPI_BUS_CAMERA</code>等，根据客户需求选<font style="color:rgb(0,0,0);">择。</font></li>
+<li>属性<code>sunxi,spi-cs-mode</code>：默认由硬件操作 CS 脚，可以使用<code>SUNXI_SPI_CS_SOFT</code>，由软件手动控制。</li>
+</ul>
+<p>以下是 SPI 从设备的主要属性：</p>
+<ul>
+<li>属性<code>reg</code>：从设备的片选地址，</li>
+<li>属性<code>spi-max-frequency</code>：从设备要求的 SPI 时钟频率</li>
+<li>属性<code>spi-rx-bus-width</code>和<code>spi-tx-bus-width</code>：从设备要求的 mosi 和 miso 的总线宽度（bit）。</li>
+</ul>
+<h3 id="PWM配置"><a href="#PWM配置" class="headerlink" title="PWM配置"></a>PWM配置</h3><p>以下是全志的 PWM 配置，驱动源码<code>bsp/drivers/pwm/pwm-sunxi.c</code>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">&amp;pio &#123;</span><br><span class="line">    pwm1_0_pins_active: pwm1@<span class="number">0</span> &#123;</span><br><span class="line">		pins = <span class="string">&quot;PD10&quot;</span>;</span><br><span class="line">		function = <span class="string">&quot;pwm1_0&quot;</span>;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	pwm1_0_pins_sleep: pwm1@<span class="number">1</span> &#123;</span><br><span class="line">		pins = <span class="string">&quot;PD10&quot;</span>;</span><br><span class="line">		function = <span class="string">&quot;gpio_in&quot;</span>;</span><br><span class="line">		bias-pull-down;</span><br><span class="line">	&#125;;</span><br><span class="line">    ...</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;pwm1 &#123;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;pwm1_0 &#123;</span><br><span class="line">	pinctrl-names = <span class="string">&quot;active&quot;</span>, <span class="string">&quot;sleep&quot;</span>;</span><br><span class="line">	pinctrl<span class="number">-0</span> = &lt;&amp;pwm1_0_pins_active&gt;;</span><br><span class="line">	pinctrl<span class="number">-1</span> = &lt;&amp;pwm1_0_pins_sleep&gt;;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>节点 <code>pwm1</code>是 PWM 主控，节点 <code>pwm1_*</code>是 PWM 通道。</p>
+<p>一般来说，配置 PWM 通道的 IO 复用即可。</p>
+<p>以下是 PWM 使用例子：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">backlight0: backlight0 &#123;</span><br><span class="line">	compatible = <span class="string">&quot;pwm-backlight&quot;</span>;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">	brightness-levels = &lt;...&gt;;</span><br><span class="line">	<span class="keyword">default</span>-brightness-level = &lt;<span class="number">255</span>&gt;;</span><br><span class="line">	pwms = &lt;&amp;pwm1 <span class="number">0</span> <span class="number">2000000</span> <span class="number">0</span>&gt;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>其具体格式为：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">name = &lt;&amp;pwm* [0-n] freq pol&gt;; </span><br></pre></td></tr></table></figure>
+
+<p>其中：</p>
+<ul>
+<li>name：驱动中使用的名字</li>
+<li><font style="color:#5C8D07;">&amp;pwm*</font>：表示 PWM 主控芯片</li>
+<li><font style="color:#0C68CA;">[0-n]</font>：表示此 PWM 的通道</li>
+<li><font style="color:#C99103;">freq</font>：PWM 通道的时钟频率</li>
+<li><font style="color:#DF2A3F;">pol</font>：PWM 通道的极性</li>
+</ul>
+<h3 id="CAN配置"><a href="#CAN配置" class="headerlink" title="CAN配置"></a>CAN配置</h3><p>以下是全志的 CAN 配置，驱动源码<code>bsp/drivers/can/</code>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">&amp;pio &#123;</span><br><span class="line">    can1_pins_a: can1_pins@<span class="number">0</span> &#123;</span><br><span class="line">		pins = <span class="string">&quot;PH0&quot;</span>, <span class="string">&quot;PH1&quot;</span>;</span><br><span class="line">		function = <span class="string">&quot;can1&quot;</span>;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	can1_pins_b: can1_pins@<span class="number">1</span> &#123;</span><br><span class="line">		pins = <span class="string">&quot;PH0&quot;</span>, <span class="string">&quot;PH1&quot;</span>;</span><br><span class="line">		function = <span class="string">&quot;io_disabled&quot;</span>;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;can1 &#123;</span><br><span class="line">	pinctrl-names = <span class="string">&quot;default&quot;</span>, <span class="string">&quot;sleep&quot;</span>;</span><br><span class="line">	pinctrl<span class="number">-0</span> = &lt;&amp;can1_pins_a&gt;;</span><br><span class="line">	pinctrl<span class="number">-1</span> = &lt;&amp;can1_pins_b&gt;;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>一般来说配置 IO 复用即可。</p>
+<h3 id="GMAC配置"><a href="#GMAC配置" class="headerlink" title="GMAC配置"></a>GMAC配置</h3><p>以下是全志的 GMAC 配置，驱动源码<code>bsp/drivers/gmac</code>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">&amp;pio &#123;</span><br><span class="line">    gmac0_pins_default: gmac0@<span class="number">0</span> &#123;</span><br><span class="line">		pins = <span class="string">&quot;PJ0&quot;</span>, <span class="string">&quot;PJ1&quot;</span>, <span class="string">&quot;PJ2&quot;</span>, <span class="string">&quot;PJ3&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PJ4&quot;</span>, <span class="string">&quot;PJ5&quot;</span>, <span class="string">&quot;PJ6&quot;</span>, <span class="string">&quot;PJ7&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PJ8&quot;</span>, <span class="string">&quot;PJ9&quot;</span>, <span class="string">&quot;PJ10&quot;</span>, <span class="string">&quot;PJ11&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PJ12&quot;</span>, <span class="string">&quot;PJ13&quot;</span>, <span class="string">&quot;PJ14&quot;</span>, <span class="string">&quot;PJ15&quot;</span>;</span><br><span class="line">		function = <span class="string">&quot;rgmii0&quot;</span>;</span><br><span class="line">		drive-strength = &lt;<span class="number">40</span>&gt;;</span><br><span class="line">		bias-pull-up;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	gmac0_pins_sleep: gmac0@<span class="number">1</span> &#123;</span><br><span class="line">		pins = <span class="string">&quot;PJ0&quot;</span>, <span class="string">&quot;PJ1&quot;</span>, <span class="string">&quot;PJ2&quot;</span>, <span class="string">&quot;PJ3&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PJ4&quot;</span>, <span class="string">&quot;PJ5&quot;</span>, <span class="string">&quot;PJ6&quot;</span>, <span class="string">&quot;PJ7&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PJ8&quot;</span>, <span class="string">&quot;PJ9&quot;</span>, <span class="string">&quot;PJ10&quot;</span>, <span class="string">&quot;PJ11&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PJ12&quot;</span>, <span class="string">&quot;PJ13&quot;</span>, <span class="string">&quot;PJ14&quot;</span>, <span class="string">&quot;PJ15&quot;</span>;</span><br><span class="line">		function = <span class="string">&quot;gpio_in&quot;</span>;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;gmac0 &#123;</span><br><span class="line">	phy-mode = <span class="string">&quot;rgmii&quot;</span>;</span><br><span class="line">	pinctrl-names = <span class="string">&quot;default&quot;</span>, <span class="string">&quot;sleep&quot;</span>;</span><br><span class="line">	pinctrl<span class="number">-0</span> = &lt;&amp;gmac0_pins_default&gt;;</span><br><span class="line">	pinctrl<span class="number">-1</span> = &lt;&amp;gmac0_pins_sleep&gt;;</span><br><span class="line">	aw,soc-phy25m;</span><br><span class="line">	/delete-property/ aw,rgmii-clk-ext;</span><br><span class="line">	tx-delay = &lt;<span class="number">10</span>&gt;;</span><br><span class="line">	rx-delay = &lt;<span class="number">1</span>&gt;;</span><br><span class="line">	dwmac3v3-supply = &lt;&amp;reg_dcdc4&gt;;</span><br><span class="line">	phy3v3-supply = &lt;&amp;reg_dcdc4&gt;;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>以下是 GMAC 的主要属性：</p>
+<ul>
+<li>属性 <code>phy-mode</code>：指定 PHY 的驱动模式，这要根据硬件原理图去配置。一般来说，千兆网卡使用“rgmii”，百兆网卡使用“rmii”。</li>
+<li>属性<code>pinctrl-*</code>：GMAC 与 PHY 芯片连接的 IO 复用。</li>
+<li>属性<code>aw,soc-phy25m</code>和<code>aw,rgmii-clk-ext</code>：指定网卡的时钟源，一个是指定使用 SoC 引出的时钟源，另一个是指定使用外部晶振的时钟源。两者只能选其一去使用，需要根据硬件原理图去配置。如上述的 gmac0 节点，指定使用 SoC 时钟源，不用外部晶振。</li>
+<li>属性<code>tx-delay</code>和<code>rx-delay</code>：这是数据传输和接收时用到的延迟，如果在进行压力测试时，发现数据传输或接收时出现丢包情况，则稍微调整一下传输和接收的延迟。</li>
+<li>属性<code>dwmac3v3-supply</code>和<code>phy3v3-supply</code>：这两个分别指定 IO 和 PHY 的电源域，根据硬件原理图去配置。</li>
+</ul>
+<p>以下是 ETH PHY 的配置，一般使用内核自带的通用 PHY 驱动即可。如果厂商有自己的驱动，则建议把这些驱动放到 <code>bsp/drivers/net/phy</code>，如裕太微的 PHY 驱动 motorcomm.c 。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&amp;gmac0_phy0 &#123;</span><br><span class="line">	compatible = <span class="string">&quot;ethernet-phy-id4f51.e91b&quot;</span>;</span><br><span class="line">	reset-gpios = &lt;&amp;pio PA <span class="number">4</span> GPIO_ACTIVE_LOW&gt;;</span><br><span class="line">	reg = &lt;<span class="number">0x1</span>&gt;;</span><br><span class="line">	max-speed = &lt;<span class="number">1000</span>&gt;;</span><br><span class="line">	reset-assert-us = &lt;<span class="number">10000</span>&gt;;</span><br><span class="line">	reset-deassert-us = &lt;<span class="number">30000</span>&gt;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>以下是 PHY 的主要属性：</p>
+<ul>
+<li>属性<code>compatible</code>：这是与 PHY 驱动匹配的关键属性，尤其是使用了 PHY 厂商的驱动。格式为：<code>ethernet-phy-id + ID for PHY Chip</code>，上述的属性值包含的“4f51.e91b”就是 PHY 芯片的 ID 号，一般是“厂商ID.设备ID”。</li>
+<li>属性<code>reset-gpios</code>：PHY 芯片的复位脚，根据硬件原理图去配置。</li>
+<li>属性<code>reg</code>：PHY 芯片的地址，根据硬件原理图去配置。</li>
+<li>属性<code>max-speed</code>：PHY 芯片的最大速率，根据 PHY 芯片的型号确认。</li>
+<li>属性<code>reset-assert-us</code>和<code>reset-deassert-us</code>：PHY 芯片的复位延迟，一般不用关心。</li>
+</ul>
+<h3 id="PCIe配置"><a href="#PCIe配置" class="headerlink" title="PCIe配置"></a>PCIe配置</h3><p>全志有两个版本的 PCIe 配置，一个是 RC ，另一个是 EP ，这里一般使用 RC 。在配置菜单中选择<code>CONFIG_AW_PCIE_RC</code>启用，对应的源码路径为<code>bsp/drivers/pcie/pcie-sunxi-rc.c</code>。</p>
+<p>以下是设备树配置：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&amp;pcie &#123;</span><br><span class="line">	reset-gpios = &lt;&amp;pio PI <span class="number">10</span> GPIO_ACTIVE_HIGH&gt;;</span><br><span class="line">	wake-gpios = &lt;&amp;pio PI <span class="number">11</span> GPIO_ACTIVE_LOW&gt;;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>属性<code>reset-gpios</code>和<code>wake-gpios</code>根据硬件原理图配置。</p>
+<p>在 T536 中，还要额外 PHY 芯片去驱动 PCIe ，估计后续的版本都是这样：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&amp;combophy &#123;</span><br><span class="line">	phy_use_sel = &lt;<span class="number">0</span>&gt;; <span class="comment">/* 0:PCIE; 1:USB3; 2:PCIE_USB3_U2 */</span></span><br><span class="line">	select3v3-supply = &lt;&amp;reg_dcdc4&gt;;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="LocalBus配置"><a href="#LocalBus配置" class="headerlink" title="LocalBus配置"></a>LocalBus配置</h3><p>以下是 LocalBus 的配置，相关源码路径为<code>bsp/drivers/lbc</code>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">&amp;pio &#123;</span><br><span class="line">    lbc_pins_a: lbc_pins_a@<span class="number">0</span> &#123;</span><br><span class="line">		pins = <span class="string">&quot;PE0&quot;</span>, <span class="string">&quot;PE1&quot;</span>, <span class="string">&quot;PE2&quot;</span>, <span class="string">&quot;PE3&quot;</span>, </span><br><span class="line">			<span class="string">&quot;PE4&quot;</span>, <span class="string">&quot;PE5&quot;</span>, <span class="string">&quot;PE6&quot;</span>, <span class="string">&quot;PE7&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PE8&quot;</span>, <span class="string">&quot;PE9&quot;</span>, <span class="string">&quot;PE10&quot;</span>, <span class="string">&quot;PE11&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PE12&quot;</span>, <span class="string">&quot;PE13&quot;</span>, <span class="string">&quot;PE14&quot;</span>, <span class="string">&quot;PE15&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PE16&quot;</span>, <span class="string">&quot;PE17&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PK0&quot;</span>, <span class="string">&quot;PK1&quot;</span>, <span class="string">&quot;PK2&quot;</span>, <span class="string">&quot;PK3&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PK4&quot;</span>, <span class="string">&quot;PK5&quot;</span>, <span class="string">&quot;PK6&quot;</span>, <span class="string">&quot;PK7&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PK8&quot;</span>, <span class="string">&quot;PK9&quot;</span>, <span class="string">&quot;PK10&quot;</span>, <span class="string">&quot;PK11&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PK12&quot;</span>, <span class="string">&quot;PK13&quot;</span>, <span class="string">&quot;PK14&quot;</span>, <span class="string">&quot;PK15&quot;</span>;</span><br><span class="line">		function = <span class="string">&quot;lbus&quot;</span>;</span><br><span class="line">		drive-strength = &lt;<span class="number">30</span>&gt;;</span><br><span class="line">		bias-pull-up;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	lbc_pins_b: lbc_pins_b@<span class="number">0</span> &#123;</span><br><span class="line">		pins = <span class="string">&quot;PE0&quot;</span>, <span class="string">&quot;PE1&quot;</span>, <span class="string">&quot;PE2&quot;</span>, <span class="string">&quot;PE3&quot;</span>, </span><br><span class="line">			<span class="string">&quot;PE4&quot;</span>, <span class="string">&quot;PE5&quot;</span>, <span class="string">&quot;PE6&quot;</span>, <span class="string">&quot;PE7&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PE8&quot;</span>, <span class="string">&quot;PE9&quot;</span>, <span class="string">&quot;PE10&quot;</span>, <span class="string">&quot;PE11&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PE12&quot;</span>, <span class="string">&quot;PE13&quot;</span>, <span class="string">&quot;PE14&quot;</span>, <span class="string">&quot;PE15&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PE16&quot;</span>, <span class="string">&quot;PE17&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PK0&quot;</span>, <span class="string">&quot;PK1&quot;</span>, <span class="string">&quot;PK2&quot;</span>, <span class="string">&quot;PK3&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PK4&quot;</span>, <span class="string">&quot;PK5&quot;</span>, <span class="string">&quot;PK6&quot;</span>, <span class="string">&quot;PK7&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PK8&quot;</span>, <span class="string">&quot;PK9&quot;</span>, <span class="string">&quot;PK10&quot;</span>, <span class="string">&quot;PK11&quot;</span>,</span><br><span class="line">			<span class="string">&quot;PK12&quot;</span>, <span class="string">&quot;PK13&quot;</span>, <span class="string">&quot;PK14&quot;</span>, <span class="string">&quot;PK15&quot;</span>;</span><br><span class="line">		function = <span class="string">&quot;gpio_in&quot;</span>;</span><br><span class="line">	&#125;;</span><br><span class="line">	...</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;lbc &#123;</span><br><span class="line">	clock-frequency = &lt;<span class="number">33000000</span>&gt;;</span><br><span class="line">	transfer_mode = &lt;<span class="number">2</span>&gt;;</span><br><span class="line">	transfer_width = &lt;<span class="number">1</span>&gt;;</span><br><span class="line">	burst_mode = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">	chain_delay = &lt;<span class="number">30</span>&gt;;</span><br><span class="line">	lbc-io-supply = &lt;&amp;reg_bldo3&gt;;</span><br><span class="line">	lbc-io-vol = &lt;<span class="number">3300000</span>&gt;;</span><br><span class="line">	pinctrl-names = <span class="string">&quot;default&quot;</span>, <span class="string">&quot;sleep&quot;</span>;</span><br><span class="line">	pinctrl<span class="number">-0</span> = &lt;&amp;lbc_pins_a&gt;;</span><br><span class="line">	pinctrl<span class="number">-1</span> = &lt;&amp;lbc_pins_b&gt;;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>以下是 LocalBus 的关键属性：</p>
+<ul>
+<li>属性<code>clock-frequency</code>：LocalBus 的时钟频率，需要与 LocalBus 连接的从设备确认。</li>
+<li>属性<code>transfer_mode</code>：为 0 时表示使用直接传输模式；为 1 表示使用间接传输模式；为 2 表示使用 DMA 传输模式。其中直接传输模式是指定一个内存区域去读写数据；间接传输模式是通过 LocalBus 主控芯片的寄存器去读写数据。</li>
+<li>属性<code>transfer_width</code>：为 0 表示数据宽街为 8 位，为 1 表示 16 位，为 2 表示 32 位。</li>
+<li>属性<code>burst_mode</code>：表示是否使用激进（burst）模式，为 0 默认不使用。</li>
+<li>属性<code>chain_delay</code>：这个仅有在非 DMA 模式下使用，传输数据之间的间距延迟。</li>
+<li>属性<code>lbc-io-supply</code>和<code>lbc-io-vol</code>：LocalBus 的 IO 电源域，这个根据硬件原理图确认。</li>
+<li>属性<code>pinctrl-*</code>：LocalBus 主控与 LocalBus 从设备之间的 IO 复用。</li>
+</ul>
+<p>另外，目前对 LocalBus 的开发更多针对的是：LocalBus-&gt;FPGA-&gt;AD7616 。有些 AD7616 的功能引脚（ Convst、Reset 和 Busy ）并不能与 FPGA 连接，转而使用 CPU 去控制这些引脚：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&amp;lbc &#123;</span><br><span class="line">    ...</span><br><span class="line">    adc-io-supply = &lt;&amp;reg_bldo1&gt;;</span><br><span class="line">	adc-io-vol = &lt;<span class="number">3300000</span>&gt;;</span><br><span class="line">    convst-adc-gpios = &lt;&amp;pio PD <span class="number">11</span> GPIO_ACTIVE_LOW&gt;;</span><br><span class="line">	reset-adc-gpios = &lt;&amp;pio PH <span class="number">14</span> GPIO_ACTIVE_LOW&gt;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="GPADC配置"><a href="#GPADC配置" class="headerlink" title="GPADC配置"></a>GPADC配置</h3><p>以下是 GPADC 的配置，相关驱动源码在<code>bsp/drivers/gpadc/sunxi_gpadc.c</code>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">&amp;gpadc0 &#123;</span><br><span class="line">	channel_num = &lt;<span class="number">10</span>&gt;;</span><br><span class="line">	channel_select = &lt;<span class="number">0x3ff</span>&gt;;</span><br><span class="line">	channel_data_select = &lt;<span class="number">0x3ff</span>&gt;;</span><br><span class="line">	channel_compare_select = &lt;<span class="number">0x3ff</span>&gt;;</span><br><span class="line">	channel_cld_select = &lt;<span class="number">0x3ff</span>&gt;;</span><br><span class="line">	channel_chd_select = &lt;<span class="number">0x3ff</span>&gt;;</span><br><span class="line">	channel0_compare_lowdata = &lt;<span class="number">1700000</span>&gt;;</span><br><span class="line">	channel0_compare_higdata = &lt;<span class="number">1200000</span>&gt;;</span><br><span class="line">	...</span><br><span class="line">	gpadc_sample_rate = &lt;<span class="number">1000000</span>&gt;;</span><br><span class="line">	sync = &lt;&amp;gpadc_sync0 <span class="number">0x0</span>&gt;; <span class="comment">/* &lt;&amp;sync_group, idx&gt; */</span></span><br><span class="line">	<span class="comment">/* sync_group is used for matching between multiple ports, same within the same group */</span></span><br><span class="line">	<span class="comment">/* idx means the order of starting in sync group, differences within the same group */</span></span><br><span class="line">	<span class="comment">/* gpadc_sample_rate must be the same within the same group */</span></span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>大多数来说，仅需要配置属性<code>channel_*_select</code>即可，同类型的都为 0 。这些属性值是位图，bit0 表示通道 0 ，bit1 表示通道 1 ，以此类推。需要根据硬件原理图去配置 GPADC 的通道。</p>
+<h3 id="RTC配置"><a href="#RTC配置" class="headerlink" title="RTC配置"></a>RTC配置</h3><p>多数使用外部 RTC ，比如使用 rx8025t ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">&amp;twi1 &#123;</span><br><span class="line">	...</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line"></span><br><span class="line">	rx8025t: rtc@<span class="number">32</span> &#123;</span><br><span class="line">		compatible = <span class="string">&quot;rx8025t&quot;</span>;</span><br><span class="line">		reg = &lt;<span class="number">0x32</span>&gt;;</span><br><span class="line">		wakeup-source;</span><br><span class="line">		interrupt-parent = &lt;&amp;pio&gt;;</span><br><span class="line">		interrupts = &lt;PH <span class="number">14</span> IRQ_TYPE_LEVEL_HIGH&gt;;</span><br><span class="line">		status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>这里建议把 SoC 内部的 RTC 关闭，不然在 &#x2F;dev 中出现两个 rtc 节点，分不清哪个是外部 RTC ，哪个是内部的。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&amp;rtc &#123;</span><br><span class="line">	status = <span class="string">&quot;disabled&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="看门狗配置"><a href="#看门狗配置" class="headerlink" title="看门狗配置"></a>看门狗配置</h3><p>注意不要把芯片内部的看门狗关闭，因为已经在 U-Boot 启动，全志的 U-Boot 需要该看门狗来支持软复位功能。<br>以下是外部看门狗的节点，相关配置为<code>CONFIG_GPIO_WATCHDOG</code>：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">/&#123;</span><br><span class="line">    wtd0: sgm706@<span class="number">0</span> &#123;</span><br><span class="line">		compatible = <span class="string">&quot;linux,wdt-gpio&quot;</span>;</span><br><span class="line">		status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line"></span><br><span class="line">		gpios = &lt;&amp;pio PA <span class="number">6</span> GPIO_ACTIVE_LOW&gt;;</span><br><span class="line">		hw_algo = <span class="string">&quot;toggle&quot;</span>;</span><br><span class="line">		hw_margin_ms = &lt;<span class="number">1000</span>&gt;;</span><br><span class="line">		always-running;</span><br><span class="line">	&#125;;</span><br><span class="line">    ...</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>以下是主要属性：</p>
+<ul>
+<li><code>hw_algo</code>：选择喂狗方式<ul>
+<li>“toggle” ：类似于 PWM 频率的方式喂狗</li>
+<li>“level” ：把电平拉高 1 us，再拉低，一直到下次喂狗</li>
+</ul>
+</li>
+<li><code>hw_margin_ms</code>：每隔多少毫秒喂一次狗</li>
+</ul>
+<h3 id="WIFI和蓝牙配置"><a href="#WIFI和蓝牙配置" class="headerlink" title="WIFI和蓝牙配置"></a>WIFI和蓝牙配置</h3><p>以下是与WIFI蓝牙有关的组件，源码在<code>/bsp/drivers/misc/sunxi-rf/sunxi-rfkill.c</code></p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">&amp;rfkill &#123;</span><br><span class="line">	compatible = <span class="string">&quot;allwinner,sunxi-rfkill&quot;</span>;</span><br><span class="line">	...</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* wlan session */</span></span><br><span class="line">	wlan &#123;</span><br><span class="line">		compatible    = <span class="string">&quot;allwinner,sunxi-wlan&quot;</span>;</span><br><span class="line">		clocks        = &lt;&amp;rtc_ccu CLK_DCXO24M_OUT&gt;, &lt;&amp;rtc_ccu CLK_OSC32K_OUT&gt;;</span><br><span class="line">		clock-names   = <span class="string">&quot;dcxo24M-out&quot;</span>, <span class="string">&quot;osc32k-out&quot;</span>;</span><br><span class="line">		wlan_power    = <span class="string">&quot;axp2202-dcdc4&quot;</span>, <span class="string">&quot;axp2202-bldo1&quot;</span>, <span class="string">&quot;axp2202-bldo2&quot;</span>; <span class="comment">/* vcc-wifi/vccio-wifi/vcc-pm */</span></span><br><span class="line">		wlan_power_vol= &lt;<span class="number">3300000</span>&gt;, &lt;<span class="number">1800000</span>&gt;, &lt;<span class="number">1800000</span>&gt;;</span><br><span class="line">		wlan_busnum   = &lt;<span class="number">0x1</span>&gt;;</span><br><span class="line">		wlan_regon    = &lt;&amp;r_pio PM <span class="number">1</span> GPIO_ACTIVE_HIGH&gt;;</span><br><span class="line">		wlan_hostwake = &lt;&amp;r_pio PM <span class="number">0</span> GPIO_ACTIVE_HIGH&gt;;</span><br><span class="line">		wakeup-source;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* bt session */</span></span><br><span class="line">	bt &#123;</span><br><span class="line">		compatible    = <span class="string">&quot;allwinner,sunxi-bt&quot;</span>;</span><br><span class="line">		clocks        = &lt;&amp;rtc_ccu CLK_DCXO24M_OUT&gt;, &lt;&amp;rtc_ccu CLK_OSC32K_OUT&gt;;</span><br><span class="line">		clock-names   = <span class="string">&quot;dcxo24M-out&quot;</span>, <span class="string">&quot;osc32k-out&quot;</span>;</span><br><span class="line">		bt_power    = <span class="string">&quot;axp2202-dcdc4&quot;</span>, <span class="string">&quot;axp2202-bldo1&quot;</span>, <span class="string">&quot;axp2202-bldo2&quot;</span>; <span class="comment">/* vcc-wifi/vccio-wifi/vcc-pm */</span></span><br><span class="line">		bt_power_vol= &lt;<span class="number">3300000</span>&gt;, &lt;<span class="number">1800000</span>&gt;, &lt;<span class="number">1800000</span>&gt;;</span><br><span class="line">		bt_rst_n      = &lt;&amp;r_pio PM <span class="number">2</span> GPIO_ACTIVE_LOW&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>这个目前仅关系是否开启即可。</p>
+<p>以下是 WIFI 的 SDIO 节点，也是确认是开启即可：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">&amp;sdc1 &#123;</span><br><span class="line">	bus-width = &lt;<span class="number">4</span>&gt;;</span><br><span class="line">	no-mmc;</span><br><span class="line">	no-sd;</span><br><span class="line">	cap-sd-highspeed;</span><br><span class="line">	<span class="comment">/*sd-uhs-sdr12*/</span></span><br><span class="line">	sd-uhs-sdr25;</span><br><span class="line">	sd-uhs-sdr50;</span><br><span class="line">	sd-uhs-ddr50;</span><br><span class="line">	sd-uhs-sdr104;</span><br><span class="line">	<span class="comment">/*sunxi-power-save-mode;*/</span></span><br><span class="line">	sunxi-dis-signal-vol-sw;</span><br><span class="line">	cap-sdio-irq;</span><br><span class="line">	keep-power-in-suspend;</span><br><span class="line">	ignore-pm-notify;</span><br><span class="line">	max-frequency = &lt;<span class="number">208000000</span>&gt;;</span><br><span class="line">	ctl-spec-caps = &lt;<span class="number">0x428</span>&gt;;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="显示配置"><a href="#显示配置" class="headerlink" title="显示配置"></a>显示配置</h3><p>以下是显示主控节点集合，以 T536 为例，相关驱动在<code>bsp/drivers/drm</code>。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">&amp;sunxi_drm &#123;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;de &#123;</span><br><span class="line">	chn_cfg_mode = &lt;<span class="number">3</span>&gt;;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;vo0 &#123;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;lcd0 &#123;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;dsi0combophy &#123;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;rgb0 &#123;</span><br><span class="line">	status = <span class="string">&quot;disabled&quot;</span>;</span><br><span class="line">	pinctrl<span class="number">-0</span> = &lt;&amp;rgb0_24pins_a&gt;;</span><br><span class="line">	pinctrl<span class="number">-1</span> = &lt;&amp;rgb0_24pins_b&gt;;</span><br><span class="line">	pinctrl-names = <span class="string">&quot;active&quot;</span>,<span class="string">&quot;sleep&quot;</span>;</span><br><span class="line">	...</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;lvds0 &#123;</span><br><span class="line">	status = <span class="string">&quot;disabled&quot;</span>;</span><br><span class="line">	dual-channel = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">	pinctrl<span class="number">-0</span> = &lt;&amp;lvds0_pins_a&gt;;</span><br><span class="line">	pinctrl<span class="number">-1</span> = &lt;&amp;lvds0_pins_b&gt;;</span><br><span class="line">	pinctrl-names = <span class="string">&quot;active&quot;</span>,<span class="string">&quot;sleep&quot;</span>;</span><br><span class="line">	...</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;dsi0 &#123;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">	pinctrl<span class="number">-0</span> = &lt;&amp;dsi0_4lane_pins_a&gt;;</span><br><span class="line">	pinctrl<span class="number">-1</span> = &lt;&amp;dsi0_4lane_pins_b&gt;;</span><br><span class="line">	pinctrl-names = <span class="string">&quot;active&quot;</span>,<span class="string">&quot;sleep&quot;</span>;</span><br><span class="line">    ...</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>以下是它们之间的关系：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/配置/allwinner/全志Tina5.0-SDK说明/1723693459463-b59874b1-fded-4e48-8d0e-6f0b620adfa5.png"></div>
+
+<p>在 T536 中，三个不同类型的屏复用同一个显示管道，即只能选择一个屏显示。</p>
+<p>节点 dsi0combophy 是三个屏一起复用的 PHY 芯片。</p>
+<p>需要额外注意各个显示主控的 IO 复用。</p>
+<p>各屏的 Panel 节点属性与其它平台的是近似的，不赘述。</p>
+<h3 id="音频配置"><a href="#音频配置" class="headerlink" title="音频配置"></a>音频配置</h3><p>以下是 SoC 内部 codec 的节点：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">&amp;codec &#123;</span><br><span class="line">	<span class="comment">/* tx-hub-en; */</span></span><br><span class="line">	<span class="comment">/* rx-sync-en; */</span></span><br><span class="line"></span><br><span class="line">	dac-vol		= &lt;<span class="number">63</span>&gt;;		<span class="comment">/* default value:63 range:0-&gt;63 */</span></span><br><span class="line">	dacl-vol	= &lt;<span class="number">160</span>&gt;;	<span class="comment">/* default value:160 range:0-&gt;255 */</span></span><br><span class="line">	lineout-gain	= &lt;<span class="number">31</span>&gt;;		<span class="comment">/* default value:31 range:0-&gt;31 */</span></span><br><span class="line"></span><br><span class="line">	rglt-max	= &lt;<span class="number">1</span>&gt;;</span><br><span class="line">	rglt0-mode	= <span class="string">&quot;PMU&quot;</span>;</span><br><span class="line">	rglt0-voltage	= &lt;<span class="number">1800000</span>&gt;;</span><br><span class="line">	rglt0-supply	= &lt;&amp;reg_aldo4&gt;;</span><br><span class="line"></span><br><span class="line">	pa-pin-max	= &lt;<span class="number">1</span>&gt;;</span><br><span class="line">	pa-pin<span class="number">-0</span>	= &lt;&amp;pio PG <span class="number">9</span> GPIO_ACTIVE_LOW&gt;;</span><br><span class="line">	pa-pin-level<span class="number">-0</span>	= &lt;<span class="number">0</span>&gt;;</span><br><span class="line">	pa-pin-msleep<span class="number">-0</span>	= &lt;<span class="number">0</span>&gt;;</span><br><span class="line"></span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;codec_plat &#123;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;codec_mach &#123;</span><br><span class="line">	soundcard-mach,jack-support = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">	soundcard-mach,cpu &#123;</span><br><span class="line">		sound-dai = &lt;&amp;codec_plat&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line">	soundcard-mach,codec &#123;</span><br><span class="line">		sound-dai = &lt;&amp;codec&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>通常来说，仅关心属性<code>pa-pin-0</code>，和以上组件的使能即可。</p>
+<h1 id="Buildroot开发"><a href="#Buildroot开发" class="headerlink" title="Buildroot开发"></a>Buildroot开发</h1><h2 id="Kconfig-2"><a href="#Kconfig-2" class="headerlink" title="Kconfig"></a>Kconfig</h2><h3 id="配置文件路径-2"><a href="#配置文件路径-2" class="headerlink" title="配置文件路径"></a>配置文件路径</h3><p><strong>defconfig：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./buildroot/buildroot-202205/configs/sun8iw22p1_t153_mmc_defconfig</span><br></pre></td></tr></table></figure>
+
+<p><strong>.config：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">out/t153/demo/buildroot/buildroot/.config</span><br></pre></td></tr></table></figure>
+
+<p><font style="color:#DF2A3F;">注意</font>：“t153”转换为实际的 SoC 配置目录；“demo”转换为你实际的板卡配置目录。</p>
+<h3 id="配置方法-2"><a href="#配置方法-2" class="headerlink" title="配置方法"></a>配置方法</h3><p><strong>进入配置菜单</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./build.sh buildroot_menuconfig</span><br></pre></td></tr></table></figure>
+
+<p><strong>保存配置菜单</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./build.sh buildroot_saveconfig</span><br></pre></td></tr></table></figure>
+
+<h2 id="fstab"><a href="#fstab" class="headerlink" title="fstab"></a>fstab</h2><p>以下是文件系统挂载表路径：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./buildroot/buildroot-202205/package/skeleton-init-sysv/skeleton/etc/fstab</span><br></pre></td></tr></table></figure>
+
+<h1 id="常用调试命令"><a href="#常用调试命令" class="headerlink" title="常用调试命令"></a>常用调试命令</h1><h2 id="查看pinctrl芯片的复用情况"><a href="#查看pinctrl芯片的复用情况" class="headerlink" title="查看pinctrl芯片的复用情况"></a>查看pinctrl芯片的复用情况</h2><p><strong>pinctrl@3604000：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/kernel/debug/pinctrl/3604000.pinctrl/pinmux-pins</span><br></pre></td></tr></table></figure>
+
+<p><strong>pinctrl@7096500：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/kernel/debug/pinctrl/7096500.pinctrl/pinmux-pins</span><br></pre></td></tr></table></figure>
+
+<h2 id="查看MMC的使用情况"><a href="#查看MMC的使用情况" class="headerlink" title="查看MMC的使用情况"></a>查看MMC的使用情况</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/kernel/debug/mmc*/ios</span><br></pre></td></tr></table></figure>
+
+<h2 id="查看PMIC电源域的使用情况"><a href="#查看PMIC电源域的使用情况" class="headerlink" title="查看PMIC电源域的使用情况"></a>查看PMIC电源域的使用情况</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/kernel/debug/regulator/axp2202-*/use_count</span><br></pre></td></tr></table></figure>
+
+<h2 id="查看时钟树"><a href="#查看时钟树" class="headerlink" title="查看时钟树"></a>查看时钟树</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/kernel/debug/clk/clk_summary</span><br></pre></td></tr></table></figure>
+
+<h2 id="使能和关闭USB总线"><a href="#使能和关闭USB总线" class="headerlink" title="使能和关闭USB总线"></a>使能和关闭USB总线</h2><p>使能：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">echo 1 &gt; /sys/bus/usb/devices/usbX/authorized</span><br></pre></td></tr></table></figure>
+
+<p>关闭：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">echo 0 &gt; /sys/bus/usb/devices/usbX/authorized</span><br></pre></td></tr></table></figure>
+
+<p><font style="color:#DF2A3F;">注意</font>：“usbX”换为实际的 USB 总线。</p>
+<h2 id="使能和关闭rkfill"><a href="#使能和关闭rkfill" class="headerlink" title="使能和关闭rkfill"></a>使能和关闭rkfill</h2><p>使能：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">echo 1 &gt; /sys/class/rfkill/rfkill0/state</span><br></pre></td></tr></table></figure>
+
+<p>关闭：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">echo 0 &gt; /sys/class/rfkill/rfkill0/state</span><br></pre></td></tr></table></figure>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Allwinner/" rel="tag"># Allwinner</a>
+              <a href="/tags/Tina5-0/" rel="tag"># Tina5.0</a>
+              <a href="/tags/SDK/" rel="tag"># SDK</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/10/10/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-LVDS%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/" rel="prev" title="Linux - LVDS开发要点">
+                  <i class="fa fa-angle-left"></i> Linux - LVDS开发要点
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2025/10/14/%E9%85%8D%E7%BD%AE/allwinner/%E5%85%A8%E5%BF%97Tina5.0-%E6%9B%B4%E6%8D%A2debug%E4%B8%B2%E5%8F%A3/" rel="next" title="全志Tina5.0 - 更换debug串口">
+                  全志Tina5.0 - 更换debug串口 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="HDMI 显示屏模式一般来说，HDMI 显示屏的厂商为了展现他们的兼容性，当然，最主要是应市场需求，他们的 HDMI 显示屏除了有 HDMI 接口，还有 VGA 和 DVI 接口等。而且使用不同的接口连接，所支持的分辨率也是不同的。所以相应的，一个 HDMI 显示屏有很多不同的模式，除了 HDMI 模式外，还有 VGA 模式和 DVI 模式等。  这里的 HDMI 显示屏可以理解为 HDMI 接口">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - IMX8MP HDMI驱动分析">
+<meta property="og:url" content="http://example.com/2024/06/21/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-IMX8MP_HDMI%E9%A9%B1%E5%8A%A8%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="HDMI 显示屏模式一般来说，HDMI 显示屏的厂商为了展现他们的兼容性，当然，最主要是应市场需求，他们的 HDMI 显示屏除了有 HDMI 接口，还有 VGA 和 DVI 接口等。而且使用不同的接口连接，所支持的分辨率也是不同的。所以相应的，一个 HDMI 显示屏有很多不同的模式，除了 HDMI 模式外，还有 VGA 模式和 DVI 模式等。  这里的 HDMI 显示屏可以理解为 HDMI 接口">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-IMX8MP_HDMI%E9%A9%B1%E5%8A%A8%E5%88%86%E6%9E%90/HDMI0.png">
+<meta property="article:published_time" content="2024-06-20T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-06-29T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="DRM">
+<meta property="article:tag" content="HDMI">
+<meta property="article:tag" content="IMX8MP">
+<meta property="article:tag" content="Linux">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-IMX8MP_HDMI%E9%A9%B1%E5%8A%A8%E5%88%86%E6%9E%90/HDMI0.png">
+
+
+<link rel="canonical" href="http://example.com/2024/06/21/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-IMX8MP_HDMI%E9%A9%B1%E5%8A%A8%E5%88%86%E6%9E%90/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2024/06/21/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-IMX8MP_HDMI%E9%A9%B1%E5%8A%A8%E5%88%86%E6%9E%90/","path":"2024/06/21/原理及实现/DRM/Linux-IMX8MP_HDMI驱动分析/","title":"Linux - IMX8MP HDMI驱动分析"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - IMX8MP HDMI驱动分析 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#HDMI-%E6%98%BE%E7%A4%BA%E5%B1%8F%E6%A8%A1%E5%BC%8F"><span class="nav-number">1.</span> <span class="nav-text">HDMI 显示屏模式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%9D%E6%8E%A2%E5%9C%A8-DRM-%E6%A1%86%E6%9E%B6%E4%B8%8B%E7%9A%84-HDMI-%E9%A9%B1%E5%8A%A8"><span class="nav-number">2.</span> <span class="nav-text">初探在 DRM 框架下的 HDMI 驱动</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#HDMI-%E8%AE%BE%E5%A4%87%E7%9A%84%E8%A1%A8%E7%A4%BA"><span class="nav-number">2.1.</span> <span class="nav-text">HDMI 设备的表示</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%B9-HDMI-%E7%9A%84%E8%BE%93%E5%87%BA%E4%BF%A1%E6%81%AF%E8%A7%A3%E6%9E%90"><span class="nav-number">2.2.</span> <span class="nav-text">对 HDMI 的输出信息解析</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2024/06/21/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-IMX8MP_HDMI%E9%A9%B1%E5%8A%A8%E5%88%86%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - IMX8MP HDMI驱动分析 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - IMX8MP HDMI驱动分析
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2024-06-21 00:00:00" itemprop="dateCreated datePublished" datetime="2024-06-21T00:00:00+08:00">2024-06-21</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2024-06-30 00:00:00" itemprop="dateModified" datetime="2024-06-30T00:00:00+08:00">2024-06-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>4k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>14 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="HDMI-显示屏模式"><a href="#HDMI-显示屏模式" class="headerlink" title="HDMI 显示屏模式"></a>HDMI 显示屏模式</h2><p>一般来说，HDMI 显示屏的厂商为了展现他们的兼容性，当然，最主要是应市场需求，他们的 HDMI 显示屏除了有 HDMI 接口，还有 VGA 和 DVI 接口等。而且使用不同的接口连接，所支持的分辨率也是不同的。所以相应的，一个 HDMI 显示屏有很多不同的模式，除了 HDMI 模式外，还有 VGA 模式和 DVI 模式等。</p>
+<blockquote>
+<p>这里的 HDMI 显示屏可以理解为 HDMI 接口为主要，其余接口都是为兼容性而添加。</p>
+</blockquote>
+<span id="more"></span>
+
+<p>在 Linux 6.1 的 DRM 框架，针对 HDMI 显示屏都是优先使用 HDMI 模式启动。但是现在开发板一起接上 LVDS 屏和 HDMI 屏后，无法启动 Weston ，故把 HDMI 显示屏的 HDMI 模式延后，待 Weston 启动完成后再开启。</p>
+<h2 id="初探在-DRM-框架下的-HDMI-驱动"><a href="#初探在-DRM-框架下的-HDMI-驱动" class="headerlink" title="初探在 DRM 框架下的 HDMI 驱动"></a>初探在 DRM 框架下的 HDMI 驱动</h2><h3 id="HDMI-设备的表示"><a href="#HDMI-设备的表示" class="headerlink" title="HDMI 设备的表示"></a>HDMI 设备的表示</h3><p>HDMI 显示屏在 imx8mp 的设备树中的表示：</p>
+<figure class="highlight dts"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="symbol">lcdif3:</span> <span class="title class_">lcd-controller@32fc6000</span> <span class="punctuation">&#123;</span></span><br><span class="line">	<span class="meta">#address-cells = &lt;1&gt;;</span></span><br><span class="line">	<span class="meta">#size-cells = &lt;0&gt;;</span></span><br><span class="line">	<span class="attr">compatible</span> <span class="operator">=</span> <span class="string">&quot;fsl,imx8mp-lcdif1&quot;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">reg</span> <span class="operator">=</span> <span class="params">&lt;<span class="number">0x32fc6000</span> <span class="number">0x10000</span>&gt;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">clocks</span> <span class="operator">=</span> <span class="params">&lt;<span class="variable">&amp;hdmiphy</span> <span class="number">0</span>&gt;</span>,</span><br><span class="line">			<span class="params">&lt;<span class="variable">&amp;clk</span> IMX8MP_CLK_HDMI_AXI&gt;</span>,</span><br><span class="line">			<span class="params">&lt;<span class="variable">&amp;clk</span> IMX8MP_CLK_HDMI_APB&gt;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">clock-names</span> <span class="operator">=</span> <span class="string">&quot;pix&quot;</span>, <span class="string">&quot;disp-axi&quot;</span>, <span class="string">&quot;disp-apb&quot;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">power-domains</span> <span class="operator">=</span> <span class="params">&lt;<span class="variable">&amp;hdmi_blk_ctrl</span> IMX8MP_HDMIBLK_PD_LCDIF&gt;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">assigned-clocks</span> <span class="operator">=</span>  <span class="params">&lt;<span class="variable">&amp;clk</span> IMX8MP_CLK_HDMI_AXI&gt;</span>,</span><br><span class="line">					<span class="params">&lt;<span class="variable">&amp;clk</span> IMX8MP_CLK_HDMI_APB&gt;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">assigned-clock-parents</span> <span class="operator">=</span> <span class="params">&lt;<span class="variable">&amp;clk</span> IMX8MP_SYS_PLL2_500M&gt;</span>,</span><br><span class="line">				 <span class="params">&lt;<span class="variable">&amp;clk</span> IMX8MP_SYS_PLL1_133M&gt;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">assigned-clock-rates</span> <span class="operator">=</span> <span class="params">&lt;<span class="number">500000000</span>&gt;</span>, <span class="params">&lt;<span class="number">133000000</span>&gt;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">interrupts</span> <span class="operator">=</span> <span class="params">&lt;<span class="number">8</span> IRQ_TYPE_LEVEL_HIGH&gt;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">interrupt-parent</span> <span class="operator">=</span> <span class="params">&lt;<span class="variable">&amp;irqsteer_hdmi</span>&gt;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">status</span> <span class="operator">=</span> <span class="string">&quot;okay&quot;</span><span class="punctuation">;</span></span><br><span class="line"><span class="symbol"></span></span><br><span class="line"><span class="symbol">	lcdif3_disp:</span> <span class="title class_">port@0</span> <span class="punctuation">&#123;</span></span><br><span class="line">		<span class="attr">reg</span> <span class="operator">=</span> <span class="params">&lt;<span class="number">0</span>&gt;</span><span class="punctuation">;</span></span><br><span class="line"><span class="symbol"></span></span><br><span class="line"><span class="symbol">		lcdif3_to_hdmi:</span> <span class="title class_">endpoint</span> <span class="punctuation">&#123;</span></span><br><span class="line">			<span class="attr">remote-endpoint</span> <span class="operator">=</span> <span class="params">&lt;<span class="variable">&amp;hdmi_from_lcdif3</span>&gt;</span><span class="punctuation">;</span></span><br><span class="line">		<span class="punctuation">&#125;;</span></span><br><span class="line">	<span class="punctuation">&#125;;</span></span><br><span class="line"><span class="punctuation">&#125;;</span></span><br><span class="line"><span class="symbol"></span></span><br><span class="line"><span class="symbol">hdmi:</span> <span class="title class_">hdmi@32fd8000</span> <span class="punctuation">&#123;</span></span><br><span class="line">	<span class="attr">compatible</span> <span class="operator">=</span> <span class="string">&quot;fsl,imx8mp-hdmi&quot;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">reg</span> <span class="operator">=</span> <span class="params">&lt;<span class="number">0x32fd8000</span> <span class="number">0x7eff</span>&gt;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">interrupts</span> <span class="operator">=</span> <span class="params">&lt;<span class="number">0</span> IRQ_TYPE_LEVEL_HIGH&gt;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">interrupt-parent</span> <span class="operator">=</span> <span class="params">&lt;<span class="variable">&amp;irqsteer_hdmi</span>&gt;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">power-domains</span> <span class="operator">=</span> <span class="params">&lt;<span class="variable">&amp;hdmi_blk_ctrl</span> IMX8MP_HDMIBLK_PD_HDMI_TX&gt;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">clocks</span> <span class="operator">=</span> <span class="params">&lt;<span class="variable">&amp;clk</span> IMX8MP_CLK_HDMI_APB&gt;</span>,</span><br><span class="line">			<span class="params">&lt;<span class="variable">&amp;clk</span> IMX8MP_CLK_HDMI_24M&gt;</span>,</span><br><span class="line">			<span class="params">&lt;<span class="variable">&amp;hdmiphy</span> <span class="number">0</span>&gt;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">clock-names</span> <span class="operator">=</span> <span class="string">&quot;iahb&quot;</span>, <span class="string">&quot;isfr&quot;</span>, <span class="string">&quot;pix&quot;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">assigned-clocks</span> <span class="operator">=</span> <span class="params">&lt;<span class="variable">&amp;clk</span> IMX8MP_CLK_HDMI_APB&gt;</span>,</span><br><span class="line">				<span class="params">&lt;<span class="variable">&amp;clk</span> IMX8MP_CLK_HDMI_AXI&gt;</span>,</span><br><span class="line">				<span class="params">&lt;<span class="variable">&amp;clk</span> IMX8MP_CLK_HDMI_24M&gt;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">assigned-clock-parents</span> <span class="operator">=</span> <span class="params">&lt;<span class="variable">&amp;clk</span> IMX8MP_SYS_PLL1_133M&gt;</span>,</span><br><span class="line">				<span class="params">&lt;<span class="variable">&amp;clk</span> IMX8MP_SYS_PLL2_500M&gt;</span>,</span><br><span class="line">				<span class="params">&lt;<span class="variable">&amp;clk</span> IMX8MP_CLK_24M&gt;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">assigned-clock-rates</span> <span class="operator">=</span> <span class="params">&lt;<span class="number">133000000</span>&gt;</span>, <span class="params">&lt;<span class="number">500000000</span>&gt;</span>, <span class="params">&lt;<span class="number">24000000</span>&gt;</span><span class="punctuation">;</span></span><br><span class="line">	<span class="attr">status</span> <span class="operator">=</span> <span class="string">&quot;okay&quot;</span><span class="punctuation">;</span></span><br><span class="line"></span><br><span class="line">	<span class="title class_">port@0</span> <span class="punctuation">&#123;</span></span><br><span class="line"><span class="symbol">		hdmi_from_lcdif3:</span> <span class="title class_">endpoint</span> <span class="punctuation">&#123;</span></span><br><span class="line">			<span class="attr">remote-endpoint</span> <span class="operator">=</span> <span class="params">&lt;<span class="variable">&amp;lcdif3_to_hdmi</span>&gt;</span><span class="punctuation">;</span></span><br><span class="line">		<span class="punctuation">&#125;;</span></span><br><span class="line">	<span class="punctuation">&#125;;</span></span><br><span class="line"><span class="punctuation">&#125;;</span></span><br></pre></td></tr></table></figure>
+<p>其中，第一个对应 HDMI 屏的控制器，第二个对应 HDMI 屏的连接器。在 DRM 框架中，第一个是 CRTC，第二个是 Connecter 。<br>当主板接上 HDMI 屏后，启动系统。在系统初始化期间，打印调试信息，发现 hdmi@32fd8000 对应的 platform_driver-&gt;probe() 先被调用，然后在到 lcd-controller@32fc6000 的。</p>
+<blockquote>
+<p>它们之间的调用顺序有强制要求，估计是因为 DRM 的 Driver 使用设备树的 Component 机制初始化，以后再详细了解。</p>
+</blockquote>
+<p>然后发现执行 lcd-controller@32fc6000 对应的 platform_driver-&gt;probe() 的输出信息：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">[    0.533682] dwhdmi-imx 32fd8000.hdmi: read_hpd result: 1</span><br><span class="line">[    0.534132] dwhdmi-imx 32fd8000.hdmi: xfer: num: 2, addr: 0x50</span><br><span class="line">[    0.534141] dwhdmi-imx 32fd8000.hdmi: xfer: num: 1/2, len: 1, flags: 0x0</span><br><span class="line">[    0.534147] dwhdmi-imx 32fd8000.hdmi: xfer: num: 2/2, len: 1, flags: 0x1</span><br><span class="line">[    0.534610] dwhdmi-imx 32fd8000.hdmi: xfer: num: 2, addr: 0x50</span><br><span class="line">[    0.534618] dwhdmi-imx 32fd8000.hdmi: xfer: num: 1/2, len: 1, flags: 0x0</span><br><span class="line">[    0.534627] dwhdmi-imx 32fd8000.hdmi: xfer: num: 2/2, len: 128, flags: 0x1</span><br><span class="line">[    0.536402] dwhdmi-imx 32fd8000.hdmi: EVENT=plugin 0x03</span><br><span class="line">[    0.536408] dwhdmi-imx 32fd8000.hdmi: dw_hdmi_power_on_needed 0 0 1, 1 0 1</span><br><span class="line">[    0.594595] dwhdmi-imx 32fd8000.hdmi: xfer: num: 2, addr: 0x50</span><br><span class="line">[    0.594604] dwhdmi-imx 32fd8000.hdmi: xfer: num: 1/2, len: 1, flags: 0x0</span><br><span class="line">[    0.594613] dwhdmi-imx 32fd8000.hdmi: xfer: num: 2/2, len: 128, flags: 0x1</span><br><span class="line">[    0.657035] dwhdmi-imx 32fd8000.hdmi: got edid: width[48] x height[27]</span><br><span class="line">[    0.658204] dwhdmi-imx 32fd8000.hdmi: dw_hdmi_update_power 0 0 1, 1</span><br><span class="line">[    0.673815] dwhdmi-imx 32fd8000.hdmi: input format 0x100a, output format 0x0001</span><br><span class="line">[    0.676048] lcdifv3_set_mode: wanted 455000000 got 519750000</span><br><span class="line">[    0.706526] dwhdmi-imx 32fd8000.hdmi: dw_hdmi_bridge_atomic_enable: 0 0 0, 1</span><br><span class="line">[    0.706535] dwhdmi-imx 32fd8000.hdmi: dw_hdmi_update_power 0 0 0, 1</span><br><span class="line">[    0.706957] dwhdmi-imx 32fd8000.hdmi: CEA mode used vic=16</span><br><span class="line">[    0.706965] dwhdmi-imx 32fd8000.hdmi: final pixclk = 148500000</span><br><span class="line">[    0.706971] dwhdmi-imx 32fd8000.hdmi: final tmdsclock = 148500000</span><br><span class="line">[    0.706996] dwhdmi-imx 32fd8000.hdmi: sink has audio support</span><br><span class="line">[    0.707002] dwhdmi-imx 32fd8000.hdmi: hdmi_set_clk_regenerator: fs=48000Hz ftdms=148.500MHz N=6144 cts=148500</span><br><span class="line">[    0.707018] dwhdmi-imx 32fd8000.hdmi: dw_hdmi_setup HDMI mode</span><br></pre></td></tr></table></figure>
+<h3 id="对-HDMI-的输出信息解析"><a href="#对-HDMI-的输出信息解析" class="headerlink" title="对 HDMI 的输出信息解析"></a>对 HDMI 的输出信息解析</h3><p>第一条打印信息是由 dw_hdmi_detect() 发出，result 对应的数据类型为 <code>enum drm_connector_status</code> ，result 为 1 表示 <code>connector_status_connected</code> 。当主板上电时，主板也会把电输送到 HDMI 屏，同时 HDMI 屏发送一个热插拔信号。这时可以通过读寄存器 HDMI_PHY_STAT0 ，查看当前 HDMI 屏是否已发送热插拔信号，以下是对“读 HDMI_PHY_STAT0 ”的封装。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">enum</span> drm_connector_status <span class="title function_">dw_hdmi_phy_read_hpd</span><span class="params">(<span class="keyword">struct</span> dw_hdmi *hdmi,</span></span><br><span class="line"><span class="params">					       <span class="type">void</span> *data)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">return</span> hdmi_readb(hdmi, HDMI_PHY_STAT0) &amp; HDMI_PHY_HPD ?</span><br><span class="line">		connector_status_connected : connector_status_disconnected;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>以下是寄存器 HDMI_PHY_STAT0 的布局：</p>
+<div align="center"><img src="/images/原理及实现/DRM/Linux-IMX8MP_HDMI驱动分析/HDMI0.png"></div>
+
+<p>以下是 dw_hdmi_detect() 的调用栈，从下往上</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">CPU: 1 PID: 9 Comm: kworker/u8:0 Not tainted 6.1.22 #136</span><br><span class="line">Hardware name: EmbedSky TQIMX8MP Board (DT)</span><br><span class="line">Workqueue: events_unbound deferred_probe_work_func</span><br><span class="line">Call trace:</span><br><span class="line"> dw_hdmi_detect+0x1c/0xb0</span><br><span class="line"> dw_hdmi_connector_detect+0x10/0x1c</span><br><span class="line"> drm_helper_probe_detect+0xac/0xe0</span><br><span class="line"> drm_helper_probe_single_connector_modes+0x3e8/0x4f0</span><br><span class="line"> drm_client_modeset_probe+0x1fc/0x1190</span><br><span class="line"> __drm_fb_helper_initial_config_and_unlock+0x44/0x54c</span><br><span class="line"> drm_fbdev_client_hotplug+0x160/0x220</span><br><span class="line"> drm_fbdev_generic_setup+0xb4/0x194</span><br><span class="line"> imx_drm_bind+0x260/0x2e0</span><br><span class="line"> try_to_bring_up_aggregate_device+0x1dc/0x2d0</span><br><span class="line"> __component_add+0xac/0x190</span><br><span class="line"> component_add+0x14/0x20</span><br><span class="line"> lcdifv3_crtc_probe+0x50/0xb0</span><br><span class="line"> platform_probe+0x68/0xc0</span><br><span class="line"> really_probe+0xc0/0x3dc</span><br><span class="line"> __driver_probe_device+0x7c/0x190</span><br><span class="line"> driver_probe_device+0x3c/0x110</span><br><span class="line"> __device_attach_driver+0xbc/0x160</span><br><span class="line"> bus_for_each_drv+0x7c/0xd4</span><br><span class="line"> __device_attach+0x9c/0x1c0</span><br><span class="line"> device_initial_probe+0x14/0x20</span><br><span class="line"> bus_probe_device+0x9c/0xa4</span><br><span class="line"> device_add+0x404/0x850</span><br><span class="line"> platform_device_add+0x100/0x270</span><br><span class="line"> imx_lcdifv3_probe+0x304/0x4bc</span><br></pre></td></tr></table></figure>
+<p>注意函数 drm_helper_probe_single_connector_modes()，后面的讲解都有它的身影。现在把它的内容挑出一部分讲解：</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">drm_helper_probe_single_connector_modes</span><span class="params">(<span class="keyword">struct</span> drm_connector *connector,</span></span><br><span class="line"><span class="params">					    <span class="type">uint32_t</span> maxX, <span class="type">uint32_t</span> maxY)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">drm_device</span> *<span class="title">dev</span> =</span> connector-&gt;dev;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">drm_display_mode</span> *<span class="title">mode</span>;</span></span><br><span class="line">	<span class="type">int</span> count = <span class="number">0</span>, ret;</span><br><span class="line">	<span class="class"><span class="keyword">enum</span> <span class="title">drm_connector_status</span> <span class="title">old_status</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">drm_modeset_acquire_ctx</span> <span class="title">ctx</span>;</span></span><br><span class="line"></span><br><span class="line">	...</span><br><span class="line"></span><br><span class="line">	old_status = connector-&gt;status;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (connector-&gt;force) &#123;</span><br><span class="line">		<span class="keyword">if</span> (connector-&gt;force == DRM_FORCE_ON ||</span><br><span class="line">		    connector-&gt;force == DRM_FORCE_ON_DIGITAL)</span><br><span class="line">			connector-&gt;status = connector_status_connected;</span><br><span class="line">		<span class="keyword">else</span></span><br><span class="line">			connector-&gt;status = connector_status_disconnected;</span><br><span class="line">		<span class="keyword">if</span> (connector-&gt;funcs-&gt;force)</span><br><span class="line">			connector-&gt;funcs-&gt;force(connector);</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		ret = drm_helper_probe_detect(connector, &amp;ctx, <span class="literal">true</span>);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (ret == -EDEADLK) &#123;</span><br><span class="line">			drm_modeset_backoff(&amp;ctx);</span><br><span class="line">			<span class="keyword">goto</span> retry;</span><br><span class="line">		&#125; <span class="keyword">else</span> <span class="keyword">if</span> (WARN(ret &lt; <span class="number">0</span>, <span class="string">&quot;Invalid return value %i for connector detection\n&quot;</span>, ret))</span><br><span class="line">			ret = connector_status_unknown;</span><br><span class="line"></span><br><span class="line">		connector-&gt;status = ret;</span><br><span class="line">	&#125;</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>第 14 行，由于此阶段是初始化 HDMI 的 CRTC ，connector-&gt;force 一般为 0 ，所以跳过，跳到第 22 行。<br>第 22 行，执行顺序和上面给出的调用栈对应。</p>
+<p>回头看输出信息，下面的以 “xfer: num: ” 开头的输出信息是获取 EDID 的函数输出的。EDID 是开启 HDMI 模式的关键，它被存储在 HDMI 显示屏内的一个小 ROM 内，它记录着 HDMI 屏的厂商信息、色度和支持的分辨率@帧率等。<br>下面网址是对 EDID 的讲解：<br><a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_41028621/article/details/113659038">https://blog.csdn.net/weixin_41028621/article/details/113659038</a></p>
+<p>获取 EDID 的函数是 drm_get_edid()，以下是它的调用栈，从下往上看：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">dw_hdmi_i2c_xfer+0x3c/0x3e8</span><br><span class="line">__i2c_transfer+0x150/0x490	// in i2c subsystem</span><br><span class="line">i2c_transfer+0x60/0x124		// in i2c subsystem</span><br><span class="line">drm_do_probe_ddc_edid+0xa8/0x134</span><br><span class="line">edid_block_read+0x48/0x100</span><br><span class="line">_drm_do_get_edid+0x64/0x36c</span><br><span class="line">drm_get_edid+0x4c/0x88</span><br><span class="line">dw_hdmi_get_edid+0x24/0xb0</span><br><span class="line">dw_hdmi_connector_get_modes+0x20/0x70</span><br><span class="line">drm_helper_probe_single_connector_modes+0x1ac/0x4f0</span><br></pre></td></tr></table></figure>
+<p>获取 EDID 是使用 I2C 总线去获取的，虽然说这里涉及到的 I2C 子系统，但是 DRM 框架已经把这操作封装为 drm_get_edid() 供给开发者使用。<br>函数 dw_hdmi_i2c_xfer() 由在 DRM 框架下的 HDMI Bridge 驱动提供，但被 I2C 子系统调用。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">dw_hdmi_i2c_xfer</span><span class="params">(<span class="keyword">struct</span> i2c_adapter *adap,</span></span><br><span class="line"><span class="params">			    <span class="keyword">struct</span> i2c_msg *msgs, <span class="type">int</span> num)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dw_hdmi</span> *<span class="title">hdmi</span> =</span> i2c_get_adapdata(adap);</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dw_hdmi_i2c</span> *<span class="title">i2c</span> =</span> hdmi-&gt;i2c;</span><br><span class="line">	u8 addr = msgs[<span class="number">0</span>].addr;</span><br><span class="line">	<span class="type">int</span> i, ret = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	...</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Unmute DONE and ERROR interrupts */</span></span><br><span class="line">	hdmi_writeb(hdmi, <span class="number">0x00</span>, HDMI_IH_MUTE_I2CM_STAT0);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Set slave device address taken from the first I2C message */</span></span><br><span class="line">	hdmi_writeb(hdmi, addr, HDMI_I2CM_SLAVE);</span><br><span class="line"></span><br><span class="line">	...</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> (i = <span class="number">0</span>; i &lt; num; i++) &#123;</span><br><span class="line">		dev_dbg(hdmi-&gt;dev, <span class="string">&quot;xfer: num: %d/%d, len: %d, flags: %#x\n&quot;</span>,</span><br><span class="line">			i + <span class="number">1</span>, num, msgs[i].len, msgs[i].flags);</span><br><span class="line">		&#123;...&#125; </span><br><span class="line">		<span class="keyword">else</span> &#123;</span><br><span class="line">			<span class="keyword">if</span> (msgs[i].flags &amp; I2C_M_RD) <span class="comment">// #define I2C_M_RD 1</span></span><br><span class="line">				ret = dw_hdmi_i2c_read(hdmi, msgs[i].buf,</span><br><span class="line">						       msgs[i].len);</span><br><span class="line">			<span class="keyword">else</span></span><br><span class="line">				ret = dw_hdmi_i2c_write(hdmi, msgs[i].buf,</span><br><span class="line">							msgs[i].len);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> (ret &lt; <span class="number">0</span>)</span><br><span class="line">			<span class="keyword">break</span>;</span><br><span class="line">	&#125;</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>看函数 dw_hdmi_i2c_xfer() 并结合下列信息，可知获取 EDID 是先通过 I2C 总线写操作，然后再读出与 EDID 的信息。</p>
+<blockquote>
+<p>参数 msgs 由 drm_do_probe_ddc_edid() 提供。</p>
+</blockquote>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">xfer: num: 1/2, len: 1, flags: 0x0</span><br><span class="line">xfer: num: 2/2, len: 1, flags: 0x1</span><br></pre></td></tr></table></figure>
+
+<p>挑一个函数来说，就以 dw_hdmi_i2c_read() 为例，来看看它的内部实现：</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">dw_hdmi_i2c_read</span><span class="params">(<span class="keyword">struct</span> dw_hdmi *hdmi,</span></span><br><span class="line"><span class="params">			    <span class="type">unsigned</span> <span class="type">char</span> *buf, <span class="type">unsigned</span> <span class="type">int</span> length)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dw_hdmi_i2c</span> *<span class="title">i2c</span> =</span> hdmi-&gt;i2c;</span><br><span class="line">	<span class="type">int</span> ret;</span><br><span class="line"></span><br><span class="line">	...</span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span> (length--) &#123;</span><br><span class="line">		reinit_completion(&amp;i2c-&gt;cmp);</span><br><span class="line"></span><br><span class="line">		hdmi_writeb(hdmi, i2c-&gt;slave_reg++, HDMI_I2CM_ADDRESS);</span><br><span class="line">		<span class="keyword">if</span> (i2c-&gt;is_segment)</span><br><span class="line">			hdmi_writeb(hdmi, HDMI_I2CM_OPERATION_READ_EXT,</span><br><span class="line">				    HDMI_I2CM_OPERATION);</span><br><span class="line">		<span class="keyword">else</span></span><br><span class="line">			hdmi_writeb(hdmi, HDMI_I2CM_OPERATION_READ,</span><br><span class="line">				    HDMI_I2CM_OPERATION);</span><br><span class="line"></span><br><span class="line">		ret = dw_hdmi_i2c_wait(hdmi);</span><br><span class="line">		<span class="keyword">if</span> (ret)</span><br><span class="line">			<span class="keyword">return</span> ret;</span><br><span class="line"></span><br><span class="line">		*buf++ = hdmi_readb(hdmi, HDMI_I2CM_DATAI);</span><br><span class="line">	&#125;</span><br><span class="line">	i2c-&gt;is_segment = <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在这里也看出，在 I2C 子系统调用的 xxx_i2c_xfer() 类函数都是由其它子系统或模块提供。而且提供这类的函数的子系统或模块，它们所对应的真实设备（firmware）都是有一个组件 I2C Master ，收发数据都是靠它完成。以 HDMI 为例，它的连接器（或者是桥设备）有一个 I2C Master，HDMI 为它提供了一个内存映射空间，用于用户操作这个组件。</p>
+<blockquote>
+<p>如上列代码的 <code>HDMI_I2CM_SLAVE</code>、<code>HDMI_I2CM_ADDRESS</code>、<code>HDMI_I2CM_OPERATION</code> 和 <code>HDMI_I2CM_DATAI</code>，这些宏对应的是在针对 I2C Master 的内存映射空间内的地址。</p>
+</blockquote>
+<p>现在来细看 dw_hdmi_i2c_read()，第 10 行，初始化 i2c-&gt;cmp（struct completion），这个机制是什么？暂且略过，后面自然知晓。<br>第 11 行，在 I2C 总线的眼中，HDMI 显示屏是一个 I2C 从设备，而且现在 I2C 从设备内有多个可读写的寄存器已经常见了。所以，这行代码是填入的数值是 I2C 从设备的寄存器地址，将要把该地址的数值从 I2C 总线读出。<br>第 13~17 行，这个读数据的方式，是指一次读 1 字节还是 2 个字节。这个与 MSBus 相关吧，又或者说是类似于 MSBus ，这个取决于 I2C Master 。<br>第 20 行，这个和第 10 行有关系，让我们进入 dw_hdmi_i2c_wait() 。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">dw_hdmi_i2c_wait</span><span class="params">(<span class="keyword">struct</span> dw_hdmi *hdmi)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dw_hdmi_i2c</span> *<span class="title">i2c</span> =</span> hdmi-&gt;i2c;</span><br><span class="line">	<span class="type">int</span> stat;</span><br><span class="line"></span><br><span class="line">	stat = wait_for_completion_timeout(&amp;i2c-&gt;cmp, HZ / <span class="number">10</span>);</span><br><span class="line">	<span class="keyword">if</span> (!stat) &#123;</span><br><span class="line">		<span class="comment">/* If we can&#x27;t unwedge, return timeout */</span></span><br><span class="line">		<span class="keyword">if</span> (!dw_hdmi_i2c_unwedge(hdmi))</span><br><span class="line">			<span class="keyword">return</span> -EAGAIN;</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* We tried to unwedge; give it another chance */</span></span><br><span class="line">		stat = wait_for_completion_timeout(&amp;i2c-&gt;cmp, HZ / <span class="number">10</span>);</span><br><span class="line">		<span class="keyword">if</span> (!stat)</span><br><span class="line">			<span class="keyword">return</span> -EAGAIN;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Check for error condition on the bus */</span></span><br><span class="line">	<span class="keyword">if</span> (i2c-&gt;stat &amp; HDMI_IH_I2CM_STAT0_ERROR)</span><br><span class="line">		<span class="keyword">return</span> -EIO;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>下列是函数 wait_for_completion_timeout() 的说明：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * wait_for_completion_timeout: - waits for completion of a task (w/timeout)</span></span><br><span class="line"><span class="comment"> * @x:  holds the state of this particular completion</span></span><br><span class="line"><span class="comment"> * @timeout:  timeout value in jiffies</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * This waits for either a completion of a specific task to be signaled or for a</span></span><br><span class="line"><span class="comment"> * specified timeout to expire. The timeout is in jiffies. It is not</span></span><br><span class="line"><span class="comment"> * interruptible.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Return: 0 if timed out, and positive (at least 1, or number of jiffies left</span></span><br><span class="line"><span class="comment"> * till timeout) if completed.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">unsigned</span> <span class="type">long</span> __sched</span><br><span class="line"><span class="title function_">wait_for_completion_timeout</span><span class="params">(<span class="keyword">struct</span> completion *x, <span class="type">unsigned</span> <span class="type">long</span> timeout)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">return</span> wait_for_common(x, timeout, TASK_UNINTERRUPTIBLE);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过注释可知，这是一个 task 的同步机制。当当前 task 调用该函数时，就会去<strong>计时睡眠</strong>等待，等待有另一个 task（准确来说是 一个 <strong>Processor</strong>）调用 complete(x) 来唤醒它，这个相当于是当触发特定事件后才能唤醒沉睡中的 task ；又或者是待超时后才把它唤醒。而且这个“睡眠”是可以被 Signal 信号打断的。</p>
+<p>回到 dw_hdmi_i2c_wait(), 假设现在 wait_for_completion_timeout() 被调用，谁来调用 complete() 唤醒它？<br>在 hdmi@32fd8000 对应的 platform_driver-&gt;probe()，该函数注册了一个中断处理程序，</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> dw_hdmi *<span class="title function_">dw_hdmi_probe</span><span class="params">(<span class="keyword">struct</span> platform_device *pdev,</span></span><br><span class="line"><span class="params">			      <span class="type">const</span> <span class="keyword">struct</span> dw_hdmi_plat_data *plat_data)</span></span><br><span class="line">&#123;</span><br><span class="line">	...</span><br><span class="line">	ret = devm_request_threaded_irq(dev, irq, dw_hdmi_hardirq,</span><br><span class="line">					dw_hdmi_irq, IRQF_SHARED,</span><br><span class="line">					dev_name(dev), hdmi);</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>该中断处理程序的上半部分是 dw_hdmi_hardirq()，现在来看它的实现：</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">irqreturn_t</span> <span class="title function_">dw_hdmi_hardirq</span><span class="params">(<span class="type">int</span> irq, <span class="type">void</span> *dev_id)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dw_hdmi</span> *<span class="title">hdmi</span> =</span> dev_id;</span><br><span class="line">	u8 intr_stat;</span><br><span class="line">	<span class="type">irqreturn_t</span> ret = IRQ_NONE;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (hdmi-&gt;i2c)</span><br><span class="line">		ret = dw_hdmi_i2c_irq(hdmi);</span><br><span class="line"></span><br><span class="line">	intr_stat = hdmi_readb(hdmi, HDMI_IH_PHY_STAT0);</span><br><span class="line">	<span class="keyword">if</span> (intr_stat) &#123;</span><br><span class="line">		hdmi_writeb(hdmi, ~<span class="number">0</span>, HDMI_IH_MUTE_PHY_STAT0);</span><br><span class="line">		<span class="keyword">return</span> IRQ_WAKE_THREAD;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>见函数 dw_hdmi_i2c_irq() ：</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">irqreturn_t</span> <span class="title function_">dw_hdmi_i2c_irq</span><span class="params">(<span class="keyword">struct</span> dw_hdmi *hdmi)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dw_hdmi_i2c</span> *<span class="title">i2c</span> =</span> hdmi-&gt;i2c;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> stat;</span><br><span class="line"></span><br><span class="line">	stat = hdmi_readb(hdmi, HDMI_IH_I2CM_STAT0);</span><br><span class="line">	<span class="keyword">if</span> (!stat)</span><br><span class="line">		<span class="keyword">return</span> IRQ_NONE;</span><br><span class="line"></span><br><span class="line">	hdmi_writeb(hdmi, stat, HDMI_IH_I2CM_STAT0);</span><br><span class="line"></span><br><span class="line">	i2c-&gt;stat = stat;</span><br><span class="line"></span><br><span class="line">	complete(&amp;i2c-&gt;cmp);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> IRQ_HANDLED;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意第 14 行，发现 complete() 在这里被调用了。则结合上面的代码，由此可知，wait_for_completion_timeout() 在 dw_hdmi_i2c_wait() 的作用，或者说在整个 I2C Operation for HDMI EDID 的作用，是等待单次 I2C 总线传输操作完成（特指由 dw_hdmi_i2c_read() 或 dw_hdmi_i2c_write() 发出的传输请求）。待传输完成后，I2C Slave 所属的硬件，即 HDMI 显示屏发出中断，告知传输已完成。然后执行中断处理程序上半部分 dw_hdmi_hardirq()，调用 dw_hdmi_i2c_irq() 来唤醒执行 dw_hdmi_i2c_read() 或 dw_hdmi_i2c_write() 的 task 。<br>唤醒之后，对于 dw_hdmi_i2c_read()，它会执行 <code>*buf++ = hdmi_readb(hdmi, HDMI_I2CM_DATAI)</code> 。HDMI_I2CM_DATAI 内有刚刚从 I2C Slave 读出的数据，这个寄存器也是属于 I2C Master 的。<br>至此，一个 I2C 总线传输周期完成。</p>
+<p>小总结一下，见下列输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[    0.534610] dwhdmi-imx 32fd8000.hdmi: xfer: num: 2, addr: 0x50</span><br><span class="line">[    0.534618] dwhdmi-imx 32fd8000.hdmi: xfer: num: 1/2, len: 1, flags: 0x0</span><br><span class="line">[    0.534627] dwhdmi-imx 32fd8000.hdmi: xfer: num: 2/2, len: 128, flags: 0x1</span><br></pre></td></tr></table></figure>
+<p>一个 “xfer: num: 1&#x2F;2, len: 1, flags: 0x0” 对应一次 I2C 传输。而且每调用一次 dw_hdmi_i2c_xfer() ，会即执行 dw_hdmi_i2c_wait() 和 dw_hdmi_i2c_read() 来获取 HDMI 屏的 EDID 。</p>
+<p>我们继续看执行 lcd-controller@32fc6000 对应的 platform_driver-&gt;probe() 的输出信息：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[    0.536402] dwhdmi-imx 32fd8000.hdmi: EVENT=plugin 0x03</span><br><span class="line">[    0.536408] dwhdmi-imx 32fd8000.hdmi: dw_hdmi_power_on_needed 0 0 1, 1 0 1</span><br><span class="line">...</span><br><span class="line">[    0.672059] dwhdmi-imx 32fd8000.hdmi: dw_hdmi_update_power 0 0 1, 1</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>中间省略的是 I2C 传输的输出信息</p>
+</blockquote>
+<p>这段信息的由来是 hdmi_debounce_work() ，该函数的作用是建立 HDMI 热插拔连接，但在 DRM 框架下的 HDMI 驱动初始化阶段，它是不起任何作用的（我是通过查看 HDMI 驱动初始化的调用过程得知的）。那么它又是为什么在 HDMI 驱动初始化阶段被调用？现在来看它是如何被调用的。<br>回到 dw_hdmi_hardirq()，看第 10~14 行，其实主板上电之前， HDMI 屏接上电源和主板，HDMI 屏把类似于“已接上电源与主板”的状态记录到寄存器当中。而 HDMI_IH_PHY_STAT0 寄存器是中断状态寄存器，当 HDMI 屏接上主板后都会发出热插拔中断，这个中断状态由它记录，同时它也间接表示了 “已接上电源与主板” 。<br>然后把 ~0 写入 HDMI_IH_MUTE_PHY_STAT0 ，这个寄存器的作用是把热插拔中断静默。意思就是如果 HDMI 显示屏再次发出此中断，对面的 PHY 芯片也不接收了。<br>为什么要这样做？回看 imx8mp 的设备树节点 <code>hdmi: hdmi@32fd8000</code>，它有一个属性：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">interrupts = &lt;0 IRQ_TYPE_LEVEL_HIGH&gt;;</span><br></pre></td></tr></table></figure>
+<p>可知，它的中断触发是高电平触发，而非边沿触发。结合寄存器 HDMI_IH_PHY_STAT0 的作用理解，当触发高电平中断时，该中断引脚会一直持续高电平（？有待验证），同时寄存器 HDMI_IH_PHY_STAT0 的 HPD 位也会被置位。高电平触发中断可能会持续发出一段时间的中断，所以把热插拔中断静默了，表示已接收到此中断，无需再次接受。<br>然后返回 IRQ_WAKE_THREAD ，表示将会新创建一个 thread 来执行中断下半部分。中断下半部分对应的函数是 dw_hdmi_irq() ：</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">irqreturn_t</span> <span class="title function_">dw_hdmi_irq</span><span class="params">(<span class="type">int</span> irq, <span class="type">void</span> *dev_id)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dw_hdmi</span> *<span class="title">hdmi</span> =</span> dev_id;</span><br><span class="line">	u8 intr_stat, phy_int_pol, phy_int_pol_new, phy_stat;</span><br><span class="line"></span><br><span class="line">	intr_stat = hdmi_readb(hdmi, HDMI_IH_PHY_STAT0);</span><br><span class="line">	phy_stat = hdmi_readb(hdmi, HDMI_PHY_STAT0);</span><br><span class="line"></span><br><span class="line">	phy_int_pol_new = (~phy_stat) &amp; (HDMI_PHY_HPD | HDMI_PHY_RX_SENSE);</span><br><span class="line">	phy_int_pol = hdmi_readb(hdmi, HDMI_PHY_POL0);</span><br><span class="line">	<span class="keyword">if</span> (phy_int_pol_new != phy_int_pol)</span><br><span class="line">		hdmi_writeb(hdmi, phy_int_pol_new, HDMI_PHY_POL0);</span><br><span class="line"></span><br><span class="line">	hdmi_writeb(hdmi, intr_stat, HDMI_IH_PHY_STAT0);</span><br><span class="line">	hdmi_writeb(hdmi, ~(HDMI_IH_PHY_STAT0_HPD | HDMI_IH_PHY_STAT0_RX_SENSE),</span><br><span class="line">		    HDMI_IH_MUTE_PHY_STAT0);</span><br><span class="line"></span><br><span class="line">	cancel_delayed_work_sync(&amp;hdmi-&gt;debounce_work);</span><br><span class="line">	<span class="keyword">if</span> (hdmi-&gt;phy_stat_debounce != phy_stat)</span><br><span class="line">		schedule_delayed_work(&amp;hdmi-&gt;debounce_work,</span><br><span class="line">			msecs_to_jiffies((phy_stat &amp; HDMI_PHY_HPD) ? <span class="number">5</span> : <span class="number">1000</span>));</span><br><span class="line">	<span class="keyword">return</span> IRQ_HANDLED;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们忽略第 9<del>12 行，这是与寄存器值极性相关的操作。<br>第 6 行和 14 行，把 HDMI_IH_PHY_STAT0 和内的数值清除，表示已知道有一个 HDMI 屏接上主板了。<br>注意第 18</del>22 行，<code>hdmi-&gt;debounce_work</code> 由 hdmi@32fd8000 对应的 platform_driver-&gt;probe() 初始化。它是延迟工作队列 <code>system_wq</code> 的成员。它对应的函数的主要工作是建立系统与 HDMI 屏之前的连接。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">struct</span> dw_hdmi *<span class="title function_">dw_hdmi_probe</span><span class="params">(<span class="keyword">struct</span> platform_device *pdev,</span></span><br><span class="line"><span class="params">			      <span class="type">const</span> <span class="keyword">struct</span> dw_hdmi_plat_data *plat_data)</span></span><br><span class="line">&#123;</span><br><span class="line">	...</span><br><span class="line">	INIT_DELAYED_WORK(&amp;hdmi-&gt;debounce_work, hdmi_debounce_work);</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>先想想，为什么需要<code>延迟工作</code>机制去建立 HDMI 屏的连接？<br>这个主要是因为硬件的问题，和 GPIO 按钮的机械抖动是高度相似的。当插入 HDMI 接口时，接口内的金属弹片可能会发送机械抖动，每抖动一次可能会发出一次中断信号。所以这段代码的主要功能是消抖。</p>
+<p>总结：这个 HDMI 屏的中断有两个作用，一是 I2C 传输结束通知；二是热插拔连接通知。<br>通过中断处理程序的上下部分划分，便于区分它们的作用。而且“I2C 传输结束通知”比“热插拔连接通知”来的更频繁，应有比热插拔中断更高的优先级去即时处理。</p>
+<p>看函数 hdmi_debounce_work()</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">hdmi_debounce_work</span><span class="params">(<span class="keyword">struct</span> work_struct *work)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dw_hdmi</span> *<span class="title">hdmi</span> =</span> container_of(work, <span class="keyword">struct</span> dw_hdmi,</span><br><span class="line">			debounce_work.work);</span><br><span class="line">	<span class="class"><span class="keyword">enum</span> <span class="title">drm_connector_status</span> <span class="title">status</span> =</span> connector_status_unknown;</span><br><span class="line">	u8 phy_stat;</span><br><span class="line"></span><br><span class="line">	hdmi-&gt;phy_stat_debounce = phy_stat = hdmi_readb(hdmi, HDMI_PHY_STAT0);</span><br><span class="line">	<span class="keyword">if</span> (phy_stat &amp; HDMI_PHY_HPD)</span><br><span class="line">		status = connector_status_connected;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!(phy_stat &amp; (HDMI_PHY_HPD | HDMI_PHY_RX_SENSE)))</span><br><span class="line">		status = connector_status_disconnected;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (status != connector_status_unknown)</span><br><span class="line">		dev_dbg(hdmi-&gt;dev, <span class="string">&quot;EVENT=%s 0x%02x\n&quot;</span>,</span><br><span class="line">			status == connector_status_connected ?</span><br><span class="line">			<span class="string">&quot;plugin&quot;</span> : <span class="string">&quot;plugout&quot;</span>, phy_stat);</span><br><span class="line">	...</span><br><span class="line">	<span class="keyword">if</span> (dw_hdmi_power_on_needed(hdmi, phy_stat &amp; HDMI_PHY_HPD,</span><br><span class="line">			phy_stat &amp; HDMI_PHY_RX_SENSE)) &#123;</span><br><span class="line">		dw_hdmi_setup_rx_sense(hdmi,</span><br><span class="line">				phy_stat &amp; HDMI_PHY_HPD,</span><br><span class="line">				phy_stat &amp; HDMI_PHY_RX_SENSE);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (hdmi-&gt;bridge.dev &amp;&amp; !hdmi-&gt;force &amp;&amp;</span><br><span class="line">	    (hdmi-&gt;bridge_is_on || (status != connector_status_unknown))) &#123;</span><br><span class="line">		drm_helper_hpd_irq_event(hdmi-&gt;bridge.dev);</span><br><span class="line">		drm_bridge_hpd_notify(&amp;hdmi-&gt;bridge, status);</span><br><span class="line">		dw_hdmi_setup_rx_sense(hdmi,</span><br><span class="line">		       phy_stat &amp; HDMI_PHY_HPD,</span><br><span class="line">		       phy_stat &amp; HDMI_PHY_RX_SENSE);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>见函数 dw_hdmi_power_on_needed() ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">bool</span> <span class="title function_">dw_hdmi_power_on_needed</span><span class="params">(<span class="keyword">struct</span> dw_hdmi *hdmi, <span class="type">bool</span> hpd, <span class="type">bool</span> rx_sense)</span></span><br><span class="line">&#123;</span><br><span class="line">	dev_dbg(hdmi-&gt;dev, <span class="string">&quot;%s %d %d %d, %d %d %d\n&quot;</span>, __func__,</span><br><span class="line">			hdmi-&gt;bridge_is_on, hdmi-&gt;force, hdmi-&gt;disabled,</span><br><span class="line">			hpd, rx_sense, hdmi-&gt;rxsense);</span><br><span class="line">	<span class="keyword">if</span> (hdmi-&gt;bridge_is_on || hdmi-&gt;force || hdmi-&gt;disabled)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">	<span class="keyword">if</span> (hpd)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">	<span class="keyword">if</span> (!rx_sense)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">	<span class="keyword">if</span> (hdmi-&gt;rxsense)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>结合下列信息可知，它返回 false 。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[    0.536408] dwhdmi-imx 32fd8000.hdmi: dw_hdmi_power_on_needed 0 0 1, 1 0 1</span><br></pre></td></tr></table></figure>
+<p>而且，<code>hdmi-&gt;bridge_is_on</code> 为 0 ，表示还没完成建立连接。通过下面的调用栈来看（从下往上）：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">dw_hdmi_update_power</span><br><span class="line">dw_hdmi_setup_rx_sense</span><br><span class="line">hdmi_debounce_work</span><br></pre></td></tr></table></figure>
+<p>看函数 dw_hdmi_update_power() ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">dw_hdmi_update_power</span><span class="params">(<span class="keyword">struct</span> dw_hdmi *hdmi)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> force = hdmi-&gt;force;</span><br><span class="line"></span><br><span class="line">	dev_dbg(hdmi-&gt;dev, <span class="string">&quot;%s %d %d %d, %d\n&quot;</span>, __func__,</span><br><span class="line">			hdmi-&gt;bridge_is_on, hdmi-&gt;force, hdmi-&gt;disabled,</span><br><span class="line">			hdmi-&gt;rxsense);</span><br><span class="line">	<span class="keyword">if</span> (hdmi-&gt;disabled) &#123;</span><br><span class="line">		force = DRM_FORCE_OFF;</span><br><span class="line">	&#125; <span class="keyword">else</span> <span class="keyword">if</span> (force == DRM_FORCE_UNSPECIFIED) &#123;</span><br><span class="line">		<span class="keyword">if</span> (hdmi-&gt;rxsense)</span><br><span class="line">			force = DRM_FORCE_ON;</span><br><span class="line">		<span class="keyword">else</span></span><br><span class="line">			force = DRM_FORCE_OFF;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (force == DRM_FORCE_OFF) &#123;</span><br><span class="line">		<span class="keyword">if</span> (hdmi-&gt;bridge_is_on) &#123;</span><br><span class="line">			hdmi-&gt;phy_stat_debounce &amp;= ~HDMI_PHY_HPD;</span><br><span class="line">			dw_hdmi_poweroff(hdmi);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		<span class="keyword">if</span> (!hdmi-&gt;bridge_is_on) &#123;</span><br><span class="line">			hdmi-&gt;phy_stat_debounce |= HDMI_PHY_HPD;</span><br><span class="line">			dw_hdmi_poweron(hdmi);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>至此，本次的中断处理程序执行完成。</p>
+<p>待做：<br>讲解output_poll_execute的调用（主动查询连接状态）<br>connect 的 mode_list， vec<br>讲解热插拔中断<br>讲解如何延后开启HDMI模式</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/IMX8MP/" rel="tag"># IMX8MP</a>
+              <a href="/tags/DRM/" rel="tag"># DRM</a>
+              <a href="/tags/HDMI/" rel="tag"># HDMI</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/06/19/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/%E5%86%85%E5%AD%98%E5%B1%8F%E9%9A%9C%E7%9A%84%E4%BD%BF%E7%94%A8/" rel="prev" title="内存屏障的使用">
+                  <i class="fa fa-angle-left"></i> 内存屏障的使用
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2024/06/23/Skill/device/Linux-%E8%B0%83%E8%AF%95i2c%E6%8A%80%E5%B7%A7/" rel="next" title="Linux - 调试i2c技巧">
+                  Linux - 调试i2c技巧 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

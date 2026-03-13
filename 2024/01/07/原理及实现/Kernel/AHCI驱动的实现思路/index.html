@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言这是基于 Linux 2.4 ，自己实现的 AHCI 驱动框架。">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="AHCI驱动的实现思路（内核版本 2.4.22，32位x86）">
+<meta property="og:url" content="http://example.com/2024/01/07/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/AHCI%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="前言这是基于 Linux 2.4 ，自己实现的 AHCI 驱动框架。">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/AHCI%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF//SATA-protocolLayer-1.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/AHCI%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF//AHCI-1.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/AHCI%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF//AHCI-3.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/AHCI%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF//AHCI-2.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/AHCI%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF//AHCI-4.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/AHCI%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF//AHCI-5.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/AHCI%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF//AHCI-6.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/AHCI%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF//AHCI-7.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/AHCI%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF//AHCI-8.drawio.png">
+<meta property="article:published_time" content="2024-01-06T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-01-06T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="AHCI">
+<meta property="article:tag" content="Kernel">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/AHCI%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF//SATA-protocolLayer-1.drawio.png">
+
+
+<link rel="canonical" href="http://example.com/2024/01/07/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/AHCI%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2024/01/07/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/AHCI%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF/","path":"2024/01/07/原理及实现/Kernel/AHCI驱动的实现思路/","title":"AHCI驱动的实现思路（内核版本 2.4.22，32位x86）"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>AHCI驱动的实现思路（内核版本 2.4.22，32位x86） | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E4%BA%9B%E6%A6%82%E5%BF%B5%E7%9F%A5%E8%AF%86"><span class="nav-number">2.</span> <span class="nav-text">一些概念知识</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#AHCI-%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-number">2.1.</span> <span class="nav-text">AHCI 是什么</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SATA-%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-number">2.2.</span> <span class="nav-text">SATA 是什么</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#AHCI-%E5%92%8C-SATA-%E4%B9%8B%E9%97%B4%E7%9A%84%E8%81%94%E7%B3%BB"><span class="nav-number">2.3.</span> <span class="nav-text">AHCI 和 SATA 之间的联系</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9B%B8%E5%85%B3%E6%96%87%E6%A1%A3-%E6%89%8B%E5%86%8C"><span class="nav-number">2.4.</span> <span class="nav-text">相关文档&#x2F;手册</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9C%A8%E5%AE%9E%E7%8E%B0%E4%B9%8B%E5%89%8D%EF%BC%8C%E8%BF%98%E9%9C%80%E7%9F%A5%E9%81%93%E4%B8%80%E4%BA%9B%E5%9B%A0%E7%B4%A0"><span class="nav-number">3.</span> <span class="nav-text">在实现之前，还需知道一些因素</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A1%86%E6%9E%B6%E5%B1%95%E7%A4%BA"><span class="nav-number">4.</span> <span class="nav-text">框架展示</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%93%E6%9E%84%E5%9B%BE"><span class="nav-number">4.1.</span> <span class="nav-text">结构图</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#C-%E6%BA%90%E7%A0%81%E6%96%87%E4%BB%B6%E5%88%86%E5%B8%83"><span class="nav-number">4.2.</span> <span class="nav-text">.C 源码文件分布</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#H-%E5%A4%B4%E6%96%87%E4%BB%B6%E5%88%86%E5%B8%83"><span class="nav-number">4.3.</span> <span class="nav-text">.H 头文件分布</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%93%E6%9E%84%E4%BD%93%E5%88%86%E5%B8%83%E4%BB%A5%E5%8F%8A%E5%85%B3%E7%B3%BB"><span class="nav-number">4.4.</span> <span class="nav-text">结构体分布以及关系</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%84%E5%B1%82%E7%9A%84%E5%87%BD%E6%95%B0%E8%AE%B2%E8%A7%A3%EF%BC%88%E4%B8%8D%E5%8C%85%E5%90%AB%E5%88%9D%E5%A7%8B%E5%8C%96%EF%BC%89"><span class="nav-number">5.</span> <span class="nav-text">各层的函数讲解（不包含初始化）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#IOMEM-%E5%B1%82"><span class="nav-number">5.1.</span> <span class="nav-text">IOMEM 层</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%85%E9%83%A8%E5%B1%82"><span class="nav-number">5.2.</span> <span class="nav-text">内部层</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%9F%BA%E5%B1%82"><span class="nav-number">5.2.1.</span> <span class="nav-text">基层</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%91%BD%E4%BB%A4%E5%B1%82"><span class="nav-number">5.2.2.</span> <span class="nav-text">命令层</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#SATA-%E5%B1%82"><span class="nav-number">5.2.3.</span> <span class="nav-text">SATA 层</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#SATA-DISK%EF%BC%88%E4%BE%8B%E5%AD%90%EF%BC%89"><span class="nav-number">5.2.3.1.</span> <span class="nav-text">SATA-DISK（例子）</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%AF%B7%E6%B1%82%E5%B1%82"><span class="nav-number">5.2.4.</span> <span class="nav-text">请求层</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8E%A5%E5%8F%A3%E5%B1%82"><span class="nav-number">5.3.</span> <span class="nav-text">接口层</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BB%93%E6%9E%84%E4%BD%93-request-queue-t-%E9%92%88%E5%AF%B9-AHCI-%E9%A9%B1%E5%8A%A8%E7%9A%84%E6%94%B9%E8%BF%9B"><span class="nav-number">6.</span> <span class="nav-text">结构体 request_queue_t 针对 AHCI 驱动的改进</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%B9-request-queue-t-%E7%9A%84%E5%88%9D%E5%A7%8B%E5%8C%96%E6%94%B9%E5%8A%A8"><span class="nav-number">6.1.</span> <span class="nav-text">对 request_queue_t 的初始化改动</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#request-queue-t-%E5%9C%A8-AHCI-%E9%A9%B1%E5%8A%A8%E7%9A%84%E8%BF%90%E8%A1%8C"><span class="nav-number">6.2.</span> <span class="nav-text">request_queue_t 在 AHCI 驱动的运行</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%90%E8%A1%8C%E6%B5%81%E7%A8%8B"><span class="nav-number">7.</span> <span class="nav-text">运行流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9C%A8%E5%86%85%E9%83%A8%E5%B1%82%E5%8F%91%E9%80%81%E4%B8%80%E4%B8%AA-ATA-%E5%91%BD%E4%BB%A4%E7%9A%84%E6%95%B4%E4%BD%93%E6%B5%81%E7%A8%8B"><span class="nav-number">7.1.</span> <span class="nav-text">在内部层发送一个 ATA 命令的整体流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%AD%E6%96%AD%E5%A4%84%E7%90%86%E7%9A%84%E8%BF%90%E8%A1%8C%E6%B5%81%E7%A8%8B"><span class="nav-number">7.2.</span> <span class="nav-text">中断处理的运行流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%A1%E6%97%B6%E5%A4%84%E7%90%86%E7%9A%84%E8%BF%90%E8%A1%8C%E6%B5%81%E7%A8%8B"><span class="nav-number">7.3.</span> <span class="nav-text">计时处理的运行流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%94%99%E8%AF%AF%E5%A4%84%E7%90%86%E7%9A%84%E8%BF%90%E8%A1%8C%E6%B5%81%E7%A8%8B"><span class="nav-number">7.4.</span> <span class="nav-text">错误处理的运行流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A4%84%E7%90%86%E4%B8%80%E5%88%B0%E5%A4%9A%E4%B8%AA%E8%AF%B7%E6%B1%82%E7%9A%84%E6%95%B4%E4%BD%93%E6%B5%81%E7%A8%8B%EF%BC%88%E5%8C%85%E6%8B%AC-NCQ-%EF%BC%89"><span class="nav-number">7.5.</span> <span class="nav-text">处理一到多个请求的整体流程（包括 NCQ ）</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2024/01/07/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/AHCI%E9%A9%B1%E5%8A%A8%E7%9A%84%E5%AE%9E%E7%8E%B0%E6%80%9D%E8%B7%AF/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="AHCI驱动的实现思路（内核版本 2.4.22，32位x86） | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          AHCI驱动的实现思路（内核版本 2.4.22，32位x86）
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2024-01-07 00:00:00" itemprop="dateCreated datePublished" datetime="2024-01-07T00:00:00+08:00">2024-01-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>7.5k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>27 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>这是基于 Linux 2.4 ，自己实现的 AHCI 驱动框架。</p>
+<span id="more"></span>
+
+<h2 id="一些概念知识"><a href="#一些概念知识" class="headerlink" title="一些概念知识"></a>一些概念知识</h2><h3 id="AHCI-是什么"><a href="#AHCI-是什么" class="headerlink" title="AHCI 是什么"></a>AHCI 是什么</h3><p>AHCI 的英文全称是 Advanced Host Controller Interface ，中文则为高级主机控制接口。结合字面意思理解，它是一个 CPU 与 SATA 设备之间沟通的桥梁，能够让软件更方便、更规范和更高效地去访问 SATA 设备。AHCI 定义了存储器架构规范，为硬件制造商提供了系统存储器与 SATA 存储设备之间的传输数据的规范。同时，AHCI 也定义了一系列供给软件访问的端口（寄存器组），如控制寄存器组、状态寄存器组等。还有，AHCI 同步支持 SATA 的众多特性，以 AHCI v1.3.1 版本为例，支持电源管理、NCQ 、接口扩展和热插拔等。<br>最后，AHCI 是一个 PCI&#x2F;PCIe 类设备，在系统内存总线和 SATA 设备内部逻辑之间扮演一种通用接口的角色。而且它在 PCI 配置寄存器组提供了一个 PCI BAR ，把 PCI BAR 内的地址在内存控制器（北桥）映射到总线地址空间，软件可直接通过物理地址访问到 AHCI 控制器的寄存器组。</p>
+<blockquote>
+<p>AHCI 控制器又称 HBA (host bus adapter) ，指使用 AHCI 规范的，在系统内存和 SATA 设备之间建立沟通的适配器。</p>
+</blockquote>
+<h3 id="SATA-是什么"><a href="#SATA-是什么" class="headerlink" title="SATA 是什么"></a>SATA 是什么</h3><p>SATA 的前身是 PATA ，PATA 被 SATA 淘汰的原因是它的并行传输的物理限制，而从并行传输替换为串行传输，即使用 SATA 能够解决此问题（<a target="_blank" rel="noopener" href="https://baike.baidu.com/item/SATA%E7%A1%AC%E7%9B%98/3947233">了解详情</a>）。另外， SATA 还提供协议层进行通信，从下到上分别是物理层、链路层、传输层和命令层，见下图。  </p>
+<div align=center><img src="/images/原理及实现/Kernel/AHCI驱动的实现思路//SATA-protocolLayer-1.drawio.png"></div>  
+
+<p>其中， FIS 是主机和设备之间通信的一个机制，SATA 提供了 14 种不同类型的 FIS ，每一个 FIS 的格式固定，有惟一的 ID 。详情请戳<a target="_blank" rel="noopener" href="https://blog.csdn.net/weixin_38233274/article/details/79290874">这里</a>。<br>最后，SATA 命令的规范是由 ATA&#x2F;ATAPI8-ACS 提供的。  </p>
+<h3 id="AHCI-和-SATA-之间的联系"><a href="#AHCI-和-SATA-之间的联系" class="headerlink" title="AHCI 和 SATA 之间的联系"></a>AHCI 和 SATA 之间的联系</h3><p>结合上文可知，SATA 是被 AHCI 封装的，使得 SATA 类似于一个黑盒一样，这是因为软件可直接访问 AHCI 提供的一系列寄存器组即可控制 SATA 设备、查看 SATA 设备的状态、发送命令给 SATA 设备。而且中断信号的发送是由 AHCI 主导的。所以，我们仅需知道 SATA 的基本概念以及一些常用的特性和命令即可，重点关注 AHCI 的使用。</p>
+<h3 id="相关文档-手册"><a href="#相关文档-手册" class="headerlink" title="相关文档&#x2F;手册"></a>相关文档&#x2F;手册</h3><p><a target="_blank" rel="noopener" href="https://www.intel.cn/content/www/cn/zh/io/serial-ata/serial-ata-ahci-spec-rev1-3-1.html">AHCI v1.3.1</a><br><a target="_blank" rel="noopener" href="https://sata-io.org/system/files/specifications/SerialATA_Revision_3_1_Gold.pdf">SATA v3.1</a><br><a target="_blank" rel="noopener" href="https://read.seas.harvard.edu/cs161/2019/pdf/ata-atapi-8.pdf">ATA&#x2F;ATAPI8 - ACS</a></p>
+<blockquote>
+<p>建议细看 AHCI 手册的前四章；SATA 手册当需要实现相关功能时，比如实现与 NCQ 相关时功能时查看；ATA&#x2F;ATAPI8-ACS 手册当作是命令查阅手册即可。</p>
+</blockquote>
+<h2 id="在实现之前，还需知道一些因素"><a href="#在实现之前，还需知道一些因素" class="headerlink" title="在实现之前，还需知道一些因素"></a>在实现之前，还需知道一些因素</h2><p>本驱动是基于 Linux 2.4 编写，运行环境为 QEMU ，QEMU 的 AHCI 控制器的版本是 AHCI v1.0 ，对应的 SATA 是 v1.0，使用 ATA&#x2F;ATAPI8 - ACS 。<br>对应 qemu 运行参数：  </p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">-device ahci,id=ahci0   # 添加一个 ahci 控制器，id 为 ahci0</span><br><span class="line">-drive file=disk.img,if=none,format=raw,id=sata0  # 添加一个虚拟硬盘，id 为 sata0 ，其中“file=”为虚拟硬盘的文件路径</span><br><span class="line">-device ide-hd,drive=sata0,bus=ahci0.0  # 把 sata0 连接到 ahci0 的第 0 个端口</span><br></pre></td></tr></table></figure>
+
+<p>还有实现该驱动前，需要知道该驱动的侧重点是什么，主要从 性能-生产率-通用率 考虑。<br>本驱动更多是注重性能，目前已支持命令队列、单命令大容量传输（最高 32 MiB）、支持 NCQ 。其次是通用率，识别不同型号的 AHCI 控制器，针对不同的 SATA 设备，如 DISK 、CDROM 等提供不同的函数接口。最后是生产率，因为同时需要兼顾性能和通用率，所以编写此驱动耗费时间很长。所以，性能-生产率-通用率 之间是相互互斥的，不可能面面俱到。还有，其他诸如可靠性、易读性、正确性本驱动也有对应的实现。<br>想了解更多与 性能-生产率-通用率 相关的知识点请看《深入理解并行编程》第二章。  </p>
+<h2 id="框架展示"><a href="#框架展示" class="headerlink" title="框架展示"></a>框架展示</h2><h3 id="结构图"><a href="#结构图" class="headerlink" title="结构图"></a>结构图</h3><div align=center><img src="/images/原理及实现/Kernel/AHCI驱动的实现思路//AHCI-1.drawio.png"></div>  
+
+<p>把驱动分层的目的是提升可扩展性、可维护性，每一层分工明确，尽可能地满足高内聚低耦合。</p>
+<ul>
+<li>IOMEM 层：该层是把“软件访问 AHCI 控制器的寄存器组”封装，提升 I&#x2F;O 访问的可靠性和可扩展性。</li>
+<li>内部层：它属于基层，也是 IOMEM 层的上层，提供开启 AHCI 模式、重启 AHCI 控制器、提供获取&#x2F;释放命令、中断处理和计时处理等功能。<ul>
+<li>命令层：发送命令，接受命令执行结果。</li>
+<li>SATA 层：识别 SATA 设备，对命令进行解析，不同类型的 SATA 设备，解析命令的方式也不同。</li>
+<li>数据请求层：它是上层接口层与 SATA 层之间的过渡层，用于把块设备的 request 解析为对应的命令描述符。</li>
+</ul>
+</li>
+<li>接口层：和块设备驱动接轨的层。</li>
+</ul>
+<blockquote>
+<p>PS：其实可以尝试把内部层的内的层独立出来，但由于开发时间不够，暂且作罢。</p>
+</blockquote>
+<h3 id="C-源码文件分布"><a href="#C-源码文件分布" class="headerlink" title=".C 源码文件分布"></a>.C 源码文件分布</h3><div align=center><img src="/images/原理及实现/Kernel/AHCI驱动的实现思路//AHCI-3.drawio.png"></div>  
+
+<p>其中，ahci_probe.c 是用于 AHCI 驱动初始化；ahci_pci.c 和 pci&#x2F; 目录下的源文件是用于识别 AHCI 控制器的型号。</p>
+<h3 id="H-头文件分布"><a href="#H-头文件分布" class="headerlink" title=".H 头文件分布"></a>.H 头文件分布</h3><div align=center><img src="/images/原理及实现/Kernel/AHCI驱动的实现思路//AHCI-2.drawio.png"></div>  
+
+<p>从全局去说，<br>ahci.h 存储的是本驱动的所使用的宏、函数等；<br>ahci-iomem.h 是存储 AHCI 控制器的寄存器组的分布；<br>ahci-io.h 是存储一些发送命令的结构体、函数等；<br>ahci-ops.h 则是把 IOMEM 层的函数集供给内部层使用；<br>ata.h 、ata-hdreg.h 、ata-cmdtype.h 是与 ATA&#x2F;ATAPI8 - ACS 相关。  </p>
+<p>注意，图内的头文件都是在驱动目录内的 include 目录内，对外提供的头文件则是 ahci.h（和图中的 ahci.h 重名，但用途不一样），它定义在全局的 include&#x2F;linux 内（对应到我的内核目录是 include&#x2F;eleos ）。</p>
+<h3 id="结构体分布以及关系"><a href="#结构体分布以及关系" class="headerlink" title="结构体分布以及关系"></a>结构体分布以及关系</h3><div align=center><img src="/images/原理及实现/Kernel/AHCI驱动的实现思路//AHCI-4.drawio.png"></div>  
+
+<p>先从 struct ahci_general 说起，这是每一个可用的 AHCI 控制器的描述符，用于记录 AHCI 的运行状态。ahci_gen_regions[] 是一个指针数组，被定义在 ahci.c ，当识别到一个可用的 AHCI 控制器时，会分配一个内存空间作为描述符，并根据当前 AHCI 控制器的运行信息进行初始化。<br>其中 AHCI_CTR_MAX 是一个宏，拟定最多有八个 AHCI 控制器（实际上一个 AHCI 控制器就够了）。<br>下列是 struct ahci_general 结构体：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">ahci_general</span> &#123;</span></span><br><span class="line">    u32         ahci_idx;           <span class="comment">// AHCI 控制器编号</span></span><br><span class="line"></span><br><span class="line">    <span class="type">ahci_status_t</span>   ahci_status;</span><br><span class="line">    <span class="type">ahci_driver_t</span>   *driver;        <span class="comment">// 临时的</span></span><br><span class="line"></span><br><span class="line">    u32         ports_max;</span><br><span class="line">    u32         ports_max_map;</span><br><span class="line">    u32         active_ports_max;</span><br><span class="line">    u32         active_ports_map;</span><br><span class="line"></span><br><span class="line">    u32         cmds_max;</span><br><span class="line"></span><br><span class="line">    u32         major;</span><br><span class="line">    u32         status;</span><br><span class="line"></span><br><span class="line">    u32         cap;</span><br><span class="line">    u32         cap_ext;</span><br><span class="line">    u64         dma_mask;</span><br><span class="line"></span><br><span class="line">    u32         invalid_ports_max;</span><br><span class="line">    u32         invalid_ports_map;</span><br><span class="line"></span><br><span class="line">    u32         irq;</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">pci_dev</span>  *<span class="title">dev</span>;</span></span><br><span class="line"></span><br><span class="line">    <span class="type">char</span>        *ahci_name;</span><br><span class="line">    u32         ahci_version;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>ports_max ：当前 AHCI 控制器可用的端口数量。</li>
+<li>ports_max_map ：可用的端口数量的位图，如端口 0 可用，在位图的 bit0 被置位。</li>
+<li>active_ports_max ：当前活跃端口的最大数，如端口 0 和 2 是活跃的，则该字段为 2 。</li>
+<li>active_ports_map ：当前活跃端口的位图，如端口 0 和 2 是活跃的，则位图的 bit 0 和 2 被置位。</li>
+<li>cmds_max ：当前 AHCI 控制器的每个端口的命令队列支持的最大命令数量。</li>
+<li>status ：当前 AHCI 控制器的运行状态，以下是运行状态。  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">enum</span> <span class="title">ahci_general_status</span> &#123;</span></span><br><span class="line">    AHCI_GSTAT_PRESENT      = <span class="number">0</span>,    <span class="comment">// AHCI 控制器存在且可用</span></span><br><span class="line">    AHCI_GSTAT_MAPPED       = <span class="number">1</span>,    <span class="comment">// AHCI 控制器的寄存器组已被映射</span></span><br><span class="line">    AHCI_GSTAT_ACTPORTS     = <span class="number">2</span>,    <span class="comment">// AHCI 控制器内已有端口被 SATA 设备连接且活跃</span></span><br><span class="line">    AHCI_GSTAT_CAPEXT       = <span class="number">3</span>,    <span class="comment">// 存在 AHCI 控制器的特性功能表（额外扩展）</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></li>
+<li>cap 和 cap_ext ：分别和 AHCI 的 GHC.CAP 与 GHC.CAP2 对应。</li>
+<li>dma_mask ：这需要当前架构（包括 PCI 总线）和 AHCI 的 DMA 字长相同，任意一方的字长低于另一方的则需要向下兼容。</li>
+<li>invalid_ports_max 和 invalid_ports_map ：在初始化驱动时，检测发现某个端口不可用，则被记录下来，待初始化结束时释放相应资源。</li>
+<li>irq ：每个 AHCI 控制器都有自己的 IRQ 号，尽管 IRQ 号有相同的可能。  </li>
+<li>dev ：AHCI 控制器是一个 PCI 类设备，有一个属于自己的 PCI 设备描述符。  </li>
+<li>ahci_status ：记录 AHCI 控制器的每个活跃端口的运行状态，对应的结构体如下：  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">ahci_status</span> &#123;</span></span><br><span class="line">    <span class="comment">/** </span></span><br><span class="line"><span class="comment">     * protect all the field</span></span><br><span class="line"><span class="comment">     * PS: 其实用位图自旋锁会更好，但由于时间关系，暂时用普通的自旋锁</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">spinlock_t</span>  lock[AHCI_MAX_PORTS_DEFAULT];</span><br><span class="line"></span><br><span class="line">    u32         failure;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * followings are maps corresponding hba ports</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/* for normal cmds */</span></span><br><span class="line">    u32         busy;</span><br><span class="line">    u32         ready;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* for ncq cmds */</span></span><br><span class="line">    u32         ncq_busy;</span><br><span class="line">    u32         ncq_ready;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* for requests */</span></span><br><span class="line">    u32         ready_reqs;</span><br><span class="line">    u32         loading_reqs;   <span class="comment">/* putting reqs into qcmds */</span></span><br><span class="line"></span><br><span class="line">    u32         continue_loading;   <span class="comment">/* 当 reqs 正被处理时发生中断，如果还有其它 reqs</span></span><br><span class="line"><span class="comment">                                    等待处理（active_reqs_tail 之外）的，则中断</span></span><br><span class="line"><span class="comment">                                    处理程序将它置位，表示 loading_reqs 之后，当</span></span><br><span class="line"><span class="comment">                                    前进程继续处理 reqs */</span></span><br><span class="line">&#125; <span class="type">ahci_status_t</span>;</span><br></pre></td></tr></table></figure>
+  这个结构体，需要在讲解命令的运行流程时才能清楚知道它们的作用。</li>
+</ul>
+<p>轮到 struct ahci_iomem ，该结构体由 IOMEM 层独享，用于保护 AHCI IOMEM ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">ahci_iomem</span> &#123;</span></span><br><span class="line">    <span class="comment">/* protect the iomem for an ahci controller */</span></span><br><span class="line">    <span class="type">spinlock_t</span>      ahci_lock;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>   hba_base;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * protect the iomem for hba ports </span></span><br><span class="line"><span class="comment">     * PS: 其实用位图自旋锁会更好，但由于时间关系，暂时用普通的自旋锁</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">spinlock_t</span>      port_lock[AHCI_MAX_PORTS_DEFAULT];</span><br><span class="line">    </span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>   *cmdlists_base;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>   *rFISs_base;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>ahci_lock ：保护 AHCI 控制器的 HBA Memory Registers 内的 Generic Host Control </li>
+<li>hba_base ：HBA Memory Registers 的基址（虚拟地址），是把 HBA 的 PCI BAR 内的地址空间映射到总线地址空间，再通过内核空间的非连续区域把物理地址转换为虚拟地址得来。  </li>
+<li>port_lock ：保护对应端口的 HBA Memory Registers 内的 Port Registers 、Received FIS Structure 和 Command List Structure 。</li>
+<li>cmdlists_base ：这是一个数组，数组元素等于端口号，记录 Command List Structure 基址（虚拟地址）。</li>
+<li>rFISs_base ：这是一个数组，数组元素等于端口号，记录 Received FIS Structure 基址（虚拟地址）。</li>
+</ul>
+<p>struct hba_port ，该结构体是每个活跃的端口都有一个对应描述符，用于记录端口内命令队列的运行情况：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">hba_port</span> &#123;</span></span><br><span class="line">    <span class="type">spinlock_t</span>  lock;   <span class="comment">/* protect iomem of a port, and </span></span><br><span class="line"><span class="comment">                            following field */</span></span><br><span class="line">    </span><br><span class="line">    u32         ahci_idx;</span><br><span class="line">    u32         port_idx;</span><br><span class="line"></span><br><span class="line">    u32         cmds_nr;</span><br><span class="line">    u32         cmds_active_nr;</span><br><span class="line">    u32         cmds_active_map;</span><br><span class="line">    ahci_qcmd_tf        *qcmd_tfs;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>    <span class="title">active_list</span>;</span></span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">sata_device</span>  *<span class="title">sata</span>;</span></span><br><span class="line"></span><br><span class="line">    <span class="type">wait_queue_head_t</span>   wait_cmd;</span><br><span class="line">    <span class="type">wait_queue_head_t</span>   wait_ncq;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>lock ：保护字段 cmds_nr 、cmds_active_nr 、cmds_active_map 、qcmd_tfs 以及 active_list。</li>
+<li>cmds_nr ：当前端口支持的最大命令数量。</li>
+<li>cmds_active_nr ：当前端口正在运行的命令数量</li>
+<li>cmds_active_map ：正在运行的命令的位图，如 cmdslot0 的命令正在运行，则对应的位置位<blockquote>
+<p>cmdslot0 是 Command List Structure 内的第 0 个命令槽。</p>
+</blockquote>
+</li>
+<li>qcmd_tfs ：这是一个数组，一个元素对应一个命令描述符，对应的结构体较大，稍后解释。</li>
+<li>active_list ：当一个命令被主机端发送时，把该命令对应的描述符加入到该链表（从尾部加入），这用于当命令队列执行中出现错误时，能够使用该链表从头到尾重新把命令发送到 SATA 设备。</li>
+<li>sata ：通常来说，一个端口对应一个 SATA 设备（本驱动不支持 port multi），这是 SATA 设备的描述符，该结构体较大，稍后解释。</li>
+<li>wait_cmd ：当一个任务需要发送命令时，如果无空闲的 cmdslot 或正在执行 ncq 命令，则可以尝试睡眠等待，待有空闲的 cmdslot 时或执行完 ncq 命令后唤醒。</li>
+<li>wait_ncq ：和 wait_cmd 类似，不同的是该任务是想要发送 ncq 命令，但无空闲的 cmdslot 或正在执行 normal 命令时睡眠等待。</li>
+</ul>
+<p>结构体 ahci_qcmd_tf 是一个命令描述符，在发送命令之前，填入命令的同时，也要填写它所需要的参数。而该命令的参数包含 Command List Structure 内的第 N 个命令槽和对应 Command Table ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">ahci_qcmd_tf</span> &#123;</span></span><br><span class="line">    u32             qcmd_idx;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">hba_port</span>     *<span class="title">port</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>    <span class="title">node</span>;</span></span><br><span class="line"></span><br><span class="line">    u32             state;</span><br><span class="line"></span><br><span class="line">    u16             cmd_list_flags;</span><br><span class="line">    u16             prdts_nr;</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">ata_taskfile</span> <span class="title">taskfile</span>;</span></span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">prdt</span> &#123;</span></span><br><span class="line">        <span class="type">unsigned</span> <span class="type">long</span>   paddr;  <span class="comment">/* phy address */</span></span><br><span class="line">        <span class="type">unsigned</span> <span class="type">int</span>    size;   <span class="comment">/* in bytes */</span></span><br><span class="line">    &#125; prdts[AHCI_PRDT_ENTRIES];</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * the ATAPI command to transmit if the “A” bit </span></span><br><span class="line"><span class="comment">     * is set in the command header.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    u8              acmd[<span class="number">16</span>];</span><br><span class="line">    u8              acmd_szl;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* for NCQ DMA (Isochronous command completion) */</span></span><br><span class="line">    u8              icc;</span><br><span class="line"></span><br><span class="line">    u64             lba;</span><br><span class="line">    u16             size;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * record the FIS when receiving from the device (from </span></span><br><span class="line"><span class="comment">     * Received FIS Structure) if &quot;AHCI_QCSTAT_OUTPUT&quot; is </span></span><br><span class="line"><span class="comment">     * set. </span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    u8              *rFIS_buf;</span><br><span class="line">    u8              rFIS_buf_sz;</span><br><span class="line"></span><br><span class="line">    start_fn        start;</span><br><span class="line">    <span class="type">void</span>            *start_data;</span><br><span class="line">    complete_fn     complete;</span><br><span class="line">    <span class="type">void</span>            *complete_data;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* the field is for AHCI_QCSTAT_SYNCWAIT */</span></span><br><span class="line">    u32             waiting_time;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* wait for completing a current qcmd */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">timer_list</span>   <span class="title">expiry</span>;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/* a process is waiting for the cur qcmd finished */</span></span><br><span class="line">    <span class="type">wait_queue_head_t</span>   wait;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">ahci_qcmd_tf</span> <span class="title">ahci_qcmd_tf</span>;</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li>state ：命令当前的状态，见下列的 enum  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">enum</span> <span class="title">ahci_qcmd_stat</span> &#123;</span></span><br><span class="line">    AHCI_QCSTAT_ACTIVE      = <span class="number">0</span>,</span><br><span class="line">    AHCI_QCSTAT_LAUNCH,</span><br><span class="line">    AHCI_QCSTAT_ERROR,</span><br><span class="line">    <span class="comment">/* succeed running cmd */</span></span><br><span class="line">    AHCI_QCSTAT_COMPLETE,   </span><br><span class="line"></span><br><span class="line">    AHCI_QCSTAT_CTL,        <span class="comment">// 不是命令，只是单纯地访问控制寄存器</span></span><br><span class="line">    AHCI_QCSTAT_ATAPI,      <span class="comment">// 是 ATAPI 类型的明亮</span></span><br><span class="line">    <span class="comment">/* recognize data or nodata cmd */</span></span><br><span class="line">    AHCI_QCSTAT_TRAN,       <span class="comment">// 区分是 data 类型命令与否</span></span><br><span class="line">    AHCI_QCSTAT_WRITE,      <span class="comment">// 将数据写入到存储器</span></span><br><span class="line">    <span class="comment">/* data transmit for user */</span></span><br><span class="line">    AHCI_QCSTAT_USER,       <span class="comment">// 表示当前命令需求是由块设备传来</span></span><br><span class="line">    AHCI_QCSTAT_OUTPUT,     <span class="comment">// 获取当前命令的执行结果</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * if a port is running NCQ, or no any free cmd slots, </span></span><br><span class="line"><span class="comment">     * current process sleeps to wait for completion </span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    AHCI_QCSTAT_WAITUSABLE,</span><br><span class="line">    AHCI_QCSTAT_SYNCWAIT,   <span class="comment">// 命令执行期间，当前任务同步忙等待</span></span><br><span class="line">    AHCI_QCSTAT_SYNCSLEEP,  <span class="comment">// 命令执行期间，当前任务同步睡眠等待</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>该驱动暂未把 AHCI_QCSTAT_SYNCWAIT 和 AHCI_QCSTAT_SYNCSLEEP 提供给接口层使用。</p>
+</blockquote>
+</li>
+<li>cmd_list_flags ：与 Command List Structure 的 cmdslot 的 DW0 对应</li>
+<li>prdts_nr 和 prdts ：与 Command Table 的 PRDT 对应，PRDT 的全称是 Physical Region<br>Descriptor Table ，当命令是 data 类型时有效，作用是记录主机端系统内存的地址以及大小。比如，使用读命令从 SATA 设备读出的数据，根据 PRDT 提供的信息把它读出到对应的地址空间。</li>
+<li>taskfile ：前文说过，SATA 设备使用 ATA&#x2F;ATAPI8 - ASC 命令规范，所以这个描述符是命令的本体：  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">ata_taskfile</span> &#123;</span></span><br><span class="line">    u8      control;</span><br><span class="line"></span><br><span class="line">    u8      feature;</span><br><span class="line">    u8      count;</span><br><span class="line">    u8      lba0;</span><br><span class="line">    u8      lba1;</span><br><span class="line">    u8      lba2;</span><br><span class="line">    u8      device;</span><br><span class="line">    u8      command;</span><br><span class="line"></span><br><span class="line">    u8      hob_feature;</span><br><span class="line">    u8      hob_count;</span><br><span class="line">    u8      hob_lba0;</span><br><span class="line">    u8      hob_lba1;</span><br><span class="line">    u8      hob_lba2;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></li>
+<li>acmd 和 acmd_szl ：如果设备是 CDROM ，那我们需要使用 atapi 类命令，使用该类型的命令需要额外的参数，这些参数用字段 acmd 存储，acmd_szl 记录其大小（以 DWord 为单位）。</li>
+<li>icc ：与 NCQ 相关，本驱动也没有支持该特性，默认为 0 即可。</li>
+<li>lba 和 size ：如果该命令是 data 命令，该字段有效。</li>
+<li>rFIS_buf 和 rFIS_buf_sz ：state 存在 AHCI_QCSTAT_OUTPUT 时有效，获取当前命令的执行结果。</li>
+<li>start 和 start_data ：state 存在 AHCI_QCSTAT_USER 时有效，在加载命令期间，回调 start() 到接口层做上层任务。</li>
+<li>complete 和 complete_data ：state 存在 AHCI_QCSTAT_USER 时有效，当命令被执行完成时，回调 complete() 到接口层做上层任务。</li>
+<li>waiting_time ：该字段有两种用法：<ol>
+<li>要求命令要在规定的时间内完成，否则触发超时处理；</li>
+<li>如 state 存在 AHCI_QCSTAT_SYNCWAIT 时，该字段表示任务的忙等待时间。</li>
+</ol>
+</li>
+<li>expiry ：与字段 waiting_time 的第一个用法相关，把该命令加入到 timer_list 内，如果没在规定时间内执行完成，触发超时处理。</li>
+<li>wait ：如 state 存在 AHCI_QCSTAT_SYNCSLEEP 时有效，使当前任务睡眠等待。</li>
+</ul>
+<p>结构体 struct sata_device ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">sata_device</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">hba_port</span>     *<span class="title">port</span>;</span></span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">sata_driver</span>  *<span class="title">driver</span>;</span></span><br><span class="line">    </span><br><span class="line">    u64         lba_sectors;</span><br><span class="line">    u32         xfer_mode;  <span class="comment">/* PIO: 0, MDMA: 1, UDMA: 2 */</span></span><br><span class="line">    u32         <span class="class"><span class="keyword">class</span>;</span></span><br><span class="line">    </span><br><span class="line">    u32         media:<span class="number">8</span>;</span><br><span class="line">    u32         present:<span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* e.g. number=10, that corresponds to ATA/ATAPI8-ACS3 */</span></span><br><span class="line">    u32         major:<span class="number">8</span>;</span><br><span class="line">    u32         ncqDepth:<span class="number">5</span>;</span><br><span class="line">    u32         lba48:<span class="number">1</span>;</span><br><span class="line">    u32         is_flash:<span class="number">1</span>;</span><br><span class="line">    u32         read_only:<span class="number">1</span>;</span><br><span class="line">    u32         removable:<span class="number">1</span>;</span><br><span class="line">    u8          max_multi;</span><br><span class="line">    u8          acmd_size;</span><br><span class="line"></span><br><span class="line">    u16         *identify;</span><br><span class="line">    <span class="type">char</span>        name[<span class="number">8</span>];</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>lba_sectors ：SATA 存储器内的最大可用扇区数</li>
+<li>xfer_mode ：进行数据传输时，首选哪种模式，是 PIO 、MDMA 、还是 UDMA </li>
+<li>class ：当前设备是 ATA 设备还是 ATAPI 设备</li>
+<li>media ：设备是 DISK 、CDROM 还是 FLOPPY ？</li>
+<li>major ：记录当前设备首选的命令规范，如 number&#x3D;10 ，表示 ATA&#x2F;ATAPI8-ACS3 ，这在 IDENITFY DEVICE data 的 Word 80 读出得知。</li>
+<li>ncqDepth ：NCQ 深度，默认 31 ，在 IDENITFY DEVICE data 的 Word 75 读出。</li>
+<li>max_multi ：这对 PIO 模式有效，表示一次读写的扇区数量。</li>
+<li>driver ：对应结构体：  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">sata_driver</span> &#123;</span></span><br><span class="line">    <span class="type">char</span>    name[<span class="number">16</span>];</span><br><span class="line">    <span class="type">int</span>     media;</span><br><span class="line"></span><br><span class="line">    <span class="type">void</span>    (*setup)(<span class="keyword">struct</span> hba_port *);</span><br><span class="line">    <span class="type">int</span>     (*data_request)(u32 ahci_idx, u32 port_idx, ahci_qcmd_tf *, <span class="type">int</span> rw);</span><br><span class="line">    <span class="type">int</span>     (*normal_request)(<span class="keyword">struct</span> hba_port *, ahci_qcmd_tf *, <span class="type">int</span> rw);</span><br><span class="line">    <span class="type">int</span>     (*ncq_request)(u32 ahci_idx, u32 port_idx, <span class="keyword">struct</span> list_head *);</span><br><span class="line">    <span class="type">int</span>     (*send)(<span class="keyword">struct</span> hba_port *, ahci_qcmd_tf *); <span class="comment">/* send nodata cmd */</span></span><br><span class="line">    <span class="type">int</span>     (*ncq_send)(<span class="keyword">struct</span> hba_port *, ahci_qcmd_tf *); <span class="comment">/* 发送对 NCQ 设置的命令时用 */</span></span><br><span class="line">    <span class="type">int</span>     (*reset)(<span class="keyword">struct</span> hba_port *, ahci_qcmd_tf *);</span><br><span class="line">    <span class="type">int</span>     (*diag)(<span class="keyword">struct</span> hba_port *, ahci_qcmd_tf *);</span><br><span class="line">    <span class="type">int</span>     (*control)(<span class="keyword">struct</span> hba_port *, u8 ctl, u16 cmd_flags);</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>在讲解与 struct sata_driver 相关的思路时说明</p>
+</blockquote>
+</li>
+</ul>
+<p>req_to_qcmd_t，把 request 转换为命令描述符 qcmd 的过渡型结构体：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">req_to_qcmd</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>    <span class="title">list</span>;</span></span><br><span class="line">    <span class="type">int</span>             rw;</span><br><span class="line">    </span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">buffer_head</span>  *<span class="title">bh_head</span>;</span></span><br><span class="line"></span><br><span class="line">    u64             lba_base;</span><br><span class="line"></span><br><span class="line">    start_fn        start;</span><br><span class="line">    complete_fn     complete;</span><br><span class="line">&#125;<span class="type">req_to_qcmd_t</span>;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>list ：与其它 req_to_qcmd_t 连接，形成一个链表。通常来说，该链表的数量取决于当前需要处理请求的数量。</li>
+<li>rw ：与 request 的 cmd 字段对应。</li>
+<li>bh_head ：记录当前 request 的未处理的 struct buffer_head 的起始点。</li>
+<li>lba_base ：在 SATA 设备的起始点。</li>
+<li>start ：当在内部层把请求处理到一定阶段后，可回调该函数，利用相关信息更新上层的信息。</li>
+<li>complete ：当在内部层把请求处理完成期间，可回调该函数，利用相关信息更新上层的信息。</li>
+</ul>
+<p>struct ahci_port ，该结构体用在接口层，用于与块设备接轨的描述符。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">ahci_port</span> &#123;</span></span><br><span class="line">    <span class="type">kdev_t</span>          dev;</span><br><span class="line">    u32             ahci_idx;</span><br><span class="line"></span><br><span class="line">    u32             status;</span><br><span class="line"></span><br><span class="line">    <span class="type">request_queue_t</span> <span class="built_in">queue</span>;</span><br><span class="line"></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span>    req_cmds_nr;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">req_cmd</span> &#123;</span></span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">request</span>  *<span class="title">req</span>;</span></span><br><span class="line">        <span class="class"><span class="keyword">struct</span> <span class="title">buffer_head</span>  *<span class="title">bh_end</span>;</span></span><br><span class="line">    &#125; *req_cmds;</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">gen_disk</span> *<span class="title">gendisk</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">sata_base_info</span>   *<span class="title">sata_info</span>;</span></span><br><span class="line"></span><br><span class="line">    <span class="type">char</span>            name[<span class="number">16</span>];</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>status ：该字段仅有一个 PRESENT 状态位，表示是否可用</li>
+<li>queue ：这是块设备的请求队列，强制要求的。</li>
+<li>req_cmds_nr ：记录正在活跃的请求个数</li>
+<li>req_cmds ：数组，每个元素对应一个 cmdslot ，记录当前请求的处理状态。</li>
+</ul>
+<h2 id="各层的函数讲解（不包含初始化）"><a href="#各层的函数讲解（不包含初始化）" class="headerlink" title="各层的函数讲解（不包含初始化）"></a>各层的函数讲解（不包含初始化）</h2><h3 id="IOMEM-层"><a href="#IOMEM-层" class="headerlink" title="IOMEM 层"></a>IOMEM 层</h3><p>以下是 IOMEM 层的函数接口：</p>
+<table>
+<thead>
+<tr>
+<th align="center">函数</th>
+<th align="left">作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">ahci_ghc_read &amp; ahci_ghc_write</td>
+<td align="left">对 HBA Memory Registers 的 Generic Host Control 读写</td>
+</tr>
+<tr>
+<td align="center">ahci_port_read &amp; ahci_port_write</td>
+<td align="left">指定 HBA Memory Registers 的其中一个 Port Register 进行读写操作</td>
+</tr>
+<tr>
+<td align="center">ahci_port_cmdlist_read &amp; ahci_port_cmdlist_write</td>
+<td align="left">指定某一个 HBA port 的 command list 进行读写操作</td>
+</tr>
+<tr>
+<td align="center">ahci_port_rFIS_read</td>
+<td align="left">指定某一个 HBA port 读取从 device 发送给 host 的 FIS ，需要指定 FIS 的类型读取</td>
+</tr>
+<tr>
+<td align="center">ahci_port_cFIS_write</td>
+<td align="left">指定某一个 HBA port ，把 FIS 写入到它的 Command Table 的 Command FIS 区域</td>
+</tr>
+<tr>
+<td align="center">ahci_port_ACMD_write</td>
+<td align="left">指定某一个 HBA port ，把 ACMD（for ATAPI）写入到它的 Command Table 的 ATAPI Command 区域</td>
+</tr>
+<tr>
+<td align="center">ahci_port_prdt_read &amp; ahci_port_prdt_write</td>
+<td align="left">指定某一个 HBA port ，在它的 Command Table 的 PRDT 内指定某一个表项读写数据（通常是写操作具多）</td>
+</tr>
+</tbody></table>
+<h3 id="内部层"><a href="#内部层" class="headerlink" title="内部层"></a>内部层</h3><h4 id="基层"><a href="#基层" class="headerlink" title="基层"></a>基层</h4><p>以下函数是供给接口层和内部层使用：  </p>
+<table>
+<thead>
+<tr>
+<th align="center">函数</th>
+<th align="left">作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">ahci_enable_ahci</td>
+<td align="left">开启 AHCI 模式，因为有些 HBA 也支持旧式的标准，所以可以选择兼容模式还是 AHCI 模式。当然，该驱动默认就是 AHCI 模式</td>
+</tr>
+<tr>
+<td align="center">ahci_reset_hba</td>
+<td align="left">重启 HBA ，当执行命令发生错误时，如 CRC 校验错误，重启 HBA 。还有初始化 HBA 时重启，因为在此期间 BIOS 会访问 HBA 并读写某些寄存器组，重启确保后续初始化操作无误</td>
+</tr>
+<tr>
+<td align="center">ahci_port_power_up</td>
+<td align="left">对某一个 HBA port 启动 active 状态，与接口的电源管理相关</td>
+</tr>
+<tr>
+<td align="center">ahci_disable_hbaport</td>
+<td align="left">关闭一个 HBA port 端口，关闭发送命令和接受 FIS 的接口（同时关闭 DMA 引擎）</td>
+</tr>
+<tr>
+<td align="center">ahci_enable_hbaport</td>
+<td align="left">开启一个 HBA port 端口，开启发送命令和接受 FIS 的接口（同时开启 DMA 引擎）</td>
+</tr>
+<tr>
+<td align="center">ahci_spinUp_device</td>
+<td align="left">如果 HBA 和对应 SATA 设备支持 Spin Up 有效，Spin Up 的功能是冷加载。该函数的功能是使用 Spin Up 重启指定端口对应的 SATA 设备</td>
+</tr>
+<tr>
+<td align="center">ahci_reset_sata</td>
+<td align="left">重启指定端口对应的 SATA 设备</td>
+</tr>
+<tr>
+<td align="center">ahci_has_port</td>
+<td align="left">检测指定的端口，检查是否活跃，即是否已连接上 SATA 设备</td>
+</tr>
+<tr>
+<td align="center">ahci_restart_port</td>
+<td align="left">重新开启 HBA port，如果 SATA 设备出错，也会需重启动 SATA 设备</td>
+</tr>
+</tbody></table>
+<p>以下函数用于命令层：</p>
+<table>
+<thead>
+<tr>
+<th align="center">函数</th>
+<th align="left">作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">ahci_alloc_qcmd</td>
+<td align="left">从 struct hba_port 获取一个空闲的 CMD 描述符，并初始化</td>
+</tr>
+<tr>
+<td align="center">ahci_free_qcmd</td>
+<td align="left">释放 CMD 描述符，释放相关资源</td>
+</tr>
+<tr>
+<td align="center">__ahci_free_qcmd</td>
+<td align="left">释放 CMD 描述符</td>
+</tr>
+<tr>
+<td align="center">ahci_free_qcmds_nr</td>
+<td align="left">查询有多少空闲的 cmdslots</td>
+</tr>
+<tr>
+<td align="center">ahci_tf_to_fisH2D</td>
+<td align="left">把 taskfile 转换为 H2D FIS</td>
+</tr>
+<tr>
+<td align="center">ahci_sync_waiting_cmd</td>
+<td align="left">当前任务对当前命令进行忙等待</td>
+</tr>
+</tbody></table>
+<p>以下函数是与 list_timer 相关：</p>
+<table>
+<thead>
+<tr>
+<th align="center">函数</th>
+<th align="left">作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">ahci_add_timer</td>
+<td align="left">把当前命令描述符加入到 list_timer</td>
+</tr>
+<tr>
+<td align="center">ahci_del_timer</td>
+<td align="left">把当前命令描述符从 list_timer 移除</td>
+</tr>
+</tbody></table>
+<h4 id="命令层"><a href="#命令层" class="headerlink" title="命令层"></a>命令层</h4><table>
+<thead>
+<tr>
+<th align="center">函数</th>
+<th align="left">作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">ahci_send_ata_cmd</td>
+<td align="left">把一个命令描述符对应的命令发送到指定的 SATA 设备</td>
+</tr>
+<tr>
+<td align="center">ahci_send_ata_ctl</td>
+<td align="left">把一个命令描述符对应的命令（控制）发送到指定的 SATA 设备，意为把控制抽象成一个命令发送</td>
+</tr>
+<tr>
+<td align="center">ahci_send_ata_ncqcmds</td>
+<td align="left">发送一个命令列表（命令描述符表）到指定的 SATA 设备，且都是具有 NCQ 特性的命令</td>
+</tr>
+<tr>
+<td align="center">ahci_resent_ata_cmds</td>
+<td align="left">把还没得到执行的命令利用它对应的命令描述符重新发送，用于中断处理</td>
+</tr>
+<tr>
+<td align="center">ahci_resent_ata_ncqcmds</td>
+<td align="left">把还没得到执行的 NCQ 命令它对应的命令描述符重新发送，用于中断处理</td>
+</tr>
+<tr>
+<td align="center">ahci_complete_qcmd</td>
+<td align="left">当命令描述符对应的命令被 SATA 设备执行完成后，把命令描述符释放</td>
+</tr>
+<tr>
+<td align="center">ahci_complete_qcmds</td>
+<td align="left">当一组的命令描述符对应的命令被 SATA 设备执行完成后，把命令描述符释放</td>
+</tr>
+<tr>
+<td align="center">ahci_next_cmds</td>
+<td align="left">被中断处理程序调用，当没有任何一个执行流处理请求队列时，该函数能使当前执行流继续处理请求队列</td>
+</tr>
+</tbody></table>
+<h4 id="SATA-层"><a href="#SATA-层" class="headerlink" title="SATA 层"></a>SATA 层</h4><table>
+<thead>
+<tr>
+<th align="center">函数</th>
+<th align="left">作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">sata_get_base_info</td>
+<td align="left">获取 SATA 设备的基本信息，用于初始化 struct ahci_port 时使用</td>
+</tr>
+<tr>
+<td align="center">ata_data_request &amp; atapi_data_request</td>
+<td align="left">发送 data 类型的命令前，需要检查对应描述符记录的命令是否是 data 类型的</td>
+</tr>
+<tr>
+<td align="center">ata_ncq_request</td>
+<td align="left">检查命令描述符记录的命令是否是 data ncq 类型的</td>
+</tr>
+<tr>
+<td align="center">ata_normal_cmd_send &amp; atapi_normal_cmd_send</td>
+<td align="left">检查命令描述符记录的命令是否是 normal 类型的</td>
+</tr>
+</tbody></table>
+<h5 id="SATA-DISK（例子）"><a href="#SATA-DISK（例子）" class="headerlink" title="SATA-DISK（例子）"></a>SATA-DISK（例子）</h5><p>SATA-DISK 内的代码是根据 struct sata_driver 实现：</p>
+<table>
+<thead>
+<tr>
+<th align="center">函数</th>
+<th align="left">作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">sata_disk_setup</td>
+<td align="left">初始时使用，对 SATA-DISK 设备做初始化</td>
+</tr>
+<tr>
+<td align="center">satadisk_data_request</td>
+<td align="left">给接口层的请求队列使用，处理请求队列</td>
+</tr>
+<tr>
+<td align="center">satadisk_normal_request</td>
+<td align="left">给内部层使用，检查命令描述符并发送对应命令</td>
+</tr>
+<tr>
+<td align="center">satadisk_ncq_request</td>
+<td align="left">一般给接口层使用，使用 NCQ 特性去处理请求队列</td>
+</tr>
+<tr>
+<td align="center">satadisk_normal_cmd</td>
+<td align="left">给内部层使用，检查并发送 normal 类型的命令</td>
+</tr>
+<tr>
+<td align="center">satadisk_ncq_cmd</td>
+<td align="left">用于发送 ncq management 命令，未实现</td>
+</tr>
+<tr>
+<td align="center">satadisk_device_reset</td>
+<td align="left">发送重启命令到 SATA-DISK 设备，软重启，想了解与使用 HBA port 的寄存器组重启的区别，看 AHCI 手册的第 10.4 节，（未实现）</td>
+</tr>
+<tr>
+<td align="center">satadisk_device_diag</td>
+<td align="left">发送诊断命令，未实现</td>
+</tr>
+<tr>
+<td align="center">satadisk_device_control</td>
+<td align="left">以命令描述符的形式发送控制寄存器的值</td>
+</tr>
+</tbody></table>
+<h4 id="请求层"><a href="#请求层" class="headerlink" title="请求层"></a>请求层</h4><table>
+<thead>
+<tr>
+<th align="center">函数</th>
+<th align="left">作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">ahci_normal_request</td>
+<td align="left">处理来自上层的请求队列，把 request 转换为相应的命令描述符并发送到 SATA 设备</td>
+</tr>
+<tr>
+<td align="center">ahci_ncq_request</td>
+<td align="left">处理来自上层的请求队列，把 request 转换为相应的命令描述符，并使用 NCQ 特性发送到 SATA 设备</td>
+</tr>
+</tbody></table>
+<h3 id="接口层"><a href="#接口层" class="headerlink" title="接口层"></a>接口层</h3><table>
+<thead>
+<tr>
+<th align="center">函数</th>
+<th align="left">作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">ahci_do_request</td>
+<td align="left">处理请求队列的接口函数</td>
+</tr>
+<tr>
+<td align="center">ahci_continue_request</td>
+<td align="left">处理请求队列的接口函数，被中断处理程序调用</td>
+</tr>
+</tbody></table>
+<h2 id="结构体-request-queue-t-针对-AHCI-驱动的改进"><a href="#结构体-request-queue-t-针对-AHCI-驱动的改进" class="headerlink" title="结构体 request_queue_t 针对 AHCI 驱动的改进"></a>结构体 request_queue_t 针对 AHCI 驱动的改进</h2><p>为了满足 AHCI 驱动的多命令队列、NCQ ，对 request_queue_t 新增了一些功能。展示结构体 request_queue_t 的改动：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">request_queue</span> &#123;</span></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * the current amount of requests on each queue</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">atomic_t</span> nr_requests;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * The total number of requests on each queue</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> max_requests;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Boolean that indicate handle multiple requests from head to</span></span><br><span class="line"><span class="comment">     * tail in current_request</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">int</span> handle_multi:<span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * if handle_multi is set to one, this field is implemented.</span></span><br><span class="line"><span class="comment">     * handling more than one request a time when tq_disk runs.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">active_rq_t</span> active_rq;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>以上字段是新增和有改动的，其中</p>
+<ul>
+<li>nr_requests ：记录当前 request 数量，之前是记录当前队列最大的 request 数量</li>
+<li>max_requests ：记录当前队列最大的 request 数量</li>
+<li>handle_multi ：被置位，表示可以一次处理多个 requests ，head_active 被置位时，该字段才能允许被置位</li>
+<li>active_rq ：handle_multi 被置位才能使用，见相关结构体：  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">active_rqueue</span> &#123;</span></span><br><span class="line">    <span class="comment">/** </span></span><br><span class="line"><span class="comment">     * will be handled</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span>        active_reqs_nr;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>    *<span class="title">active_reqs_tail</span>;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/** </span></span><br><span class="line"><span class="comment">     * the way to decide the amount of requests handled, see</span></span><br><span class="line"><span class="comment">     * blkdev_setup_handle_multi() in ll_rw_blk.c to learn more.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">NOTE:</span> just be wrote when initializing. </span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> reqs_high, reqs_low;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> sects_high, sects_low;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * handling</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>    *<span class="title">running_reqs_tail</span>;</span></span><br><span class="line">    <span class="comment">/* the next of tail bh in running_reqs_tail */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">buffer_head</span>  *<span class="title">running_bhs_tail</span>;</span></span><br><span class="line">    <span class="type">atomic_t</span>            unhandled_reqs;</span><br><span class="line">&#125; <span class="type">active_rq_t</span>;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>active_reqs_nr ：记录当前队列允许有多少个 requests 能被一次处理，该字段仅有在字段 plugged 为 1 时，即还未有任务执行处理该请求队列时才能被修改。</li>
+<li>active_reqs_tail ：记录将被处理的多个请求的最后一个请求，</li>
+<li>reqs_high, reqs_low, sects_high 和 sects_low ：允许一次处理多个 requests 是有要求的，下面将列出这些字段的作用。这些字段仅在初始化期间被修改。</li>
+<li>running_reqs_tail ：从 request_queue_t-&gt;queue_head.next 到 active_reqs_tail 内，记录正在处理的 requests 的尾部。</li>
+<li>running_bhs_tail ：如果一个 req 过大，无法把 req 内的所有 bh 处理，则记录最后一个被处理的 bh 的下一个 bh ，即 b_reqnext ，一般为 NULL 。</li>
+<li>unhandled_reqs ：记录还未被处理的 requests 个数。注意，这个与 request_queue_t-&gt;nr_requests 不同的是，unhandled_reqs 记录范围是才从 running_reqs_tail 到 request_queue_t-&gt;queue_head.prev ，而 request_queue_t-&gt;nr_requests 的是记录整个命令队列 request_queue_t-&gt;queue_head 的 requests 个数。即 unhandled_reqs 不包括正在处理或已处理的 requests 个数。</li>
+</ul>
+</li>
+</ul>
+<h3 id="对-request-queue-t-的初始化改动"><a href="#对-request-queue-t-的初始化改动" class="headerlink" title="对 request_queue_t 的初始化改动"></a>对 request_queue_t 的初始化改动</h3><p>以该驱动初始化 request_queue_t 为例：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * init request queue</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">ahci_init_queue</span><span class="params">(<span class="keyword">struct</span> ahci_port * port)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">request_queue_t</span> *q = &amp;port-&gt;<span class="built_in">queue</span>;</span><br><span class="line"></span><br><span class="line">    q-&gt;queuedata = port;</span><br><span class="line">    blk_init_queue(q, ahci_do_request);</span><br><span class="line">    ...</span><br><span class="line">    blk_queue_handle_multi(q, <span class="number">1</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>函数 blk_init_queue() 是初始化 request_queue_t ，但并未开启 handle_multi ，仅是初始化为 0 。<br>看函数 blk_queue_handle_multi() 是开启 handle_multi 的关键，并且初始化 active_rq 。  </p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> THRESHOLD_REQS_HIGH     16</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> THRESHOLD_SECTS_HIGH    (64 &lt;&lt; (10 - 1))</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * blk_queue_handle_multi - indicate that the multi requests from </span></span><br><span class="line"><span class="comment"> *                          head to tail will be active</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * the boolean is set if the rq-&gt;head_active is set.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span></span><br><span class="line"><span class="title function_">blk_queue_handle_multi</span><span class="params">(<span class="type">request_queue_t</span> * q, <span class="type">int</span> handle_multi)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">active_rq_t</span> *active_rq;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!q-&gt;head_active)</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">    q-&gt;handle_multi = handle_multi;</span><br><span class="line"></span><br><span class="line">    active_rq = &amp;q-&gt;active_rq;</span><br><span class="line"></span><br><span class="line">    active_rq-&gt;active_reqs_nr = <span class="number">0</span>;</span><br><span class="line">    active_rq-&gt;active_reqs_tail = &amp;q-&gt;queue_head;</span><br><span class="line">    </span><br><span class="line">    active_rq-&gt;reqs_high = THRESHOLD_REQS_HIGH;</span><br><span class="line">    active_rq-&gt;reqs_low = THRESHOLD_REQS_HIGH &gt;&gt; <span class="number">1</span>;</span><br><span class="line">    active_rq-&gt;sects_high = THRESHOLD_SECTS_HIGH;</span><br><span class="line">    active_rq-&gt;sects_low = THRESHOLD_SECTS_HIGH &gt;&gt; <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    active_rq-&gt;running_reqs_tail = &amp;q-&gt;queue_head;</span><br><span class="line">    active_rq-&gt;running_bhs_tail = <span class="literal">NULL</span>;</span><br><span class="line">    <span class="type">atomic_set</span>(&amp;active_rq-&gt;unhandled_reqs, <span class="number">0</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="request-queue-t-在-AHCI-驱动的运行"><a href="#request-queue-t-在-AHCI-驱动的运行" class="headerlink" title="request_queue_t 在 AHCI 驱动的运行"></a>request_queue_t 在 AHCI 驱动的运行</h3><p>现在查看运行状态，从 __make_request()（from ll_rw_block.c）入手，即从 bh 载入到一个 request 时看起。前文说过，acrive_rq-&gt;active_reqs_nr 是在请求队列还未被执行时还会被修改，而且随着该字段的改动，相应的 acrive_rq-&gt;active_reqs_tail 也会更新。这是因为 plugged 被清除后，把 bh 载入到 request 和处理 requests ，这两个操作是两条执行流，且异步执行，在此期间修改 active_reqs_nr 会带来一定的复杂度，所以先不写太复杂的（主要是没时间写了）。来看 __make_request() 的改动：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> </span><br><span class="line">__make_request(<span class="type">request_queue_t</span> * q, <span class="keyword">struct</span> buffer_head * bh, <span class="type">int</span> rw)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> * <span class="title">head</span>, * <span class="title">queue_head</span>;</span></span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    queue_head = &amp;(q-&gt;queue_head);</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">    </span><br><span class="line">    head = queue_head;</span><br><span class="line">    <span class="keyword">if</span> (!q-&gt;plugged)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (q-&gt;handle_multi)</span><br><span class="line">            head = q-&gt;active_rq.active_reqs_tail;</span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (q-&gt;head_active) </span><br><span class="line">            head = queue_head-&gt;next;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    add_request(q, req, insert_here);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (q-&gt;handle_multi)</span><br><span class="line">        blk_inc_unhandled_reqs(q);</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (q-&gt;plugged)</span><br><span class="line">        blkdev_setup_handle_multi(q);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>每新增一个 request 时，active_rq-&gt;unhandled_reqs 也会同步加 1 。以下是 blk_inc_unhandled_reqs() 的定义：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> </span><br><span class="line"><span class="title function_">blk_inc_unhandled_reqs</span><span class="params">(<span class="type">request_queue_t</span> * q)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (unlikely(!q-&gt;handle_multi))</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">    <span class="type">atomic_inc</span>(&amp;q-&gt;active_rq.unhandled_reqs);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后，当命令队列还处于填充状态时，active_rq 的一些字段也会更新，查看 blkdev_setup_handle_multi() ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">NOTE:</span> the q-&gt;queue_lock must be held before calling it</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">blkdev_setup_handle_multi</span><span class="params">(<span class="type">request_queue_t</span> * q)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">active_rq_t</span> * active_rq;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> cur_nr_sects, cur_nr_reqs;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> active_reqs, req;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> * <span class="title">req_node</span>;</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!q-&gt;head_active || !q-&gt;handle_multi)</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">    active_rq = &amp;q-&gt;active_rq;</span><br><span class="line"></span><br><span class="line">    cur_nr_sects = <span class="type">atomic_read</span>(&amp;q-&gt;nr_sectors);</span><br><span class="line">    cur_nr_reqs = <span class="type">atomic_read</span>(&amp;q-&gt;nr_requests);</span><br><span class="line">    active_reqs = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (cur_nr_sects &lt;= active_rq-&gt;sects_low)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (cur_nr_reqs &gt; active_rq-&gt;reqs_high)</span><br><span class="line">            active_reqs = HANDLE_MULTIREQS_MAX;</span><br><span class="line">    &#125; </span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (cur_nr_sects &lt;= active_rq-&gt;sects_high)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (cur_nr_reqs &gt; active_rq-&gt;reqs_low &amp;&amp; </span><br><span class="line">            cur_nr_reqs &lt;= active_rq-&gt;reqs_high)</span><br><span class="line">        &#123;</span><br><span class="line">            active_reqs = HANDLE_MULTIREQS_MAX &gt;&gt; <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (cur_nr_reqs &gt; active_rq-&gt;reqs_high)</span><br><span class="line">            active_reqs = HANDLE_MULTIREQS_MAX;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (cur_nr_reqs &gt; active_rq-&gt;reqs_low &amp;&amp; </span><br><span class="line">            cur_nr_reqs &lt;= active_rq-&gt;reqs_high)</span><br><span class="line">        &#123;</span><br><span class="line">            active_reqs = HANDLE_MULTIREQS_MAX &gt;&gt; <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    req_node = &amp;q-&gt;queue_head;</span><br><span class="line">    <span class="keyword">for</span> (req = <span class="number">0</span>; req &lt; active_reqs; req++)</span><br><span class="line">    &#123;</span><br><span class="line">        req_node = req_node-&gt;next;</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">if</span> (req_node == &amp;q-&gt;queue_head)</span><br><span class="line">            BUG();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    active_rq-&gt;active_reqs_nr = active_reqs;</span><br><span class="line">    active_rq-&gt;active_reqs_tail = req_node;</span><br><span class="line">    wmb();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>现在到处理请求队列期间，与 active_rq 相关的函数有：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="keyword">struct</span> list_head *</span><br><span class="line"><span class="title function_">blk_get_running_req</span><span class="params">(<span class="type">active_rq_t</span> * active_rq)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> active_rq-&gt;running_bhs_tail ? </span><br><span class="line">        active_rq-&gt;running_reqs_tail : </span><br><span class="line">        active_rq-&gt;running_reqs_tail-&gt;next;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>blk_get_running_req() 用于在处理请求队列时，从请求队列的头部获取 request 。如果字段 running_bhs_tail 不为空，表示 running_reqs_tail 指向的 request ，它的 bh 仍有一部分未被处理，则直接返回 running_reqs_tail 继续处理当前 request ，否则返回 running_reqs_tail-&gt;next 。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> </span><br><span class="line"><span class="title function_">blk_dec_unhandled_reqs</span><span class="params">(<span class="type">request_queue_t</span> * q)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (unlikely(!q-&gt;handle_multi))</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">    <span class="type">atomic_dec</span>(&amp;q-&gt;active_rq.unhandled_reqs);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="keyword">struct</span> request *</span><br><span class="line"><span class="title function_">blk_update_running_req</span><span class="params">(<span class="type">request_queue_t</span> * q, <span class="keyword">struct</span> buffer_head * bh_tail)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">active_rq_t</span> * a_rq;</span><br><span class="line"></span><br><span class="line">    a_rq = &amp;q-&gt;active_rq;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!a_rq-&gt;running_bhs_tail &amp;&amp; </span><br><span class="line">        a_rq-&gt;running_reqs_tail-&gt;next != &amp;q-&gt;queue_head)</span><br><span class="line">    &#123;</span><br><span class="line">        a_rq-&gt;running_reqs_tail = a_rq-&gt;running_reqs_tail-&gt;next;</span><br><span class="line">        blk_dec_unhandled_reqs(q);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    a_rq-&gt;running_bhs_tail = bh_tail;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> blkdev_entry_to_request(a_rq-&gt;running_reqs_tail);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>函数 blk_update_running_req（），当一个 request 处于加载状态，就是把 request 内的数据载入到实际的物理设备上时，且准备执行对应命令时，该函数被调用。该函数的参数 bh_tail 是记录还未被加载的 bhs 的起始点（单链表），如果当前的 request 内的所有 bh 都被加载了，则 bh_tail 为 NULL 。该函数的作用是更新 running_reqs_tail 或 running_bhs_tail 到下一个准备处理的 request 或 bh 。另外，如果 running_reqs_tail 更新了，相应的 unhandled_reqs 也会同步减一（调用 blk_dec_unhandled_reqs() ），表示还未加载的 requests 减一。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">void</span> </span><br><span class="line"><span class="title function_">blkdev_update_active_rq</span><span class="params">(<span class="type">request_queue_t</span> * q, <span class="keyword">struct</span> request * req)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">active_rq_t</span> * a_rq;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (unlikely(!q-&gt;handle_multi))</span><br><span class="line">        BUG();</span><br><span class="line"></span><br><span class="line">    a_rq = &amp;q-&gt;active_rq;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (a_rq-&gt;running_reqs_tail == &amp;req-&gt;<span class="built_in">queue</span>)</span><br><span class="line">        a_rq-&gt;running_reqs_tail = a_rq-&gt;running_reqs_tail-&gt;prev;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (likely(a_rq-&gt;active_reqs_tail-&gt;next != &amp;q-&gt;queue_head))</span><br><span class="line">    &#123;</span><br><span class="line">        a_rq-&gt;active_reqs_tail = a_rq-&gt;active_reqs_tail-&gt;next;</span><br><span class="line">        wmb();</span><br><span class="line">        <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (a_rq-&gt;-&gt;prev == &amp;q-&gt;queue_head)</span><br><span class="line">    &#123;</span><br><span class="line">        a_rq-&gt;active_reqs_tail = a_rq-&gt;running_reqs_tail = &amp;q-&gt;queue_head;</span><br><span class="line">        a_rq-&gt;active_reqs_nr = <span class="number">0</span>;</span><br><span class="line">        a_rq-&gt;running_bhs_tail = <span class="literal">NULL</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>blkdev_update_active_rq() ，该函数在一个 request 处理完成时被调用，准确来说是在当前 request 从请求队列删除前被调用。第一个条件判断，当 request 处理完成后需要从请求队列中移除，如果将从队列中移除的 request 等于 running_reqs_tail ，则需要把 running_reqs_tail 移到上一个节点，通常来说是 q-&gt;queue_head 。<br>然后，如果 a_rq-&gt;active_reqs_tail 的下一个节点是 q-&gt;queue_head ，则表示还有最后一次的多处理 requests 。<br>最后，如果 active_reqs_tail 的前后节点都是 q-&gt;queue_head ，表示整个请求队列都处理完成，初始化 active_rq 。</p>
+<h2 id="运行流程"><a href="#运行流程" class="headerlink" title="运行流程"></a>运行流程</h2><h3 id="在内部层发送一个-ATA-命令的整体流程"><a href="#在内部层发送一个-ATA-命令的整体流程" class="headerlink" title="在内部层发送一个 ATA 命令的整体流程"></a>在内部层发送一个 ATA 命令的整体流程</h3><p>发送一个 ATA 命令，以 SATA-DISK 为例子：</p>
+<div align=center><img src="/images/原理及实现/Kernel/AHCI驱动的实现思路//AHCI-5.drawio.png"></div>
+
+<h3 id="中断处理的运行流程"><a href="#中断处理的运行流程" class="headerlink" title="中断处理的运行流程"></a>中断处理的运行流程</h3><div align=center><img src="/images/原理及实现/Kernel/AHCI驱动的实现思路//AHCI-6.drawio.png"></div>
+
+<h3 id="计时处理的运行流程"><a href="#计时处理的运行流程" class="headerlink" title="计时处理的运行流程"></a>计时处理的运行流程</h3><div align=center><img src="/images/原理及实现/Kernel/AHCI驱动的实现思路//AHCI-7.drawio.png"></div>
+
+<h3 id="错误处理的运行流程"><a href="#错误处理的运行流程" class="headerlink" title="错误处理的运行流程"></a>错误处理的运行流程</h3><p>每一个执行到的错误都会有一个相应的错误码返回，详细请看代码</p>
+<h3 id="处理一到多个请求的整体流程（包括-NCQ-）"><a href="#处理一到多个请求的整体流程（包括-NCQ-）" class="headerlink" title="处理一到多个请求的整体流程（包括 NCQ ）"></a>处理一到多个请求的整体流程（包括 NCQ ）</h3><div align=center><img src="/images/原理及实现/Kernel/AHCI驱动的实现思路//AHCI-8.drawio.png"></div>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Kernel/" rel="tag"># Kernel</a>
+              <a href="/tags/AHCI/" rel="tag"># AHCI</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/01/01/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-%E7%AE%80%E5%8D%95%E7%9A%84%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F/" rel="prev" title="Linux - 简单的驱动程序">
+                  <i class="fa fa-angle-left"></i> Linux - 简单的驱动程序
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2024/02/02/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Normal/%E5%BF%83%E5%BE%97/" rel="next" title="心得">
+                  心得 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

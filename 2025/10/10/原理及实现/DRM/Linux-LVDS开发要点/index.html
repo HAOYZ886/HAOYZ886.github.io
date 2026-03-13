@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="硬件结构相关硬件结构以下是 LVDS-Display-Bridge 的硬件结构：">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - LVDS开发要点">
+<meta property="og:url" content="http://example.com/2025/10/10/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-LVDS%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="硬件结构相关硬件结构以下是 LVDS-Display-Bridge 的硬件结构：">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-LVDS%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/ldb-hw-struct.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-LVDS%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/lvds-jeida.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-LVDS%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/lvds-vesa.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-LVDS%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/ldb-ctrl-reg0.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-LVDS%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/ldb-ctrl-reg1.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-LVDS%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/lvds-phy-reg0.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-LVDS%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/lvds-phy-reg1.png">
+<meta property="og:image" content="http://example.com/2025/10/10/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-LVDS%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/image/drm/drm-my-ldb-struct.drawio.png">
+<meta property="article:published_time" content="2025-10-09T16:00:00.000Z">
+<meta property="article:modified_time" content="2025-10-10T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="DRM">
+<meta property="article:tag" content="IMX8MP">
+<meta property="article:tag" content="LVDS">
+<meta property="article:tag" content="Linux">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-LVDS%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/ldb-hw-struct.png">
+
+
+<link rel="canonical" href="http://example.com/2025/10/10/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-LVDS%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2025/10/10/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-LVDS%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/","path":"2025/10/10/原理及实现/DRM/Linux-LVDS开发要点/","title":"Linux - LVDS开发要点"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - LVDS开发要点 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A1%AC%E4%BB%B6%E7%BB%93%E6%9E%84"><span class="nav-number">1.</span> <span class="nav-text">硬件结构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9B%B8%E5%85%B3%E7%A1%AC%E4%BB%B6%E7%BB%93%E6%9E%84"><span class="nav-number">1.1.</span> <span class="nav-text">相关硬件结构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%89%B9%E6%80%A7"><span class="nav-number">1.2.</span> <span class="nav-text">特性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%BB%E8%A6%81%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-number">1.3.</span> <span class="nav-text">主要寄存器</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%BE%E5%A4%87%E6%A0%91%E8%A1%A8%E7%A4%BA"><span class="nav-number">2.</span> <span class="nav-text">设备树表示</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#LDB"><span class="nav-number">2.1.</span> <span class="nav-text">LDB</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#LVDS-PHY"><span class="nav-number">2.2.</span> <span class="nav-text">LVDS-PHY</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Panel-LVDS"><span class="nav-number">2.3.</span> <span class="nav-text">Panel-LVDS</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%A9%B1%E5%8A%A8%E5%AE%9E%E7%8E%B0%E8%A6%81%E7%82%B9"><span class="nav-number">3.</span> <span class="nav-text">驱动实现要点</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#LDB%E5%92%8CLVDS-PHY%E9%A9%B1%E5%8A%A8"><span class="nav-number">3.1.</span> <span class="nav-text">LDB和LVDS-PHY驱动</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%A9%B1%E5%8A%A8%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">3.1.1.</span> <span class="nav-text">驱动初始化</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Mode-Valid%E6%88%96Atomic-Check"><span class="nav-number">3.1.2.</span> <span class="nav-text">Mode_Valid或Atomic_Check</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Atomic-Enable"><span class="nav-number">3.1.3.</span> <span class="nav-text">Atomic_Enable</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%AF%B9%E4%BA%8ELVDS-PHY"><span class="nav-number">3.1.3.1.</span> <span class="nav-text">对于LVDS-PHY</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%AF%B9%E4%BA%8ELDB"><span class="nav-number">3.1.3.2.</span> <span class="nav-text">对于LDB</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Atomic-Disable"><span class="nav-number">3.1.4.</span> <span class="nav-text">Atomic_Disable</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%AF%B9%E4%BA%8ELVDS-PHY-1"><span class="nav-number">3.1.4.1.</span> <span class="nav-text">对于LVDS-PHY</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#%E5%AF%B9%E4%BA%8ELDB-1"><span class="nav-number">3.1.4.2.</span> <span class="nav-text">对于LDB</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Panel-LVDS%E9%A9%B1%E5%8A%A8"><span class="nav-number">3.2.</span> <span class="nav-text">Panel-LVDS驱动</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%A9%B1%E5%8A%A8%E5%88%9D%E5%A7%8B%E5%8C%96-1"><span class="nav-number">3.2.1.</span> <span class="nav-text">驱动初始化</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96%E6%A8%A1%E5%BC%8F"><span class="nav-number">3.2.2.</span> <span class="nav-text">获取模式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#prepare%E5%92%8Cenable"><span class="nav-number">3.2.3.</span> <span class="nav-text">prepare和enable</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#disable%E5%92%8Cunprepare"><span class="nav-number">3.2.4.</span> <span class="nav-text">disable和unprepare</span></a></li></ol></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/10/10/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-LVDS%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - LVDS开发要点 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - LVDS开发要点
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2025-10-10 00:00:00" itemprop="dateCreated datePublished" datetime="2025-10-10T00:00:00+08:00">2025-10-10</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2025-10-11 00:00:00" itemprop="dateModified" datetime="2025-10-11T00:00:00+08:00">2025-10-11</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3.2k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>12 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="硬件结构"><a href="#硬件结构" class="headerlink" title="硬件结构"></a>硬件结构</h2><h3 id="相关硬件结构"><a href="#相关硬件结构" class="headerlink" title="相关硬件结构"></a>相关硬件结构</h3><p>以下是 LVDS-Display-Bridge 的硬件结构：</p>
+<div align="center"><img src="/images/原理及实现/DRM/Linux-LVDS开发要点/ldb-hw-struct.png"></div>
+<span id="more"></span>
+
+<h3 id="特性"><a href="#特性" class="headerlink" title="特性"></a>特性</h3><p>以下是基于 LDB 硬件概念的功能概括：</p>
+<ul>
+<li>LDB 和 LVDS PHY 的寄存器地址源自于 MEDIAMIX BLK_CTRL ，这是由硬件结构决定的。</li>
+<li>像素数据流源自于 LCD Interface ，接收来自 LCD Interface 的同步信号和数据使能信号。</li>
+<li>每一路的 LVDS 都有 4 条数据通道 ch{X}_data{Y} ，在 LDB Pixel Mapper MUX 与 LDB Channel {X} Serializer 之间，每条数据通道的宽度为 7 位。意思是一次的时钟周期，能传输 28 位像素数据。</li>
+<li>在 LDB Channel X Serializer 与 LVDS PHY 之间，7 位宽度的数据通道 ch{X}_data{Y} 经过 LDB Channel {X} Serializer 的序列化，数据链路 LVDS{X}_D{Y} 需要发送 7 次来自 ch{X}_data{Y} 的数据。所以在这两个组件之间，添加额外的像素时钟源，见上图的 <code>ch_0_serial_clk</code> 和 <code>ch_1_serial_clk</code> 。该时钟源的时钟频率的计算公式是：CLOCK * 7 &#x3D; ch_{X}_serial_clk 。</li>
+<li>支持双路 LVDS ，传输方式是奇偶像素拆分，即 CH0&#x2F;CH1 传输所有奇数像素的数据（第 1, 3, 5, … 个像素），以及 CH1&#x2F;CH0 传输所有偶数像素的数据（第 2, 4, 6, … 个像素）。双路 LVDS 的像素时钟频率的计算公式：CLOCK * 7 &#x2F; 2 &#x3D; ch_{X}_serial_clk 。公式中的“&#x2F;2”，意为两路 LVDS 各自的时钟频率。<blockquote>
+<p>比如说分辨率是 1080p ，CLOCK 为 148,500,000 ，则带入公式得出 519,750,000 。即 CH0 和 CH1 的像素时钟频率为 519,750,000 。</p>
+</blockquote>
+</li>
+<li>输入端的像素格式为 RGB666 和 RGB888 。输出端的像素格式为 jeida-18, jeida-24, vesa-24 。</li>
+</ul>
+<p>以下是 jeida 的数据格式：</p>
+<div align="center"><img src="/images/原理及实现/DRM/Linux-LVDS开发要点/lvds-jeida.png"></div>
+
+<p>以下是 vesa 的数据格式：</p>
+<div align="center"><img src="/images/原理及实现/DRM/Linux-LVDS开发要点/lvds-vesa.png"></div>
+
+<h3 id="主要寄存器"><a href="#主要寄存器" class="headerlink" title="主要寄存器"></a>主要寄存器</h3><p>以下是 LDB 的寄存器：</p>
+<div align="center"><img src="/images/原理及实现/DRM/Linux-LVDS开发要点/ldb-ctrl-reg0.png"></div>
+
+<div align="center"><img src="/images/原理及实现/DRM/Linux-LVDS开发要点/ldb-ctrl-reg1.png"></div>
+
+<p>以下是 LVDS-PHY 的寄存器：</p>
+<div align="center"><img src="/images/原理及实现/DRM/Linux-LVDS开发要点/lvds-phy-reg0.png"></div>
+
+<div align="center"><img src="/images/原理及实现/DRM/Linux-LVDS开发要点/lvds-phy-reg1.png"></div>
+
+<p>确定寄存器位值的最佳设置通常需要考虑以下几个因素（来自 AI ）：</p>
+<ul>
+<li>硬件规格和数据手册：首先，需要参考LVDS PHY芯片的数据手册或技术文档，了解各个寄存器位的具体功能和推荐设置值。这些文档通常会提供寄存器的默认值和可能的配置范围。</li>
+<li>信号完整性和质量要求：根据信号传输的距离、线材质量、以及对信号完整性的要求，可能需要调整输出电流（CC_ADJ）、共模电压（CM_ADJ）和前预加重（PRE_EMPH_ADJ）等参数，以优化信号的传输质量。</li>
+<li>电源电压稳定性：如果电源电压稳定性对系统性能有重要影响，可能需要调整Bandgap电压（VBG_ADJ）以确保电源电压的稳定性。</li>
+<li>信号摆率和EMI：输出信号的转换时间（SLEW_ADJ）影响信号的摆率，这直接关系到电磁干扰（EMI）和信号的上升&#x2F;下降时间。需要根据系统的EMI要求和信号完整性来调整这个参数。</li>
+<li>高速信号传输特性：对于高速信号传输，可能需要启用前预加重功能（PRE_EMPH_EN）来减少高频损耗，这需要根据信号的传输速率和线材特性来决定。</li>
+<li>系统功耗和热设计：使能100欧姆终止电阻（HS_EN）会增加功耗，因此需要根据系统的功耗预算和热设计要求来决定是否启用这个功能。</li>
+<li>实验和测试：在理论分析的基础上，实际的系统测试是确定最佳设置的关键步骤。可以通过实验和测试来观察不同设置下系统的性能，包括信号质量、稳定性和功耗等，从而找到最佳的寄存器配置。</li>
+</ul>
+<h2 id="设备树表示"><a href="#设备树表示" class="headerlink" title="设备树表示"></a>设备树表示</h2><h3 id="LDB"><a href="#LDB" class="headerlink" title="LDB"></a>LDB</h3><p>以下是 LDB 的设备树节点：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line">ldb: ldb@<span class="number">32</span>ec005c &#123;</span><br><span class="line">	<span class="meta">#address-cells = <span class="string">&lt;1&gt;</span>;</span></span><br><span class="line">	<span class="meta">#size-cells = <span class="string">&lt;0&gt;</span>;</span></span><br><span class="line">	compatible = <span class="string">&quot;imx8mp-learn,lvds-display-bridge&quot;</span>;</span><br><span class="line">	gpr = &lt;&amp;media_blk_ctrl&gt;;</span><br><span class="line">	ctrl-id = &lt;<span class="number">0x5c</span>&gt;;</span><br><span class="line">	clocks = &lt;&amp;clk IMX8MP_CLK_MEDIA_LDB_ROOT&gt;;</span><br><span class="line">	clock-names = <span class="string">&quot;ldb&quot;</span>;</span><br><span class="line">	assigned-clocks = &lt;&amp;clk IMX8MP_CLK_MEDIA_LDB&gt;;</span><br><span class="line">	assigned-clock-parents = &lt;&amp;clk IMX8MP_VIDEO_PLL1_OUT&gt;;</span><br><span class="line">	power-domains = &lt;&amp;pgc_mediamix&gt;;</span><br><span class="line">	channels-count = &lt;<span class="number">2</span>&gt;;</span><br><span class="line">	state = <span class="string">&quot;disabled&quot;</span>;</span><br><span class="line"></span><br><span class="line">	ldb_channel@<span class="number">0</span> &#123;</span><br><span class="line">		<span class="meta">#address-cells = <span class="string">&lt;1&gt;</span>;</span></span><br><span class="line">		<span class="meta">#size-cells = <span class="string">&lt;0&gt;</span>;</span></span><br><span class="line">		reg = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">		phys = &lt;&amp;lvds_phy0&gt;;</span><br><span class="line">		phy-names = <span class="string">&quot;lvds-phy&quot;</span>;</span><br><span class="line">		state = <span class="string">&quot;disabled&quot;</span>;</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* Input */</span></span><br><span class="line">		port@<span class="number">0</span> &#123;</span><br><span class="line">			reg = &lt;<span class="number">0</span>&gt;;</span><br><span class="line"></span><br><span class="line">			ch0_from_lcdif2: endpoint@<span class="number">0</span> &#123;</span><br><span class="line">				remote-endpoint = &lt;&amp;disp_to_ch0&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line">		&#125;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	ldb_channel@<span class="number">1</span> &#123;</span><br><span class="line">		<span class="meta">#address-cells = <span class="string">&lt;1&gt;</span>;</span></span><br><span class="line">		<span class="meta">#size-cells = <span class="string">&lt;0&gt;</span>;</span></span><br><span class="line">		reg = &lt;<span class="number">1</span>&gt;;</span><br><span class="line">		phys = &lt;&amp;lvds_phy1&gt;;</span><br><span class="line">		phy-names = <span class="string">&quot;lvds-phy&quot;</span>;</span><br><span class="line">		state = <span class="string">&quot;disabled&quot;</span>;</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* Input */</span></span><br><span class="line">		port@<span class="number">0</span> &#123;</span><br><span class="line">			reg = &lt;<span class="number">0</span>&gt;;</span><br><span class="line"></span><br><span class="line">			ch1_from_lcdif2: endpoint@<span class="number">0</span> &#123;</span><br><span class="line">				remote-endpoint = &lt;&amp;disp_to_ch1&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line">		&#125;;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>该节点分为两部分，一部分是它在 SoC 内的能源供给和寄存器地址的描述，另一部分是它自己的 LVDS 通道的描述。</p>
+<h3 id="LVDS-PHY"><a href="#LVDS-PHY" class="headerlink" title="LVDS-PHY"></a>LVDS-PHY</h3><p>以下是 LVDS-PHY 的设备树节点：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">lvds_phy: lvds-phy@<span class="number">32</span>ec0128 &#123;</span><br><span class="line">	<span class="meta">#address-cells = <span class="string">&lt;1&gt;</span>;</span></span><br><span class="line">	<span class="meta">#size-cells = <span class="string">&lt;0&gt;</span>;</span></span><br><span class="line">	compatible = <span class="string">&quot;imx-learn,lvds-phy&quot;</span>;</span><br><span class="line">	gpr = &lt;&amp;media_blk_ctrl&gt;;</span><br><span class="line">	ctrl-id = &lt;<span class="number">0x128</span>&gt;;</span><br><span class="line">	clocks = &lt;&amp;clk IMX8MP_CLK_MEDIA_APB_ROOT&gt;;</span><br><span class="line">	clock-names = <span class="string">&quot;apb&quot;</span>;</span><br><span class="line">	power-domains = &lt;&amp;pgc_mediamix&gt;;</span><br><span class="line">	cnt-phys = &lt;<span class="number">2</span>&gt;;</span><br><span class="line">	state = <span class="string">&quot;disabled&quot;</span>;</span><br><span class="line"></span><br><span class="line">	lvds_phy0: lvds_phy@<span class="number">0</span> &#123;</span><br><span class="line">		reg = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">		<span class="meta">#phy-cells = <span class="string">&lt;0&gt;</span>;</span></span><br><span class="line">	&#125;;</span><br><span class="line">	lvds_phy1: lvds_phy@<span class="number">1</span> &#123;</span><br><span class="line">		reg = &lt;<span class="number">1</span>&gt;;</span><br><span class="line">		<span class="meta">#phy-cells = <span class="string">&lt;0&gt;</span>;</span></span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Panel-LVDS"><a href="#Panel-LVDS" class="headerlink" title="Panel-LVDS"></a>Panel-LVDS</h3><p>Panel-LVDS 分为两部分，一是单路 LVDS ，二是双路 LVDS 。<br>单路 LVDS ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line">/&#123;</span><br><span class="line">	lvds_panel0: lvds-panel@<span class="number">0</span> &#123;</span><br><span class="line">		<span class="meta">#address-cells = <span class="string">&lt;1&gt;</span>;</span></span><br><span class="line">		<span class="meta">#size-cells = <span class="string">&lt;0&gt;</span>;</span></span><br><span class="line">		compatible = <span class="string">&quot;imx-learn,lvds-panel&quot;</span>;</span><br><span class="line">		label = <span class="string">&quot;1280x800-10.1-lvds&quot;</span>;</span><br><span class="line"></span><br><span class="line">		width-mm = &lt;<span class="number">216</span>&gt;;</span><br><span class="line">		height-mm = &lt;<span class="number">135</span>&gt;;</span><br><span class="line">		data-mapping = <span class="string">&quot;vesa-24&quot;</span>;	<span class="comment">/* jeida-18, jeida-24, vesa-24 */</span></span><br><span class="line">		backlight = &lt;&amp;lvds_backlight&gt;;</span><br><span class="line">		<span class="comment">// pinctrl-0 = &lt;&amp;pinctrl_lvds_panel_en&gt;;</span></span><br><span class="line">		<span class="comment">// reset-gpios = &lt;&amp;gpio1 10 GPIO_ACTIVE_LOW&gt;;</span></span><br><span class="line">		panel-type = <span class="string">&quot;lvds&quot;</span>;</span><br><span class="line">		status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line"></span><br><span class="line">		panel-timing &#123;</span><br><span class="line">			<span class="comment">/* 1280x800 @65MHz */</span></span><br><span class="line">			clock-frequency = &lt;<span class="number">74250000</span>&gt;;</span><br><span class="line">			hactive = &lt;<span class="number">1280</span>&gt;;</span><br><span class="line">			vactive = &lt;<span class="number">800</span>&gt;;</span><br><span class="line">			hfront-porch = &lt;<span class="number">70</span>&gt;;</span><br><span class="line">			hsync-len = &lt;<span class="number">10</span>&gt;;</span><br><span class="line">			hback-porch = &lt;<span class="number">80</span>&gt;;</span><br><span class="line">			vfront-porch = &lt;<span class="number">15</span>&gt;;</span><br><span class="line">			vsync-len = &lt;<span class="number">8</span>&gt;;</span><br><span class="line">			vback-porch = &lt;<span class="number">15</span>&gt;;</span><br><span class="line">			hsync-active = &lt;<span class="number">1</span>&gt;;</span><br><span class="line">			vsync-active = &lt;<span class="number">1</span>&gt;;</span><br><span class="line">			de-active = &lt;<span class="number">1</span>&gt;;</span><br><span class="line">			pixelclk-active = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		port@<span class="number">0</span> &#123;</span><br><span class="line">			reg = &lt;<span class="number">0</span>&gt;;</span><br><span class="line"></span><br><span class="line">			panel_from_channel: endpoint@<span class="number">0</span> &#123;</span><br><span class="line">				remote-endpoint = &lt;&amp;ch0_to_panel&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line">		&#125;;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;ldb &#123;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line"></span><br><span class="line">	ldb_channel@<span class="number">0</span> &#123;</span><br><span class="line">		status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* output */</span></span><br><span class="line">		port@<span class="number">1</span> &#123;</span><br><span class="line">			reg = &lt;<span class="number">1</span>&gt;;</span><br><span class="line"></span><br><span class="line">			ch0_to_panel: endpoint@<span class="number">0</span> &#123;</span><br><span class="line">				remote-endpoint = &lt;&amp;panel_from_channel&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line">		&#125;;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>双路 LVDS ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br></pre></td><td class="code"><pre><span class="line">/&#123;</span><br><span class="line">	lvds_panel0: lvds-panel@<span class="number">0</span> &#123;</span><br><span class="line">		<span class="meta">#address-cells = <span class="string">&lt;1&gt;</span>;</span></span><br><span class="line">		<span class="meta">#size-cells = <span class="string">&lt;0&gt;</span>;</span></span><br><span class="line">		compatible = <span class="string">&quot;imx-learn,lvds-panel&quot;</span>;</span><br><span class="line">		label = <span class="string">&quot;1920x1080-15.6-lvds&quot;</span>;</span><br><span class="line"></span><br><span class="line">		width-mm = &lt;<span class="number">344</span>&gt;;</span><br><span class="line">		height-mm = &lt;<span class="number">194</span>&gt;;</span><br><span class="line">		data-mapping = <span class="string">&quot;vesa-24&quot;</span>;	<span class="comment">/* jeida-18, jeida-24, vesa-24 */</span></span><br><span class="line">		backlight = &lt;&amp;lvds_backlight&gt;;</span><br><span class="line">		<span class="comment">// pinctrl-0 = &lt;&amp;pinctrl_lvds_panel_en&gt;;</span></span><br><span class="line">		<span class="comment">// reset-gpios = &lt;&amp;gpio1 10 GPIO_ACTIVE_LOW&gt;;</span></span><br><span class="line">		panel-type = <span class="string">&quot;lvds&quot;</span>;</span><br><span class="line">		status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line"></span><br><span class="line">		panel-timing &#123;</span><br><span class="line">			<span class="comment">/* 1280x800 @65MHz */</span></span><br><span class="line">			clock-frequency = &lt;<span class="number">148500000</span>&gt;;</span><br><span class="line">			hactive = &lt;<span class="number">1920</span>&gt;;</span><br><span class="line">			vactive = &lt;<span class="number">1080</span>&gt;;</span><br><span class="line">			hfront-porch = &lt;<span class="number">40</span>&gt;;</span><br><span class="line">			hsync-len = &lt;<span class="number">60</span>&gt;;</span><br><span class="line">			hback-porch = &lt;<span class="number">100</span>&gt;;</span><br><span class="line">			vfront-porch = &lt;<span class="number">3</span>&gt;;</span><br><span class="line">			vsync-len = &lt;<span class="number">2</span>&gt;;</span><br><span class="line">			vback-porch = &lt;<span class="number">30</span>&gt;;</span><br><span class="line">			hsync-active = &lt;<span class="number">1</span>&gt;;</span><br><span class="line">			vsync-active = &lt;<span class="number">1</span>&gt;;</span><br><span class="line">			de-active = &lt;<span class="number">1</span>&gt;;</span><br><span class="line">			pixelclk-active = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		port@<span class="number">0</span> &#123;</span><br><span class="line">			reg = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">			dual-lvds-odd-pixels;</span><br><span class="line"></span><br><span class="line">			panel_from_channel0: endpoint@<span class="number">0</span> &#123;</span><br><span class="line">				remote-endpoint = &lt;&amp;ch0_to_panel&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		port@<span class="number">1</span> &#123;</span><br><span class="line">			reg = &lt;<span class="number">1</span>&gt;;</span><br><span class="line">			dual-lvds-even-pixels;</span><br><span class="line"></span><br><span class="line">			panel_from_channel1: endpoint@<span class="number">1</span> &#123;</span><br><span class="line">				remote-endpoint = &lt;&amp;ch1_to_panel&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line">		&#125;;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;ldb &#123;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line"></span><br><span class="line">	ldb_channel@<span class="number">0</span> &#123;</span><br><span class="line">		status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* output */</span></span><br><span class="line">		port@<span class="number">1</span> &#123;</span><br><span class="line">			reg = &lt;<span class="number">1</span>&gt;;</span><br><span class="line"></span><br><span class="line">			ch0_to_panel: endpoint@<span class="number">0</span> &#123;</span><br><span class="line">				remote-endpoint = &lt;&amp;panel_from_channel0&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line">		&#125;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	ldb_channel@<span class="number">1</span> &#123;</span><br><span class="line">		status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* output */</span></span><br><span class="line">		port@<span class="number">1</span> &#123;</span><br><span class="line">			reg = &lt;<span class="number">1</span>&gt;;</span><br><span class="line"></span><br><span class="line">			ch1_to_panel: endpoint@<span class="number">0</span> &#123;</span><br><span class="line">				remote-endpoint = &lt;&amp;panel_from_channel1&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line">		&#125;;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h2 id="驱动实现要点"><a href="#驱动实现要点" class="headerlink" title="驱动实现要点"></a>驱动实现要点</h2><p>以下是以 LVDS 为例的 DRM 结构图：</p>
+<div align="center"><img src="image/drm/drm-my-ldb-struct.drawio.png"></div>
+
+<h3 id="LDB和LVDS-PHY驱动"><a href="#LDB和LVDS-PHY驱动" class="headerlink" title="LDB和LVDS-PHY驱动"></a>LDB和LVDS-PHY驱动</h3><h4 id="驱动初始化"><a href="#驱动初始化" class="headerlink" title="驱动初始化"></a>驱动初始化</h4><p>在 LDB 驱动的初始化，这里尤其关注双路 LVDS ，双路 LVDS 使用奇偶像素拆分传输数据，这里要尤其关注这个特性。根据以上设备树节点的描述，以下是具体的代码实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">port0 = of_graph_get_port_by_id(ldb-&gt;channels[<span class="number">0</span>].of_node, <span class="number">1</span>);</span><br><span class="line">port1 = of_graph_get_port_by_id(ldb-&gt;channels[<span class="number">1</span>].of_node, <span class="number">1</span>);</span><br><span class="line">ret = drm_of_lvds_get_dual_link_pixel_order(port0, port1);</span><br><span class="line">of_node_put(port0);</span><br><span class="line">of_node_put(port1);</span><br><span class="line"><span class="keyword">if</span> (ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">	dev_info(dev, <span class="string">&quot;Invalid Dual Link Pixel Order\n&quot;</span>);</span><br><span class="line">	<span class="keyword">return</span> -ENODEV;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (ret == DRM_LVDS_DUAL_LINK_EVEN_ODD_PIXELS &amp;&amp; </span><br><span class="line">    !of_data-&gt;ldb_support.dual_even_odd_pixel) &#123;</span><br><span class="line">	dev_err(dev, <span class="string">&quot;EVEN_ODD Pixel isn&#x27;t supported\n&quot;</span>);</span><br><span class="line">	<span class="keyword">return</span> -ENODEV;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">if</span> (ret == DRM_LVDS_DUAL_LINK_ODD_EVEN_PIXELS &amp;&amp; </span><br><span class="line">    !of_data-&gt;ldb_support.dual_odd_even_pixel) &#123;</span><br><span class="line">	dev_err(dev, <span class="string">&quot;ODD_EVEN Pixel isn&#x27;t supported\n&quot;</span>);</span><br><span class="line">	<span class="keyword">return</span> -ENODEV;</span><br><span class="line">&#125;</span><br><span class="line">ldb-&gt;dual_link_pixel = ret;</span><br></pre></td></tr></table></figure>
+
+<p>在 LVDS-PHY 的初始化，根据该组件的寄存器，这里有一个默认的初始值：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">lvds_phy_init</span><span class="params">(<span class="keyword">struct</span> phy *phy)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">lvds_phy</span> *<span class="title">lvds_phy</span> =</span> dev_get_drvdata(phy-&gt;dev.parent);</span><br><span class="line"></span><br><span class="line">	clk_prepare_enable(lvds_phy-&gt;apb);</span><br><span class="line"></span><br><span class="line">	phy_write(lvds_phy, CC_ADJ(<span class="number">0x2</span>) | PRE_EMPH_EN | PRE_EMPH_ADJ(<span class="number">0x3</span>));</span><br><span class="line"></span><br><span class="line">	clk_disable_unprepare(lvds_phy-&gt;apb);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="Mode-Valid或Atomic-Check"><a href="#Mode-Valid或Atomic-Check" class="headerlink" title="Mode_Valid或Atomic_Check"></a>Mode_Valid或Atomic_Check</h4><p>在 Display-Pipeline 的生命周期 <code>Disable-&gt;Enable</code> 和 <code>Enable1-&gt;Enable2</code> ，在 Atomic 操作请求的 CHECK 的 Check Display-Mode 阶段下，需要调用 LDB 驱动的回调函数 <code>-&gt;mode_valid()</code> 或 <code>-&gt;atomic_check()</code> ，检查从 Connector 获取的显示参数是否在 LDB 可用。<br>这里要分单路 LVDS 和双路 LVDS ，因为支持的最大分辨率不同。</p>
+<h4 id="Atomic-Enable"><a href="#Atomic-Enable" class="headerlink" title="Atomic_Enable"></a>Atomic_Enable</h4><p>在 Display-Pipeline 的生命周期 <code>Disable-&gt;Enable</code> 和 <code>Enable1-&gt;Enable2</code> ，在 Atomic 操作请求的 COMMIT 的 Real Commit 阶段下，调用 LDB 驱动的回调函数 <code>-&gt;atomic_enable()</code> 去使能 LDB 和 LVDS-PHY 。</p>
+<h5 id="对于LVDS-PHY"><a href="#对于LVDS-PHY" class="headerlink" title="对于LVDS-PHY"></a>对于LVDS-PHY</h5><p>开启 Bandgap 、使能对应的 LVDS 通道。<br>以下是对应的代码实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">lvds_phy_power_on</span><span class="params">(<span class="keyword">struct</span> phy *phy)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">lvds_phy_device</span> *<span class="title">phydev</span> =</span> phy_get_drvdata(phy);</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">lvds_phy</span> *<span class="title">lvds_phy</span> =</span> dev_get_drvdata(phy-&gt;dev.parent);</span><br><span class="line">	u32 val;</span><br><span class="line"></span><br><span class="line">	clk_prepare_enable(lvds_phy-&gt;apb);</span><br><span class="line"></span><br><span class="line">	val = phy_read(lvds_phy);</span><br><span class="line">	<span class="keyword">if</span> (!(val &amp; BG_EN)) &#123;</span><br><span class="line">		val |= BG_EN;</span><br><span class="line">		phy_write(lvds_phy, val);</span><br><span class="line">		<span class="comment">/* Wait 15us to make sure the bandgap to be stable. */</span></span><br><span class="line">		usleep_range(<span class="number">15</span>, <span class="number">20</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	val = phy_read(lvds_phy);</span><br><span class="line">	val |= CH_EN(phydev-&gt;id);</span><br><span class="line">	phy_write(lvds_phy, val);</span><br><span class="line"></span><br><span class="line">	clk_disable_unprepare(lvds_phy-&gt;apb);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Wait 5us to ensure the phy be settling. */</span></span><br><span class="line">	usleep_range(<span class="number">5</span>, <span class="number">10</span>);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h5 id="对于LDB"><a href="#对于LDB" class="headerlink" title="对于LDB"></a>对于LDB</h5><p>分为几个步骤：</p>
+<ol>
+<li>根据 LCD Interface 输出到 LDB 的像素时钟频率，计算出 ch_{X}_serial_clk 的时钟频率，然后使能它。</li>
+<li>使能 LVDS 的电源域</li>
+<li>根据输出像素格式、HSYNC、VSYNC 和单&#x2F;双路 LVDS 的指定使能（包括奇偶像素设置），填写 LDB 寄存器。</li>
+</ol>
+<p>以下是 LDB 的使能实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">imx_ldb_atomic_enable</span><span class="params">(<span class="keyword">struct</span> drm_bridge *bridge,</span></span><br><span class="line"><span class="params">				  <span class="keyword">struct</span> drm_bridge_state *old_bridge_state)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">imx_ldb_channel</span> *<span class="title">ldb_ch</span> =</span> to_imx_ldb_channel(bridge);</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">imx_ldb</span> *<span class="title">ldb</span> =</span> ldb_ch-&gt;ldb;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">drm_encoder</span> *<span class="title">encoder</span> =</span> bridge-&gt;encoder;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">drm_crtc</span> *<span class="title">crtc</span> =</span> encoder-&gt;crtc;</span><br><span class="line">	u32 flags = old_bridge_state-&gt;output_bus_cfg.flags;</span><br><span class="line">	<span class="type">int</span> pix_clk;</span><br><span class="line">	u32 ldb_ctrl = <span class="number">0</span>;</span><br><span class="line">	</span><br><span class="line">	pix_clk = crtc-&gt;state-&gt;adjusted_mode.clock * <span class="number">1000</span> * <span class="number">7</span>;</span><br><span class="line">	<span class="keyword">if</span> (ldb-&gt;dual)</span><br><span class="line">		pix_clk &gt;&gt;= <span class="number">1</span>;</span><br><span class="line">	clk_set_rate(ldb-&gt;ldb_pix, pix_clk);</span><br><span class="line">	</span><br><span class="line">	clk_prepare_enable(ldb-&gt;ldb_pix);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (ldb_ch == &amp;ldb-&gt;channels[<span class="number">0</span>] || ldb-&gt;dual) &#123;</span><br><span class="line">		<span class="keyword">if</span> (flags &amp; DRM_BUS_FLAG_SYNC_DRIVE_POSEDGE)</span><br><span class="line">			ldb_ctrl |= LDB_DI0_VS_POL_ACT_LOW;</span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (flags &amp; DRM_BUS_FLAG_SYNC_DRIVE_NEGEDGE)</span><br><span class="line">			ldb_ctrl &amp;= ~LDB_DI0_VS_POL_ACT_LOW;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> (ldb_ch == &amp;ldb-&gt;channels[<span class="number">1</span>] || ldb-&gt;dual) &#123;</span><br><span class="line">		<span class="keyword">if</span> (flags &amp; DRM_BUS_FLAG_SYNC_DRIVE_POSEDGE)</span><br><span class="line">			ldb_ctrl |= LDB_DI1_VS_POL_ACT_LOW;</span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (flags &amp; DRM_BUS_FLAG_SYNC_DRIVE_NEGEDGE)</span><br><span class="line">			ldb_ctrl &amp;= ~LDB_DI1_VS_POL_ACT_LOW;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	ldb_ch_set_bus_format(ldb_ch, </span><br><span class="line">			      old_bridge_state-&gt;output_bus_cfg.format,</span><br><span class="line">			      &amp;ldb_ctrl);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (ldb-&gt;dual) &#123;</span><br><span class="line">		ldb_ctrl |= LDB_SPLIT_MODE_EN;</span><br><span class="line">		<span class="keyword">if</span> (ldb-&gt;dual_link_pixel == DRM_LVDS_DUAL_LINK_ODD_EVEN_PIXELS) &#123;</span><br><span class="line">			ldb_ctrl &amp;= ~(LDB_CH0_SELECT_TO_DI1);</span><br><span class="line">			ldb_ctrl |= LDB_CH1_SELECT_TO_DI1;</span><br><span class="line">		&#125; <span class="keyword">else</span> <span class="keyword">if</span> (ldb-&gt;dual_link_pixel == DRM_LVDS_DUAL_LINK_EVEN_ODD_PIXELS) &#123;</span><br><span class="line">			ldb_ctrl &amp;= ~(LDB_CH1_SELECT_TO_DI1);</span><br><span class="line">			ldb_ctrl |= LDB_CH0_SELECT_TO_DI1;</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			WARN_ON(<span class="number">1</span>);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (ldb_ch == &amp;ldb-&gt;channels[<span class="number">0</span>] || ldb-&gt;dual)</span><br><span class="line">		ldb_ctrl |= LDB_CH0_MODE_EN;</span><br><span class="line">	<span class="keyword">if</span> (ldb_ch == &amp;ldb-&gt;channels[<span class="number">1</span>] || ldb-&gt;dual)</span><br><span class="line">		ldb_ctrl |= LDB_CH0_MODE_EN;</span><br><span class="line">	</span><br><span class="line">	<span class="keyword">if</span> (pm_runtime_enabled(ldb-&gt;dev))</span><br><span class="line">		pm_runtime_get_sync(ldb-&gt;dev);</span><br><span class="line"></span><br><span class="line">	regmap_write(ldb-&gt;regmap, ldb-&gt;ctrl_id, ldb_ctrl);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">ldb_ch_set_bus_format</span><span class="params">(<span class="keyword">struct</span> imx_ldb_channel *ldb_ch, </span></span><br><span class="line"><span class="params">				  u32 bus_format, u32 *ldb_ctrl)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">imx_ldb</span> *<span class="title">ldb</span> =</span> ldb_ch-&gt;ldb;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">switch</span> (bus_format) &#123;</span><br><span class="line">	<span class="keyword">case</span> MEDIA_BUS_FMT_RGB666_1X7X3_SPWG:</span><br><span class="line">		<span class="keyword">if</span> (ldb_ch-&gt;id == <span class="number">0</span> || ldb-&gt;dual)</span><br><span class="line">			*ldb_ctrl |= LDB_BIT_MAP_CH0_JEIDA;</span><br><span class="line">		<span class="keyword">if</span> (ldb_ch-&gt;id == <span class="number">1</span> || ldb-&gt;dual)</span><br><span class="line">			*ldb_ctrl |= LDB_BIT_MAP_CH1_JEIDA;</span><br><span class="line">		<span class="keyword">break</span>;</span><br><span class="line">	<span class="keyword">case</span> MEDIA_BUS_FMT_RGB888_1X7X4_SPWG:</span><br><span class="line">		<span class="keyword">if</span> (ldb_ch-&gt;id == <span class="number">0</span> || ldb-&gt;dual)</span><br><span class="line">			*ldb_ctrl |= LDB_DATA_WIDTH_CH0_24;</span><br><span class="line">		<span class="keyword">if</span> (ldb_ch-&gt;id == <span class="number">1</span> || ldb-&gt;dual)</span><br><span class="line">			*ldb_ctrl |= LDB_DATA_WIDTH_CH1_24;</span><br><span class="line">		<span class="keyword">break</span>;</span><br><span class="line">	<span class="keyword">case</span> MEDIA_BUS_FMT_RGB888_1X7X4_JEIDA:</span><br><span class="line">		<span class="keyword">if</span> (ldb_ch-&gt;id == <span class="number">0</span> || ldb-&gt;dual)</span><br><span class="line">			*ldb_ctrl |= LDB_DATA_WIDTH_CH0_24 | LDB_BIT_MAP_CH0_JEIDA;</span><br><span class="line">		<span class="keyword">if</span> (ldb_ch-&gt;id == <span class="number">1</span> || ldb-&gt;dual)</span><br><span class="line">			*ldb_ctrl |= LDB_DATA_WIDTH_CH1_24 | LDB_BIT_MAP_CH1_JEIDA;</span><br><span class="line">		<span class="keyword">break</span>;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="Atomic-Disable"><a href="#Atomic-Disable" class="headerlink" title="Atomic_Disable"></a>Atomic_Disable</h4><p>在 Display-Pipeline 的生命周期 <code>Enable-&gt;Disable</code> 和 <code>Enable1-&gt;Enable2</code> ，在 Atomic 操作请求的 COMMIT 的 Real Commit 阶段下，调用 LDB 驱动的回调函数 <code>-&gt;atomic_disable()</code> 去关闭 LDB 和 LVDS-PHY 。</p>
+<h5 id="对于LVDS-PHY-1"><a href="#对于LVDS-PHY-1" class="headerlink" title="对于LVDS-PHY"></a>对于LVDS-PHY</h5><p>关闭 Bandgap ，以及对应的 LVDS 通道。<br>以下是对应的代码实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">lvds_phy_power_off</span><span class="params">(<span class="keyword">struct</span> phy *phy)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">lvds_phy_device</span> *<span class="title">phydev</span> =</span> phy_get_drvdata(phy);</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">lvds_phy</span> *<span class="title">lvds_phy</span> =</span> dev_get_drvdata(phy-&gt;dev.parent);</span><br><span class="line">	u32 val;</span><br><span class="line"></span><br><span class="line">	clk_prepare_enable(lvds_phy-&gt;apb);</span><br><span class="line"></span><br><span class="line">	val = phy_read(lvds_phy);</span><br><span class="line">	val &amp;= ~BG_EN;</span><br><span class="line">	phy_write(lvds_phy, val);</span><br><span class="line"></span><br><span class="line">	val = phy_read(lvds_phy);</span><br><span class="line">	val &amp;= ~CH_EN(phydev-&gt;id);</span><br><span class="line">	phy_write(lvds_phy, val);</span><br><span class="line"></span><br><span class="line">	clk_disable_unprepare(lvds_phy-&gt;apb);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h5 id="对于LDB-1"><a href="#对于LDB-1" class="headerlink" title="对于LDB"></a>对于LDB</h5><p>分为几个步骤：</p>
+<ol>
+<li>关闭 LVDS 通道</li>
+<li>关闭时钟 ch_{X}_serial_clk 。</li>
+<li>关闭 LVDS 的电源域</li>
+</ol>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">imx_ldb_atomic_disable</span><span class="params">(<span class="keyword">struct</span> drm_bridge *bridge,</span></span><br><span class="line"><span class="params">				   <span class="keyword">struct</span> drm_bridge_state *old_bridge_state)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">imx_ldb_channel</span> *<span class="title">ldb_ch</span> =</span> to_imx_ldb_channel(bridge);</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">imx_ldb</span> *<span class="title">ldb</span> =</span> ldb_ch-&gt;ldb;</span><br><span class="line">	u32 ldb_ctrl;</span><br><span class="line"></span><br><span class="line">	regmap_read(ldb-&gt;regmap, ldb-&gt;ctrl_id, &amp;ldb_ctrl);</span><br><span class="line">	<span class="keyword">if</span> (ldb_ch == &amp;ldb-&gt;channels[<span class="number">0</span>] || ldb-&gt;dual)</span><br><span class="line">		ldb_ctrl &amp;= ~LDB_CH0_MODE_EN;</span><br><span class="line">	<span class="keyword">if</span> (ldb_ch == &amp;ldb-&gt;channels[<span class="number">1</span>] || ldb-&gt;dual)</span><br><span class="line">		ldb_ctrl &amp;= ~LDB_CH1_MODE_EN;</span><br><span class="line">	regmap_write(ldb-&gt;regmap, ldb-&gt;ctrl_id, ldb_ctrl);</span><br><span class="line"></span><br><span class="line">	clk_disable_unprepare(ldb-&gt;ldb_pix);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (pm_runtime_enabled(ldb-&gt;dev))</span><br><span class="line">		pm_runtime_put(ldb-&gt;dev);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Panel-LVDS驱动"><a href="#Panel-LVDS驱动" class="headerlink" title="Panel-LVDS驱动"></a>Panel-LVDS驱动</h3><h4 id="驱动初始化-1"><a href="#驱动初始化-1" class="headerlink" title="驱动初始化"></a>驱动初始化</h4><p>Panel 驱动初始化最重要的是从设备树中获取显示参数，以 lvds_panel_parse_dt_display() 为例：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> </span><br><span class="line"><span class="title function_">lvds_panel_parse_dt_display</span><span class="params">(<span class="keyword">struct</span> device *dev, <span class="keyword">struct</span> lvds_panel *lvds_panel)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">device_node</span> *<span class="title">np</span> =</span> dev-&gt;of_node;</span><br><span class="line">	<span class="type">const</span> <span class="type">char</span> *panel_type;</span><br><span class="line">	<span class="type">int</span> ret;</span><br><span class="line"></span><br><span class="line">	ret = of_property_read_string(np, <span class="string">&quot;panel-type&quot;</span>,</span><br><span class="line">				      &amp;panel_type);</span><br><span class="line">	<span class="keyword">if</span> (ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">		dev_err(dev, <span class="string">&quot;Unkown the type of a current panel\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> ret;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	ret = of_drm_get_panel_orientation(np, &amp;lvds_panel-&gt;orientation);</span><br><span class="line">	<span class="keyword">if</span> (ret &lt; <span class="number">0</span>)</span><br><span class="line">		dev_warn(dev, <span class="string">&quot;Invalid of_property &#x27;rotation&#x27;\n&quot;</span>);</span><br><span class="line">	</span><br><span class="line">	ret = of_get_drm_panel_display_mode(np, &amp;lvds_panel-&gt;dmode, </span><br><span class="line">					    &amp;lvds_panel-&gt;bus_flags);</span><br><span class="line">	<span class="keyword">if</span> (ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">		dev_err(dev, <span class="string">&quot;Failed to parse display-timings parameter&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> ret;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	ret = drm_of_lvds_get_data_mapping(np);</span><br><span class="line">	<span class="keyword">if</span> (ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">		dev_err(dev, <span class="string">&quot;Failed to get bus-format\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> ret;</span><br><span class="line">	&#125;</span><br><span class="line">	lvds_panel-&gt;bus_format = ret;</span><br><span class="line"></span><br><span class="line">	ret = of_property_read_string(np, <span class="string">&quot;label&quot;</span>, &amp;lvds_panel-&gt;label);</span><br><span class="line">	<span class="keyword">if</span> (unlikely(ret &lt; <span class="number">0</span>)) &#123;</span><br><span class="line">		lvds_panel-&gt;label = devm_kzalloc(dev, DEFAULT_LABEL_SIZE,</span><br><span class="line">						GFP_KERNEL);</span><br><span class="line">		<span class="keyword">if</span> (likely(lvds_panel-&gt;label)) &#123;</span><br><span class="line">			<span class="built_in">sprintf</span>((<span class="type">char</span> *)lvds_panel-&gt;label, </span><br><span class="line">				<span class="string">&quot;%dx%d-lvds&quot;</span>, </span><br><span class="line">				lvds_panel-&gt;dmode.hdisplay, </span><br><span class="line">				lvds_panel-&gt;dmode.vdisplay);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	lvds_panel-&gt;bus_flags |= of_property_read_bool(np, <span class="string">&quot;data-mirror&quot;</span>) ?</span><br><span class="line">					DRM_BUS_FLAG_DATA_LSB_TO_MSB :</span><br><span class="line">					DRM_BUS_FLAG_DATA_MSB_TO_LSB;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>该函数中，最重要的是 of_get_drm_panel_display_mode() 和 drm_of_lvds_get_data_mapping() 。一个是获取 Panel 的时序，另一个是获取 Panel 的像素格式。</p>
+<h4 id="获取模式"><a href="#获取模式" class="headerlink" title="获取模式"></a>获取模式</h4><p>在 Atomic 操作前，需要调用 drm_helper_probe_single_connector_modes() 获取 Connector 的显示参数，在 Connector 的回调函数 <code>-&gt;get_modes()</code> ，调用 Panel 的回调函数 <code>-&gt;get_modes()</code> 获取。以下是该回调函数的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">lvds_panel_get_modes</span><span class="params">(<span class="keyword">struct</span> drm_panel *panel, </span></span><br><span class="line"><span class="params">				<span class="keyword">struct</span> drm_connector *connector)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">lvds_panel</span> *<span class="title">lvds_panel</span> =</span> to_lvds_panel(panel);</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">drm_display_mode</span> *<span class="title">mode</span>;</span></span><br><span class="line"></span><br><span class="line">	mode = drm_mode_duplicate(connector-&gt;dev, &amp;lvds_panel-&gt;dmode);</span><br><span class="line">	<span class="keyword">if</span> (unlikely(!mode))</span><br><span class="line">		<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	mode-&gt;type |= DRM_MODE_TYPE_PREFERRED | DRM_MODE_TYPE_DRIVER;</span><br><span class="line">	drm_mode_probed_add(connector, mode);</span><br><span class="line"></span><br><span class="line">	connector-&gt;display_info.width_mm = lvds_panel-&gt;dmode.width_mm;</span><br><span class="line">	connector-&gt;display_info.height_mm = lvds_panel-&gt;dmode.height_mm;</span><br><span class="line">	drm_display_info_set_bus_formats(&amp;connector-&gt;display_info, </span><br><span class="line">					 &amp;lvds_panel-&gt;bus_format, <span class="number">1</span>);</span><br><span class="line">	connector-&gt;display_info.bus_flags = lvds_panel-&gt;bus_flags;</span><br><span class="line"></span><br><span class="line">	drm_connector_set_panel_orientation(connector, </span><br><span class="line">					    lvds_panel-&gt;orientation);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="prepare和enable"><a href="#prepare和enable" class="headerlink" title="prepare和enable"></a>prepare和enable</h4><p>在 Display-Pipeline 的生命周期 <code>Disable-&gt;Enable</code> 和 <code>Enable1-&gt;Enable2</code> ，在 Atomic 操作请求的 COMMIT 的 Real Commit 阶段下，调用 Panel-LVDS 驱动的回调函数 <code>-&gt;prepare()</code> 和 <code>-&gt;enable()</code> 去使能 Panel 。</p>
+<p>以下是 <code>-&gt;prepare()</code> 的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">lvds_panel_prepare</span><span class="params">(<span class="keyword">struct</span> drm_panel *panel)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">lvds_panel</span> *<span class="title">lvds</span> =</span> to_lvds_panel(panel);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (lvds-&gt;supply) &#123;</span><br><span class="line">		<span class="type">int</span> err;</span><br><span class="line"></span><br><span class="line">		err = regulator_enable(lvds-&gt;supply);</span><br><span class="line">		<span class="keyword">if</span> (err &lt; <span class="number">0</span>) &#123;</span><br><span class="line">			dev_err(lvds-&gt;dev, <span class="string">&quot;failed to enable supply: %d\n&quot;</span>,</span><br><span class="line">				err);</span><br><span class="line">			<span class="keyword">return</span> err;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (lvds-&gt;enable_gpio)</span><br><span class="line">		gpiod_set_value_cansleep(lvds-&gt;enable_gpio, <span class="number">1</span>);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这类函数注重于针对 Panel 的能源供给。</p>
+<p>以下是 <code>-&gt;enable()</code> 的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">lvds_panel_enable</span><span class="params">(<span class="keyword">struct</span> drm_panel *panel)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">if</span> (panel-&gt;backlight) &#123;</span><br><span class="line">		panel-&gt;backlight-&gt;props.state &amp;= ~BL_CORE_FBBLANK;</span><br><span class="line">		panel-&gt;backlight-&gt;props.power = FB_BLANK_UNBLANK;</span><br><span class="line">		backlight_update_status(panel-&gt;backlight);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这类函数注重于针对 Panel 的背光使能。</p>
+<h4 id="disable和unprepare"><a href="#disable和unprepare" class="headerlink" title="disable和unprepare"></a>disable和unprepare</h4><p>在 Display-Pipeline 的生命周期 <code>Enable-&gt;Disable</code> 和 <code>Enable1-&gt;Enable2</code> ，在 Atomic 操作请求的 COMMIT 的 Real Commit 阶段下，调用 Panel-LVDS 驱动的回调函数 <code>-&gt;disable()</code> 和 <code>-&gt;unprepare()</code> 去关闭 Panel 。</p>
+<p>以下是 <code>-&gt;disable()</code> 的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">lvds_panel_disable</span><span class="params">(<span class="keyword">struct</span> drm_panel *panel)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">if</span> (panel-&gt;backlight) &#123;</span><br><span class="line">		panel-&gt;backlight-&gt;props.power = FB_BLANK_POWERDOWN;</span><br><span class="line">		panel-&gt;backlight-&gt;props.state |= BL_CORE_FBBLANK;</span><br><span class="line">		backlight_update_status(panel-&gt;backlight);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这类函数注重于针对 Panel 的背光关闭。</p>
+<p>以下是 <code>-&gt;unprepare()</code> 的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">lvds_panel_unprepare</span><span class="params">(<span class="keyword">struct</span> drm_panel *panel)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">lvds_panel</span> *<span class="title">lvds</span> =</span> to_lvds_panel(panel);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (lvds-&gt;enable_gpio)</span><br><span class="line">		gpiod_set_value_cansleep(lvds-&gt;enable_gpio, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (lvds-&gt;supply)</span><br><span class="line">		regulator_disable(lvds-&gt;supply);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这类函数注重于针对 Panel 的能源关闭。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/LVDS/" rel="tag"># LVDS</a>
+              <a href="/tags/IMX8MP/" rel="tag"># IMX8MP</a>
+              <a href="/tags/DRM/" rel="tag"># DRM</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/10/10/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8%E6%A8%A1%E5%9E%8B/" rel="prev" title="Linux - 设备驱动模型">
+                  <i class="fa fa-angle-left"></i> Linux - 设备驱动模型
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2025/10/14/%E9%85%8D%E7%BD%AE/allwinner/%E5%85%A8%E5%BF%97Tina5.0-SDK%E8%AF%B4%E6%98%8E/" rel="next" title="全志Tina5.0 - SDK说明">
+                  全志Tina5.0 - SDK说明 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言Coredump 是指在程序异常终止时，操作系统将程序的内存映像保存到磁盘上的一种机制。 在 Linux 系统中，core dump 提供了一种调试程序错误的重要方式，它记录了程序在崩溃时的内存状态，可以帮助开发人员快速定位问题。当程序因为某种原因（如段错误、非法指令等）异常终止时，Linux 系统会尝试将程序在内存中的映像、程序计数器、寄存器状态等信息写入到一个名为 core 的文件中，这个">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - Coredump调试">
+<meta property="og:url" content="http://example.com/2025/04/29/Skill/debug/Linux-Coredump%E8%B0%83%E8%AF%95/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="前言Coredump 是指在程序异常终止时，操作系统将程序的内存映像保存到磁盘上的一种机制。 在 Linux 系统中，core dump 提供了一种调试程序错误的重要方式，它记录了程序在崩溃时的内存状态，可以帮助开发人员快速定位问题。当程序因为某种原因（如段错误、非法指令等）异常终止时，Linux 系统会尝试将程序在内存中的映像、程序计数器、寄存器状态等信息写入到一个名为 core 的文件中，这个">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-04-28T16:00:00.000Z">
+<meta property="article:modified_time" content="2025-04-28T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="debug">
+<meta property="article:tag" content="dump">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2025/04/29/Skill/debug/Linux-Coredump%E8%B0%83%E8%AF%95/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2025/04/29/Skill/debug/Linux-Coredump%E8%B0%83%E8%AF%95/","path":"2025/04/29/Skill/debug/Linux-Coredump调试/","title":"Linux - Coredump调试"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - Coredump调试 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E6%A0%B8%E9%85%8D%E7%BD%AE"><span class="nav-number">2.</span> <span class="nav-text">内核配置</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%90%AF%E7%94%A8-coredump"><span class="nav-number">3.</span> <span class="nav-text">启用 coredump</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%96%E6%B6%88-coredump-%E6%96%87%E4%BB%B6%E5%A4%A7%E5%B0%8F%E9%99%90%E5%88%B6"><span class="nav-number">3.1.</span> <span class="nav-text">取消 coredump 文件大小限制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8C%87%E5%AE%9A-coredump-%E6%96%87%E4%BB%B6%E5%B8%A6%E6%9C%89-PID"><span class="nav-number">3.2.</span> <span class="nav-text">指定 coredump 文件带有 PID</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%A7%E8%A1%8C-coredump-%E6%96%87%E4%BB%B6%E7%94%9F%E6%88%90%E8%B7%AF%E5%BE%84"><span class="nav-number">3.3.</span> <span class="nav-text">执行 coredump 文件生成路径</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%A7%A6%E5%8F%91-coredump"><span class="nav-number">4.</span> <span class="nav-text">触发 coredump</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%A0%E7%A9%BA%E6%8C%87%E9%92%88%E8%A7%A3%E5%BC%95%E7%94%A8%E8%80%8C%E5%B4%A9%E6%BA%83"><span class="nav-number">4.1.</span> <span class="nav-text">因空指针解引用而崩溃</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%80%9A%E8%BF%87%E4%BF%A1%E5%8F%B7%E8%A7%A6%E5%8F%91-coredump"><span class="nav-number">4.2.</span> <span class="nav-text">通过信号触发 coredump</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8-GDB-%E8%B0%83%E8%AF%95-coredump"><span class="nav-number">5.</span> <span class="nav-text">使用 GDB 调试 coredump</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/04/29/Skill/debug/Linux-Coredump%E8%B0%83%E8%AF%95/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - Coredump调试 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - Coredump调试
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2025-04-29 00:00:00" itemprop="dateCreated datePublished" datetime="2025-04-29T00:00:00+08:00">2025-04-29</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Skill/" itemprop="url" rel="index"><span itemprop="name">Skill</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2.2k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>8 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>Coredump 是指在程序异常终止时，操作系统将程序的内存映像保存到磁盘上的一种机制。</p>
+<p>在 Linux 系统中，core dump 提供了一种调试程序错误的重要方式，它记录了程序在崩溃时的内存状态，可以帮助开发人员快速定位问题。当程序因为某种原因（如段错误、非法指令等）异常终止时，Linux 系统会尝试将程序在内存中的映像、程序计数器、寄存器状态等信息写入到一个名为 core 的文件中，这个文件就是所谓的 core dump。</p>
+<span id="more"></span>
+
+<h1 id="内核配置"><a href="#内核配置" class="headerlink" title="内核配置"></a>内核配置</h1><p>确保在内核中以默认开启以下配置：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">CONFIG_COREDUMP=y</span><br></pre></td></tr></table></figure>
+
+<h1 id="启用-coredump"><a href="#启用-coredump" class="headerlink" title="启用 coredump"></a>启用 coredump</h1><p>启动Coredump执行一系列命令：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ulimit -c unlimited</span><br><span class="line">echo 1 &gt; /proc/sys/kernel/core_uses_pid</span><br><span class="line">echo &quot;/tmp/core-%e-%s-%u-%g-%p-%t&quot; &gt; /proc/sys/kernel/core_pattern</span><br></pre></td></tr></table></figure>
+
+<p>下面讲解以上命令的作用。</p>
+<h2 id="取消-coredump-文件大小限制"><a href="#取消-coredump-文件大小限制" class="headerlink" title="取消 coredump 文件大小限制"></a>取消 coredump 文件大小限制</h2><p>默认情况下，coredump 是不会被启用的。换句话说，就是当程序发出类似于段错误的错误时，是不会生成用于 debug 的 coredump 文件。这是因为系统的 <code>RLIMIT_CORE</code>（核心文件大小）资源限制，默认情况下设置为 0。</p>
+<p>可使用以下命令，查看当前系统的对 coredump 文件的大小限制：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ulimit -c</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@TQ536:/# ulimit -c</span><br><span class="line">0</span><br></pre></td></tr></table></figure>
+
+<p>根据以上输出信息可知，coredump 文件的大小限制在 0 ，当程序错误时不会生成 coredump 。</p>
+<p>以下是命令<code>ulimit -c</code>的输出信息类型汇总：</p>
+<ul>
+<li><strong>数字</strong>（以 KB 为单位）：表示当前用户允许生成的 coredump 文件的最大大小限制</li>
+<li><strong>unlimited</strong>：表示当前用户允许生成任意大小的 coredump 文件</li>
+<li><strong>0</strong>：表示当前用户不允许生成 coredump 文件</li>
+</ul>
+<p>执行以下命令取消 coredump 文件的大小限制：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ulimit -c unlimited</span><br></pre></td></tr></table></figure>
+
+<p>完成后使用<code>ulimit -c</code>查看是否取消限制：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@TQ536:/# ulimit -c</span><br><span class="line">unlimited</span><br></pre></td></tr></table></figure>
+
+<p>通过如下命令可以查看详细显示信息：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ulimit -a</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">root@TQ536:/# ulimit -a</span><br><span class="line">real-time non-blocking time  (microseconds, -R) unlimited</span><br><span class="line">core file size              (blocks, -c) unlimited</span><br><span class="line">data seg size               (kbytes, -d) unlimited</span><br><span class="line">scheduling priority                 (-e) 0</span><br><span class="line">file size                   (blocks, -f) unlimited</span><br><span class="line">pending signals                     (-i) 15579</span><br><span class="line">max locked memory           (kbytes, -l) 64</span><br><span class="line">max memory size             (kbytes, -m) unlimited</span><br><span class="line">open files                          (-n) 1024</span><br><span class="line">pipe size                (512 bytes, -p) 8</span><br><span class="line">POSIX message queues         (bytes, -q) 819200</span><br><span class="line">real-time priority                  (-r) 0</span><br><span class="line">stack size                  (kbytes, -s) 8192</span><br><span class="line">cpu time                   (seconds, -t) unlimited</span><br><span class="line">max user processes                  (-u) 15579</span><br><span class="line">virtual memory              (kbytes, -v) unlimited</span><br><span class="line">file locks                          (-x) unlimited</span><br></pre></td></tr></table></figure>
+
+<h2 id="指定-coredump-文件带有-PID"><a href="#指定-coredump-文件带有-PID" class="headerlink" title="指定 coredump 文件带有 PID"></a>指定 coredump 文件带有 PID</h2><p>取消限制后，执行以下命令，指定生成的 coredump 文件带有 PID ：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">echo 1 &gt; /proc/sys/kernel/core_uses_pid</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>如果为 0 ，表示不带有 PID 。</p>
+</blockquote>
+<h2 id="执行-coredump-文件生成路径"><a href="#执行-coredump-文件生成路径" class="headerlink" title="执行 coredump 文件生成路径"></a>执行 coredump 文件生成路径</h2><p>执行以下命令</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">echo &quot;/tmp/core-%e-%s-%u-%g-%p-%t&quot; &gt; /proc/sys/kernel/core_pattern</span><br></pre></td></tr></table></figure>
+
+<p>注意，这里把 coredump 文件放到 &#x2F;tmp 目录，当系统断电或重启后，&#x2F;tmp 内的文件将被清除。如果需要把生成的 coredump 文件永久保留，则放到类似 &#x2F;mnt&#x2F;UDISK 目录内。</p>
+<p>下面讲解 <code>core-%e-%s-%u-%g-%p-%t</code>的各个参数含义：</p>
+<ul>
+<li><strong>%e</strong>：导致 core dump 的程序的可执行文件名。</li>
+<li><strong>%s</strong>：导致 core dump 的信号编号。</li>
+<li><strong>%u</strong>：导致 core dump 的程序的实际用户 ID。</li>
+<li><strong>%g</strong>：导致 core dump 的程序的实际组 ID。</li>
+<li><strong>%p</strong>：导致 core dump 的程序的进程 ID。</li>
+<li><strong>%t</strong>：core dump 发生时的时间戳（自 epoch 时间以来的秒数）。</li>
+</ul>
+<p>因此，<code>&lt;font style=&quot;background-color:rgb(246, 246, 246);&quot;&gt;/tmp/core-%e-%s-%u-%g-%p-%t&lt;/font&gt;</code>会生成包含如下信息的 core 文件：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/tmp/core-&lt;executable&gt;-&lt;signal&gt;-&lt;uid&gt;-&lt;gid&gt;-&lt;pid&gt;-&lt;timestamp&gt;</span><br></pre></td></tr></table></figure>
+
+<h1 id="触发-coredump"><a href="#触发-coredump" class="headerlink" title="触发 coredump"></a>触发 coredump</h1><p>使用两个测试程序测试，以下是测试程序的 Makefile ：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">CFLAGS := -Og -g -lpthread </span><br><span class="line">INCLUDES := -I./</span><br><span class="line"></span><br><span class="line">TARGET = test</span><br><span class="line"></span><br><span class="line">SRCS = test.c</span><br><span class="line"></span><br><span class="line">all: $(TARGET)</span><br><span class="line"></span><br><span class="line">$(TARGET): $(SRCS)</span><br><span class="line">	$(CC) $^ $(CFLAGS) $(INCLUDES) -o $@</span><br><span class="line"></span><br><span class="line">clean:</span><br><span class="line">	rm -rf $(TARGET)</span><br><span class="line"></span><br><span class="line">.PHONY: all clean</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>在编译服务器的终端中，输入以下命令指定 GCC 编译器：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">export CC=/opt/EmbedSky/TQ536/bin/aarch64-none-linux-gnu-gcc</span><br></pre></td></tr></table></figure>
+
+<h2 id="因空指针解引用而崩溃"><a href="#因空指针解引用而崩溃" class="headerlink" title="因空指针解引用而崩溃"></a>因空指针解引用而崩溃</h2><p>以下是相关例程，文件名为 test.c ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">        <span class="type">int</span> *ptr = <span class="literal">NULL</span>;	<span class="comment">// 声明一个空指针</span></span><br><span class="line">        <span class="comment">// 尝试解引用空指针</span></span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;try to parse null ptr...\n&quot;</span>);</span><br><span class="line">        <span class="built_in">printf</span>(<span class="string">&quot;ptr: %d\n&quot;</span>, *ptr);	<span class="comment">// 这里会引发未定义行为    </span></span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>把以上程序通过 Makefile 编译完成为可执行文件后，复制到评估板，执行：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">root@TQ536:/# ./test</span><br><span class="line">try to parse null ptr...</span><br><span class="line">Segmentation fault (core dumped)</span><br></pre></td></tr></table></figure>
+
+<p>由以上信息可知，发出段错误后，已把这个程序转储为 coredump 文件，查看该文件是否存在：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">root@TQ536:/# ls -l /tmp</span><br><span class="line">total 596</span><br><span class="line">-rw-------    1 root     root        413696 Jan  1 02:19 core-test-11-0-0-615-8391</span><br><span class="line">drwxr-xr-x    2 root     root            60 Jan  1 02:15 dbus</span><br><span class="line">-rw-r--r--    1 root     root        181949 Jan  1 02:41 messages</span><br></pre></td></tr></table></figure>
+
+<h2 id="通过信号触发-coredump"><a href="#通过信号触发-coredump" class="headerlink" title="通过信号触发 coredump"></a>通过信号触发 coredump</h2><p>coredump 文件一般是在收到某个信号的时候结束产生，如果不指定特定的信号，应用程序按默认方式处理，默认处理的信号如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">3) SIGQUIT      4) SIGILL     5) SIGTRAP   6) SIGABRT</span><br><span class="line">7) SIGBUS       8) SIGFPE      11) SIGSEGV   31) SIGSYS   </span><br><span class="line">24) SIGXCPU     25) SIGXFSZ    29) SIGIO</span><br></pre></td></tr></table></figure>
+
+<p>此例通过 SIGSEGV 信号触发 coredump，文件名为 test.c ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">()</span></span><br><span class="line">&#123;</span><br><span class="line">        <span class="keyword">while</span> (<span class="number">1</span>)</span><br><span class="line">                sleep(<span class="number">1</span>);</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>把以上程序通过 Makefile 编译完成为可执行文件后，复制到评估板，执行：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@TQ536:/# ./test &amp;</span><br><span class="line">[1] 1414</span><br></pre></td></tr></table></figure>
+
+<p>发现它相关进程的 PID 是 1414 ，发送 SIGSEGV 信号到该进程：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">root@TQ536:/# kill -11 1414</span><br><span class="line">[1]+  Segmentation fault      (core dumped) ./test</span><br></pre></td></tr></table></figure>
+
+<p>由以上信息可知，发出段错误后，已把这个程序转储为 coredump 文件，查看该文件是否存在：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">root@TQ536:/# ls -l /tmp</span><br><span class="line">total 596</span><br><span class="line">-rw-------    1 root     root        413696 Jan  1 02:19 core-test-11-0-0-615-8391</span><br><span class="line">-rw-------    1 root     root        278528 Jan  1 02:32 core-test-11-0-0-1414-9177</span><br><span class="line">drwxr-xr-x    2 root     root            60 Jan  1 02:15 dbus</span><br><span class="line">-rw-r--r--    1 root     root        181949 Jan  1 02:41 messages</span><br><span class="line">-rw-r--r--    1 root     root        204871 Jan  1 02:25 messages.0</span><br></pre></td></tr></table></figure>
+
+<h1 id="使用-GDB-调试-coredump"><a href="#使用-GDB-调试-coredump" class="headerlink" title="使用 GDB 调试 coredump"></a>使用 GDB 调试 coredump</h1><p>T536 系统里内置了一个 GDB ，命令格式如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ gdb &lt;program_name&gt; &lt;core_dump_file&gt;</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p> 在 Buildroot 开启 <code>BR2_PACKAGE_GDB_DEBUGGER</code> 开启GDB。</p>
+</blockquote>
+<p>比如先调试第一个例子的 core 文件，则输入如下命令：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">gdb ./test /tmp/core-test-11-0-0-615-8391</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">root@<span class="built_in">test</span>:/# gdb ./test /tmp/core-test-11-0-0-615-8391</span><br><span class="line">GNU gdb (GDB) 10.2</span><br><span class="line">Copyright (C) 2021 Free Software Foundation, Inc.</span><br><span class="line">License GPLv3+: GNU GPL version 3 or later &lt;http://gnu.org/licenses/gpl.html&gt;</span><br><span class="line">This is free software: you are free to change and redistribute it.</span><br><span class="line">There is NO WARRANTY, to the extent permitted by law.</span><br><span class="line">Type <span class="string">&quot;show copying&quot;</span> and <span class="string">&quot;show warranty&quot;</span> <span class="keyword">for</span> details.</span><br><span class="line">This GDB was configured as <span class="string">&quot;aarch64-buildroot-linux-gnu&quot;</span>.</span><br><span class="line">Type <span class="string">&quot;show configuration&quot;</span> <span class="keyword">for</span> configuration details.</span><br><span class="line">For bug reporting instructions, please see:</span><br><span class="line">&lt;https://www.gnu.org/software/gdb/bugs/&gt;.</span><br><span class="line">Find the GDB manual and other documentation resources online at:</span><br><span class="line">    &lt;http://www.gnu.org/software/gdb/documentation/&gt;.</span><br><span class="line"></span><br><span class="line">For <span class="built_in">help</span>, <span class="built_in">type</span> <span class="string">&quot;help&quot;</span>.</span><br><span class="line">Type <span class="string">&quot;apropos word&quot;</span> to search <span class="keyword">for</span> commands related to <span class="string">&quot;word&quot;</span>...</span><br><span class="line">Reading symbols from ./test...</span><br><span class="line"></span><br><span class="line">warning: <span class="built_in">exec</span> file is newer than core file.</span><br><span class="line">[New LWP 615]</span><br><span class="line">[Thread debugging using libthread_db enabled]</span><br><span class="line">Using host libthread_db library <span class="string">&quot;/lib64/libthread_db.so.1&quot;</span>.</span><br><span class="line">Core was generated by `./test<span class="string">&#x27;.</span></span><br><span class="line"><span class="string">Program terminated with signal SIGSEGV, Segmentation fault.</span></span><br><span class="line"><span class="string">#0  0x000000556035082c in main () at test.c:8</span></span><br><span class="line"><span class="string">8               printf(&quot;ptr: %d\n&quot;, *ptr);      // 这里会引发未定义行</span></span><br><span class="line"><span class="string">--Type &lt;RET&gt; for more, q to quit, c to continue without paging--</span></span><br><span class="line"><span class="string">(gdb)</span></span><br></pre></td></tr></table></figure>
+
+<p>由以上信息可知，已运行到出现段错误的代码行处。</p>
+<p>如果函数关系调用关系很复杂，可以用 bt 命令（backtrace）查看调用堆栈（where 命令也有同样功能），如下图可知是在调用 main 函数时产生的段错误，可用 list 命令查看，具体就是 list 加函数名，如下图。然后通过 p(print) 命令，打印出 ptr 的值，可以发现 ptr 指针是一个空指针：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">(gdb) bt</span><br><span class="line"><span class="comment">#0  0x000000556035082c in main () at test.c:8</span></span><br><span class="line">(gdb) list main</span><br><span class="line">1       <span class="comment">#include &lt;stdio.h&gt;</span></span><br><span class="line">2</span><br><span class="line">3       int main()</span><br><span class="line">4       &#123;</span><br><span class="line">5               int *ptr = NULL;        // 声明一个空指针</span><br><span class="line">6               // 尝试解引用空指针</span><br><span class="line">7               <span class="built_in">printf</span>(<span class="string">&quot;try to parse null ptr...\n&quot;</span>);</span><br><span class="line">8               <span class="built_in">printf</span>(<span class="string">&quot;ptr: %d\n&quot;</span>, *ptr);      // 这里会引发未定义行为   </span><br><span class="line">9               <span class="built_in">return</span> 0;</span><br><span class="line">10      &#125;</span><br><span class="line">(gdb)</span><br></pre></td></tr></table></figure>
+
+<p>或者可以通过查看汇编代码来排查问题：</p>
+<p>通过<code>disass</code> 命令可以打印出出现错误的代码段：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">(gdb) disass</span><br><span class="line">Dump of assembler code <span class="keyword">for</span> <span class="keyword">function</span> main:</span><br><span class="line">   0x0000005560350814 &lt;+0&gt;:     stp     x29, x30, [sp, <span class="comment">#-16]!</span></span><br><span class="line">   0x0000005560350818 &lt;+4&gt;:     mov     x29, sp</span><br><span class="line">   0x000000556035081c &lt;+8&gt;:     adrp    x0, 0x5560350000</span><br><span class="line">   0x0000005560350820 &lt;+12&gt;:    add     x0, x0, <span class="comment">#0x8f0</span></span><br><span class="line">   0x0000005560350824 &lt;+16&gt;:    bl      0x55603506b0 &lt;puts@plt&gt;</span><br><span class="line">   0x0000005560350828 &lt;+20&gt;:    mov     x0, <span class="comment">#0x0                        // #0</span></span><br><span class="line">=&gt; 0x000000556035082c &lt;+24&gt;:    ldr     w1, [x0]</span><br><span class="line">   0x0000005560350830 &lt;+28&gt;:    adrp    x0, 0x5560350000</span><br><span class="line">   0x0000005560350834 &lt;+32&gt;:    add     x0, x0, <span class="comment">#0x910</span></span><br><span class="line">   0x0000005560350838 &lt;+36&gt;:    bl      0x55603506c0 &lt;<span class="built_in">printf</span>@plt&gt;</span><br><span class="line">   0x000000556035083c &lt;+40&gt;:    mov     w0, <span class="comment">#0x0                        // #0</span></span><br><span class="line">   0x0000005560350840 &lt;+44&gt;:    ldp     x29, x30, [sp], <span class="comment">#16</span></span><br><span class="line">   0x0000005560350844 &lt;+48&gt;:    ret</span><br><span class="line">End of assembler dump.</span><br></pre></td></tr></table></figure>
+
+<p>再通过<code>info reg</code>查看各个寄存器的值：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">(gdb) info reg</span><br><span class="line">x0             0x0                 0</span><br><span class="line">x1             0x7fb7fd86e8        548547692264</span><br><span class="line">x2             0xfbad2a84          4222429828</span><br><span class="line">x3             0x7fb803d010        548548104208</span><br><span class="line">x4             0xffffffff          4294967295</span><br><span class="line">x5             0xfbad2a84          4222429828</span><br><span class="line">x6             0x21b               539</span><br><span class="line">x7             0x40                64</span><br><span class="line">x8             0x40                64</span><br><span class="line">x9             0x10                16</span><br><span class="line">x10            0x0                 0</span><br><span class="line">x11            0x0                 0</span><br><span class="line">x12            0x7fb800f358        548547916632</span><br><span class="line">x13            0x8                 8</span><br><span class="line">x14            0x1                 1</span><br><span class="line">x15            0x0                 0</span><br><span class="line">x16            0x1                 1</span><br><span class="line">x17            0x7fb8024c20        548548004896</span><br><span class="line">x18            0x0                 0</span><br><span class="line">x19            0x5560350850        366686308432</span><br><span class="line">x20            0x0                 0</span><br><span class="line">x21            0x5560350700        366686308096</span><br><span class="line">x22            0x0                 0</span><br><span class="line">--Type &lt;RET&gt; <span class="keyword">for</span> more, q to quit, c to <span class="built_in">continue</span> without paging--</span><br><span class="line">x23            0x0                 0</span><br><span class="line">x24            0x0                 0</span><br><span class="line">x25            0x0                 0</span><br><span class="line">x26            0x0                 0</span><br><span class="line">x27            0x0                 0</span><br><span class="line">x28            0x0                 0</span><br><span class="line">x29            0x7fc1660d50        548705537360</span><br><span class="line">x30            0x5560350828        366686308392</span><br><span class="line">sp             0x7fc1660d50        0x7fc1660d50</span><br><span class="line">pc             0x556035082c        0x556035082c &lt;main+24&gt;</span><br><span class="line">cpsr           0x60001000          [ EL=0 SSBS C Z ]</span><br><span class="line">fpsr           0x0                 0</span><br><span class="line">fpcr           0x0                 0</span><br></pre></td></tr></table></figure>
+
+<p>可以看到寄存器 x0 的地址为 0，说明这个指针 ptr 是个空指针。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/debug/" rel="tag"># debug</a>
+              <a href="/tags/dump/" rel="tag"># dump</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/04/24/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90ww-mutex/" rel="prev" title="Linux - 深入分析ww-mutex（内核版本 6.1.55）">
+                  <i class="fa fa-angle-left"></i> Linux - 深入分析ww-mutex（内核版本 6.1.55）
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2025/05/19/Skill/debug/Linux%E5%86%85%E6%A0%B8FTrace%E8%B0%83%E8%AF%95/" rel="next" title="Linux - FTrace调试">
+                  Linux - FTrace调试 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

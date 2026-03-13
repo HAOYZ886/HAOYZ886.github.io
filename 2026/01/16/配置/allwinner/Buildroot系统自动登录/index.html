@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言本文档在全志 Tina5.0 SDK 验证可行，但是方法是通用的。 添加AGETTY工具需要在 Buildroot 配置单中添加以下配置，使用 .&#x2F;build.sh buildroot_menuconfig 进入配置菜单： 12BR2_PACKAGE_UTIL_LINUX&#x3D;yBR2_PACKAGE_UTIL_LINUX_AGETTY&#x3D;y  然后使用 .&#x2F;build.sh buildroot_s">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Buildroot系统自动登录">
+<meta property="og:url" content="http://example.com/2026/01/16/%E9%85%8D%E7%BD%AE/allwinner/Buildroot%E7%B3%BB%E7%BB%9F%E8%87%AA%E5%8A%A8%E7%99%BB%E5%BD%95/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="前言本文档在全志 Tina5.0 SDK 验证可行，但是方法是通用的。 添加AGETTY工具需要在 Buildroot 配置单中添加以下配置，使用 .&#x2F;build.sh buildroot_menuconfig 进入配置菜单： 12BR2_PACKAGE_UTIL_LINUX&#x3D;yBR2_PACKAGE_UTIL_LINUX_AGETTY&#x3D;y  然后使用 .&#x2F;build.sh buildroot_s">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E9%85%8D%E7%BD%AE/allwinner/Buildroot%E7%B3%BB%E7%BB%9F%E8%87%AA%E5%8A%A8%E7%99%BB%E5%BD%95/Util-Linux-log.png">
+<meta property="article:published_time" content="2026-01-15T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-01-15T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Allwinner">
+<meta property="article:tag" content="Buildroot">
+<meta property="article:tag" content="Tina5.0">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E9%85%8D%E7%BD%AE/allwinner/Buildroot%E7%B3%BB%E7%BB%9F%E8%87%AA%E5%8A%A8%E7%99%BB%E5%BD%95/Util-Linux-log.png">
+
+
+<link rel="canonical" href="http://example.com/2026/01/16/%E9%85%8D%E7%BD%AE/allwinner/Buildroot%E7%B3%BB%E7%BB%9F%E8%87%AA%E5%8A%A8%E7%99%BB%E5%BD%95/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2026/01/16/%E9%85%8D%E7%BD%AE/allwinner/Buildroot%E7%B3%BB%E7%BB%9F%E8%87%AA%E5%8A%A8%E7%99%BB%E5%BD%95/","path":"2026/01/16/配置/allwinner/Buildroot系统自动登录/","title":"Buildroot系统自动登录"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Buildroot系统自动登录 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B7%BB%E5%8A%A0AGETTY%E5%B7%A5%E5%85%B7"><span class="nav-number">2.</span> <span class="nav-text">添加AGETTY工具</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89inittab"><span class="nav-number">3.</span> <span class="nav-text">自定义inittab</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95"><span class="nav-number">4.</span> <span class="nav-text">测试</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2026/01/16/%E9%85%8D%E7%BD%AE/allwinner/Buildroot%E7%B3%BB%E7%BB%9F%E8%87%AA%E5%8A%A8%E7%99%BB%E5%BD%95/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Buildroot系统自动登录 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Buildroot系统自动登录
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2026-01-16 00:00:00" itemprop="dateCreated datePublished" datetime="2026-01-16T00:00:00+08:00">2026-01-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E9%85%8D%E7%BD%AE/" itemprop="url" rel="index"><span itemprop="name">配置</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>561</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>2 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>本文档在全志 Tina5.0 SDK 验证可行，但是方法是通用的。</p>
+<h1 id="添加AGETTY工具"><a href="#添加AGETTY工具" class="headerlink" title="添加AGETTY工具"></a>添加AGETTY工具</h1><p>需要在 Buildroot 配置单中添加以下配置，使用 <code>./build.sh buildroot_menuconfig</code> 进入配置菜单：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">BR2_PACKAGE_UTIL_LINUX=y</span><br><span class="line">BR2_PACKAGE_UTIL_LINUX_AGETTY=y</span><br></pre></td></tr></table></figure>
+
+<p>然后使用 <code>./build.sh buildroot_saveconfig</code> 保存配置。</p>
+<span id="more"></span>
+<p>AGETTY 是 UTIL_LINUX 的应用，以上配置选择完成后，如果此前已编译 Buildroot ，则根据以下指引重新编译 UTIL_LINUX 。</p>
+<p>打开以下文件：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">out/t536/demo/buildroot/buildroot/build/build-time.log</span><br></pre></td></tr></table></figure>
+
+<p>搜索“util-linux”：</p>
+<div align="center"><img src="/images/配置/allwinner/Buildroot系统自动登录/Util-Linux-log.png"></div>
+
+<p>把相关的日志清除。<br>然后在同级目录下，根据“util-linux”关键词找到过程文件目录，把这些目录删除。</p>
+<p>完成后使用 <code>./build.sh buildroot_rootfs &amp;&amp; ./build.sh pack</code> 编译并打包镜像即可。</p>
+<h1 id="自定义inittab"><a href="#自定义inittab" class="headerlink" title="自定义inittab"></a>自定义inittab</h1><p>在自己的 buildroot overlayfs 下，新建文件 inittab ：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;my_overlayfs&gt;/etc</span><br></pre></td></tr></table></figure>
+
+<p>复制粘贴以下内容到新建的文件：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/inittab</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># Copyright (C) 2001 Erik Andersen &lt;andersen@codepoet.org&gt;</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># Note: BusyBox init doesn&#x27;t support runlevels.  The runlevels field is</span></span><br><span class="line"><span class="comment"># completely ignored by BusyBox init. If you want runlevels, use</span></span><br><span class="line"><span class="comment"># sysvinit.</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># Format for each entry: &lt;id&gt;:&lt;runlevels&gt;:&lt;action&gt;:&lt;process&gt;</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># id        == tty to run on, or empty for /dev/console</span></span><br><span class="line"><span class="comment"># runlevels == ignored</span></span><br><span class="line"><span class="comment"># action    == one of sysinit, respawn, askfirst, wait, and once</span></span><br><span class="line"><span class="comment"># process   == program to run</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Startup the system</span></span><br><span class="line">::sysinit:/etc/preinit</span><br><span class="line">::sysinit:/bin/mount -t proc proc /proc</span><br><span class="line">::sysinit:/bin/mount -o remount,rw /</span><br><span class="line">::sysinit:/bin/mkdir -p /dev/pts /dev/shm</span><br><span class="line">::sysinit:/bin/mount -a</span><br><span class="line">::sysinit:/bin/mkdir -p /run/lock/subsys</span><br><span class="line">::sysinit:/sbin/swapon -a</span><br><span class="line">null::sysinit:/bin/ln -sf /proc/self/fd /dev/fd</span><br><span class="line">null::sysinit:/bin/ln -sf /proc/self/fd/0 /dev/stdin</span><br><span class="line">null::sysinit:/bin/ln -sf /proc/self/fd/1 /dev/stdout</span><br><span class="line">null::sysinit:/bin/ln -sf /proc/self/fd/2 /dev/stderr</span><br><span class="line">::sysinit:/bin/hostname -F /etc/hostname</span><br><span class="line"><span class="comment"># now run any rc scripts</span></span><br><span class="line">::sysinit:/etc/init.d/rcS</span><br><span class="line"></span><br><span class="line"><span class="comment"># Put a getty on the serial port</span></span><br><span class="line">ttyAS0::respawn:/sbin/getty -L  ttyAS0 115200 vt100 <span class="comment"># GENERIC_SERIAL</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Stuff to do for the 3-finger salute</span></span><br><span class="line"><span class="comment">#::ctrlaltdel:/sbin/reboot</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Stuff to do before rebooting</span></span><br><span class="line">::shutdown:/etc/init.d/rcK</span><br><span class="line">::shutdown:/sbin/swapoff -a</span><br><span class="line">::shutdown:/bin/umount -a -r</span><br></pre></td></tr></table></figure>
+<p>找到以下代码：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ttyAS0::respawn:/sbin/getty -L  ttyAS0 115200 vt100 <span class="comment"># GENERIC_SERIAL</span></span><br></pre></td></tr></table></figure>
+<p>替换为：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ttyAS0::respawn:/sbin/agetty -L ttyAS0 115200 vt100 --autologin root</span><br></pre></td></tr></table></figure>
+<p>其中，<code>--autologin</code> 的值 “root” 可以换为其它用户，比如 admin ：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ttyAS0::respawn:/sbin/agetty -L ttyAS0 115200 vt100 --autologin admin</span><br></pre></td></tr></table></figure>
+
+<p>以上操作完成后，使用 <code>./build.sh buildroot_rootfs &amp;&amp; ./build.sh pack</code> 编译并打包镜像。</p>
+<h1 id="测试"><a href="#测试" class="headerlink" title="测试"></a>测试</h1><p>烧录镜像进入系统后，会有以下输出信息，表示自动登录成功：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Trying to connect to SWUpdate...</span><br><span class="line">Welcome to Tina Platform</span><br><span class="line">Tina login: root (automatic login)</span><br><span class="line"></span><br><span class="line">root@Tina:~#</span><br></pre></td></tr></table></figure>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Allwinner/" rel="tag"># Allwinner</a>
+              <a href="/tags/Tina5-0/" rel="tag"># Tina5.0</a>
+              <a href="/tags/Buildroot/" rel="tag"># Buildroot</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/12/18/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/" rel="prev" title="DRAM基础和调参">
+                  <i class="fa fa-angle-left"></i> DRAM基础和调参
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/01/16/Skill/debug/Linux%E5%86%85%E6%A0%B8BPF%E8%B0%83%E8%AF%95/" rel="next" title="Linux - BPF调试">
+                  Linux - BPF调试 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="文件是什么文件是一个记录信息的载体，是有次序的、有组织的。它可以被写，也可以被读。人把大脑的想法写到文件去，人亦可阅读文件的信息输入到大脑内。对于的计算机的文件，应从狭义和广义上说。从狭义上说，电脑文件指的是存储在磁盘内的文件。从广义上说，世间万物都是文件，这是因为凡是满足文件的特性，就是能存储信息，且可被读写的事物。比如说，网卡是一个设备文件，它可以“产出”信息，即接收来自其它终端的数据，亦可暂">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux-文件系统浅析（内核版本 2.4.22）">
+<meta property="og:url" content="http://example.com/2023/08/03/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E6%B5%85%E6%9E%90/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="文件是什么文件是一个记录信息的载体，是有次序的、有组织的。它可以被写，也可以被读。人把大脑的想法写到文件去，人亦可阅读文件的信息输入到大脑内。对于的计算机的文件，应从狭义和广义上说。从狭义上说，电脑文件指的是存储在磁盘内的文件。从广义上说，世间万物都是文件，这是因为凡是满足文件的特性，就是能存储信息，且可被读写的事物。比如说，网卡是一个设备文件，它可以“产出”信息，即接收来自其它终端的数据，亦可暂">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E6%B5%85%E6%9E%90/FS-1.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E6%B5%85%E6%9E%90/FS-2.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E6%B5%85%E6%9E%90/FS-3.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E6%B5%85%E6%9E%90/FS-4.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E6%B5%85%E6%9E%90/FS-5.drawio.png">
+<meta property="article:published_time" content="2023-08-02T16:00:00.000Z">
+<meta property="article:modified_time" content="2023-08-10T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="FS">
+<meta property="article:tag" content="Kernel">
+<meta property="article:tag" content="Linux">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E6%B5%85%E6%9E%90/FS-1.drawio.png">
+
+
+<link rel="canonical" href="http://example.com/2023/08/03/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E6%B5%85%E6%9E%90/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2023/08/03/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E6%B5%85%E6%9E%90/","path":"2023/08/03/原理及实现/Kernel/Linux-文件系统浅析/","title":"Linux-文件系统浅析（内核版本 2.4.22）"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux-文件系统浅析（内核版本 2.4.22） | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%87%E4%BB%B6%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-number">1.</span> <span class="nav-text">文件是什么</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">文件管理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8E%E6%96%87%E4%BB%B6%E8%B7%AF%E5%BE%84%E5%88%B0%E7%9B%AE%E6%A0%87%E8%8A%82%E7%82%B9"><span class="nav-number">3.</span> <span class="nav-text">从文件路径到目标节点</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/08/03/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E6%B5%85%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux-文件系统浅析（内核版本 2.4.22） | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux-文件系统浅析（内核版本 2.4.22）
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2023-08-03 00:00:00" itemprop="dateCreated datePublished" datetime="2023-08-03T00:00:00+08:00">2023-08-03</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2023-08-11 00:00:00" itemprop="dateModified" datetime="2023-08-11T00:00:00+08:00">2023-08-11</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3.7k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>14 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="文件是什么"><a href="#文件是什么" class="headerlink" title="文件是什么"></a>文件是什么</h2><p>文件是一个记录信息的载体，是有次序的、有组织的。它可以被写，也可以被读。人把大脑的想法写到文件去，人亦可阅读文件的信息输入到大脑内。对于的计算机的文件，应从狭义和广义上说。从狭义上说，电脑文件指的是存储在磁盘内的文件。从广义上说，世间万物都是文件，这是因为凡是满足文件的特性，就是能存储信息，且可被读写的事物。比如说，网卡是一个设备文件，它可以“产出”信息，即接收来自其它终端的数据，亦可暂存信息，也可“消耗”信息，即把数据输出到相应进程。所以说它是一个文件也不为过。我们把它从一个设备抽象成一个文件，能够更方便地使用它，能够有组织、有次序的访问它里面的数据（这个体现在文件系统）。</p>
+<span id="more"></span>
+
+<h2 id="文件管理"><a href="#文件管理" class="headerlink" title="文件管理"></a>文件管理</h2><p>上面说了文件是有次序有组织的，那么管理多个文件也是有次序、有组织的，需要使用文件夹去整理文件。但一个文件夹是不够的，需要多个文件夹，但多个文件夹都怎么管理？这就需要通过一对多的方式，多个文件夹联系起来。然后，文件夹也是文件，需要存储文件夹内的文件基本信息，如：文件名、文件类型、inode 号等，这些把它们构成一个结构体，名为目录项。那么在磁盘内的文件系统，这些文件（包括文件夹），都是这样存储的：  </p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-文件系统浅析/FS-1.drawio.png"></div>  
+
+<p>每个文件系统都有一个根目录，而根目录对应的 inode 号存储在超级块内。那么超级块、图中的 inode 和 block 存储在哪里？见下图：  </p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-文件系统浅析/FS-2.drawio.png"></div>  
+
+<p>知道文件是如何存储在磁盘内的文件系统，那么把它们读出到内存有该怎么管理？如果只是单纯地把超级块、inode 和数据块读出是不行的，因为它们仅是存储的形式，把文件读出到内存更多的是注重对文件的操作，就是<strong>需要把磁盘内的数据结构转换成便于给内核使用和管理的数据结构</strong>。在某个文件操作中，在此之前必须根据给定的文件路径定位该文件并打开它。举个例子，如：“dir1&#x2F;dir2&#x2F;file1” ，从左到右逐步定位到达目的地 “file1” ，这些操作和目录文件的目录项离不开关系，不如我们直接把目录文件内的目录项读出组成一个整个系统可用的目录树？见下图：  </p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-文件系统浅析/FS-3.drawio.png"></div>  
+
+<blockquote>
+<p>此图是由上图的结构转换而来的</p>
+</blockquote>
+<p>由图可知，此结构仍是一对多关系，即树型结构，所以 dentry 必须用字段 <strong>d_parent</strong> 、<strong>d_subdirs</strong> 、<strong>d_child</strong> 记录 dentry 之间的关系。还有，一般来说，每个文件都有它们自己的 inode ，所以还需要在 dentry 添加一个字段 <strong>d_inode</strong> ，用于指向 inode 结构体。<br>见上图发现我们好像是把所有的 dentry 读出到内存来，这只是便于理解而已。在现实中，一个目录内的 dentry 是等它被需要的时候才被读出并转换，最后才被接入到 dentry 树，这是因为内存容量总是比外存小。而且，当我们需要读出一个 dentry 时，并不是只从外存读出一个 dentry ，而是把该 dentry 所属的数据块从外存读出到内存，然后用链表等其它数据结构将它连接，最后从该数据块读出想要的 dentry 。往后，如果需要读出一个 dentry ，就在内存的数据块看看是否有，没有则再从外存读一个数据块到内存并连接，而这种操作是 “预读 dentry” 。这些已链接的数据块，我们把它当作是 dentry 的“中转站”。如果这些数据块不被使用了，它们就会被释放或把数据写回外存。<br>另外，如果一个 dentry 也不怎么被使用了，像数据块一样，也需要把它释放。在 dentry 内添加字段：<strong>d_lru</strong> ，用于链接 dentry lru 链表；<strong>d_count</strong>，记录当前 dentry 的引用次数，在使用它时需 +1 ，不被使用时 -1 。如果等于 0 ，则表示内核、用户进程近段时间都没使用它，则把它加入到 dentry lru 链表。  </p>
+<p>上面说的情况只是基于一个文件系统的，但是现在有很多类型的文件系统，那么一个系统又该如何管理多个文件系统？换句话说，如果另外接入了一个磁盘，磁盘内的分区的文件系统和当前内核的根设备的文件系统是不一致的该怎么办？想要访问该分区内的文件系统内的文件又该怎么做？<br>在 linux ，使用虚拟文件系统去管理多个文件系统，它有统一的标准和接口。它就像一个主板的一个插槽，规定了很多标准，而文件系统驱动就是一个接口，必须要求符合虚拟文件系统的制定的标准才能够接入使用。下图是大致的操作流程：  </p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-文件系统浅析/FS-4.drawio.png"></div>  
+
+<p>那么 vfs 提供的插槽有哪些？有什么规范？<br>在往后的会发现，有 dentry_operations 、inode_operations 、files_operations 、super_operations 等。其中，dentry_operations 是可选的，vfs 有默认对 dentry 的操作函数集；目录是必须要有 inode_operations；files_operations 是目录和常规文件必有的；</p>
+<p>在 linux ，上图给出的 dentry 树是 vfs 的，但是 dentry 又是从下层文件系统读出并转换得来的。举个例子，比如说根设备的文件系统是 ext2 ，且把该文件系统的根目录作为整个系统的根目录，即 vfs 的 dentry 树的根 dentry 就是它。那么如果接入了一个磁盘，磁盘内的主分区1有一个文件系统 NTFS ，且想要访问该文件系统内的文件，该怎么办？在 linux 中的做法是在 VFS 支持 NTFS ，且 NTFS 驱动支持 VFS 标准的前提下，把 NTFS 的超级块读出，并把 NTFS 的根目录接上 dentry 树的某一个 dentry ，即挂载到一个空目录内，就像这样：</p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-文件系统浅析/FS-5.drawio.png"></div>  
+
+<blockquote>
+<p>在内核初始化期间，存储内核映像的设备会被当作根设备，而根设备内的文件系统会被当作整个系统的下层文件系统，换句话说就是内核的 vfs 的操作必须靠底层的文件系统支撑，就像上文说的主板插槽和接口。然后，根设备的文件系统的根目录是作为整个系统的根目录。</p>
+</blockquote>
+<p>图中的 mnt_mountpoint 是 NTFS 在 dentry 树的挂载点，而 mnt_root 是 NTFS 的根目录。<strong>mnt_mountpoint</strong> 和 <strong>mnt_root</strong> 是属于 vfs_mount 的字段。图中的发现它们连接在一起，其实不然，这仅是便于理解才这样画的。<br>vfs_mount 存在的原因是为了方便管理，目的就是把挂载这个功能和 dentry 树分开，把与挂载的相关函数和功能分来，达到高内聚低耦合。此外 vfs_mount 之间也用 <strong>mnt_parent</strong> 、<strong>mnt_child</strong>、<strong>mnt_mounts</strong> 联系在一起，构成一对多关系，即树形结构。vfs_mount 还有指向超级块的字段 <strong>mnt_sb</strong>，便于在对文件操作时使用（这点在使用 struct nameidata 和会提现到，还有 dentry 也会用到超级块 <strong>d_sb</strong> ）。另外， vfs_mount 还有一个字段 <strong>mnt_count</strong> 用于记录使用次数，和 dentry 的 d_count 类似。还有，dentry 还有一个字段 <strong>d_mounted</strong> ，如果大于 0 ，则表示它已作为某个下层文件系统的挂载点。</p>
+<p>还有，需要知道在一个目录内根据文件名定位到文件。这个看起来很简单，不就是把目录项对应 dentry 的目录项都遍历不就好了。可以，但是效率极低，对应的时间复杂度为 O(n) 。虽说这仅仅是在目录内的一次遍历而已，但是用户给出的文件路径不单是一个目录，而是一至多个目录需要逐步定位，而且还没算上动态链接文件呢，所以说，遍历的次数一多起来，对应的时间复杂度就越高。打开一个文件，通常来说是从外存读出 inode 等相关数据，还有数据块等，这些 I&#x2F;O 操作是很费时间的（虽然说有 buffer_head 这个中转站来缓解该情况）。而且，能否打开文件是取决于用户提供的文件路径进行定位，在定位的过程中有较大概率也进行 I&#x2F;O 来读目录项。所以说，使用文件路径到目标节点是一个很消耗时间，且很频繁的操作。再从算法的角度去看，解决一个特定的问题所对应的算法，都有它的平均情况和最坏情况（预期最小的情况），那么对于“遍历目录项”的最坏情况其实并不好。所以在一个目录根据文件名定位一个目录项，使用 hash 表 + 链表的方式（目前最新的是 hash 表+红黑树）去定位。dentry hash 表是全局的，一个 dentry 树对应一个 dentry hash 表。那么一个 dentry 项是如何 hash() 加入到 dentry hash 表？是当前 dentry 的 d_parent 的内存地址 + 文件名进行 hash 。原因是在文件系统内，在一个目录内不能出现重名文件，但在不同的目录可以，而 hash 表是全局的，所以需要加上一个额外的，且极少可能重复的值来生成 hash 值，目的是减少 hash 冲突，而 d_parent 的内存地址是极好的 hash 原值。<br>总之，当 dentry 树的所有 dentry 都加入到 dentry hash 表后，在进行使用文件路径定位时，直接通过 hash() 找到对应的 dentry 。</p>
+<blockquote>
+<p>虽说在定位过程中如果出现 hash 冲突还是需要在该 hash 表的对应元素的链表进行遍历，这是没办法避免的，现阶段是在初始化期间通过系统内存的大小适当地扩大 hash 表，还有链表换成红黑树去缓解，恰当地提高效率。  </p>
+</blockquote>
+<p>还有，dentry 内还应记录该对应文件名的 hash 值以及文件名长度，目的是防止在 hash 表的链表进行遍历时因检查不全面误把错的 dentry 当成想要的 dentry 。所以找出一个正确的 dentry ，需要检查 parent 、文件名对比、长度对比、hash 值对比才行。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">qstr</span> &#123;</span></span><br><span class="line">	<span class="type">const</span> <span class="type">unsigned</span> <span class="type">char</span> * name;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> len;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> hash;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>dcache.h</p>
+</blockquote>
+<p>在使用文件路径到目标节点时，还需要确认 dentry 是否是挂载点，上面说过了 dentry 的字段 d_mounted 来表示它是否是挂载点，但是挂载点和文件系统的根目录之间并不是直接连接一起的，而是分别作为 vfs_mount 的字段 mnt_pointmount 和 mnt_root 。那么现在的问题就是如何根据挂载点找出对应的 vfs_mount 。<br>已知系统有 vfs_mount 树，且 vfs_mount 内有相关的字段去表示 vfs_mount 之间的关系，但是找出相关的 vfs_mount 并不依靠这些字段。和 dentry 一样， vfs_mount 也有一个全局的 hash 表，生成 hash 值的原值是：mnt_parent 的内存地址 + 挂载点的 dentry 的内存地址。使用该 hash 值把 vfs_mount 加入到 hash 表，并找到它（根据上图去理解）。</p>
+<p>现在回顾 dentry 和 vfs_mount 结构体（部分）：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">dentry</span> &#123;</span></span><br><span class="line">	<span class="type">atomic_t</span> d_count;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">inode</span>  * <span class="title">d_inode</span>;</span>	<span class="comment">/* Where the name belongs to - NULL is negative */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dentry</span> * <span class="title">d_parent</span>;</span>	<span class="comment">/* parent directory */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">d_hash</span>;</span>	<span class="comment">/* lookup hash list */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">d_lru</span>;</span>		<span class="comment">/* d_count = 0 LRU list */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">d_child</span>;</span>	<span class="comment">/* child of parent list */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">d_subdirs</span>;</span>	<span class="comment">/* our children */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">d_alias</span>;</span>	<span class="comment">/* inode alias list */</span></span><br><span class="line">	<span class="type">int</span> d_mounted;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">qstr</span> <span class="title">d_name</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dentry_operations</span>  *<span class="title">d_op</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">super_block</span> * <span class="title">d_sb</span>;</span>	<span class="comment">/* The root of the dentry tree */</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>dcache.h</p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">vfsmount</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">mnt_hash</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">vfsmount</span> *<span class="title">mnt_parent</span>;</span>	<span class="comment">/* fs we are mounted on */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dentry</span> *<span class="title">mnt_mountpoint</span>;</span>	<span class="comment">/* dentry of mountpoint */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dentry</span> *<span class="title">mnt_root</span>;</span>	<span class="comment">/* root of the mounted tree */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">super_block</span> *<span class="title">mnt_sb</span>;</span>	<span class="comment">/* pointer to superblock */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">mnt_mounts</span>;</span>	<span class="comment">/* list of children, anchored here */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">mnt_child</span>;</span>	<span class="comment">/* and going through their mnt_child */</span></span><br><span class="line">	<span class="type">atomic_t</span> mnt_count;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>mount.h</p>
+</blockquote>
+<h2 id="从文件路径到目标节点"><a href="#从文件路径到目标节点" class="headerlink" title="从文件路径到目标节点"></a>从文件路径到目标节点</h2><p>文件路径分绝对路径和相对路径，其中绝对路径是从根目录开始的。但并不是所有的进程都可以访问系统根目录，因为有些经途根目录的数据文件是很重要的，比如 &#x2F;etc&#x2F;passwd 。所以说，每个任务都有自己的，或者被系统设置为属于它们自己的根目录，比如说把用户任务 usr1 的根目录设置为 &#x2F;home 。还有相对路径，是以用户进程的 pwd 为起始，如 &#x2F;home&#x2F;usr1 。所以，进程的 PCB 必须要记录这些字段（包括 root dentry 和 pwd dentry 所在的 vfs_mount ）。<br>当我们正在根据文件路径到目标节点时，我们是否需要一个类似于指针一样的东西去定位目前使用该路径已到什么地方？在 dentry 树内的哪一个 dentry ？答案是需要的，不止需要记录 dentry 和 vfs_mount ，还需要根据用户要求的条件去定位。  </p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">nameidata</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">dentry</span> *<span class="title">dentry</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">vfsmount</span> *<span class="title">mnt</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">qstr</span> <span class="title">last</span>;</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> flags;</span><br><span class="line">	<span class="type">int</span> last_type;  <span class="comment">// 一般是当 flags 包含 LOOKUP_PARENT 才有效</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>fs.h</p>
+</blockquote>
+<p>其中 flags 的定义如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> LOOKUP_FOLLOW		(1)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> LOOKUP_DIRECTORY	(2)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> LOOKUP_POSITIVE		(8)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> LOOKUP_PARENT		(16)</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Type of the last component on LOOKUP_PARENT</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="class"><span class="keyword">enum</span> &#123;</span>LAST_NORM, LAST_ROOT, LAST_DOT, LAST_DOTDOT&#125;;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>fs.h</p>
+</blockquote>
+<ul>
+<li>LOOKUP_FOLLOW：表示如果目标节点是链接文件，则继续链接</li>
+<li>LOOKUP_DIRECTORY：目标节点必须是目录</li>
+<li>LOOKUP_POSITIVE：目标节点必须有 inode </li>
+<li>LOOKUP_PARENT：目标节点的上层节点，即 d_parent 必须存在。如果 flags 包含该 flag ，则目标节点是不被定位的，止步到目标节点的 parent 节点就结束，并根据目标节点的名字确定目标节点是什么类型并返回，见下面讲解。<ul>
+<li>LAST_NORM：拥有常规名字的目标节点，即常规文件、目录文件、链接文件</li>
+<li>LAST_ROOT：根目录文件，在定位前的初始化时默认设置的</li>
+<li>LAST_DOT：对应的名字是 “.” ，即当前目录</li>
+<li>LAST_DOTDOT：对应的名字是 “..” ，即上一层目录</li>
+</ul>
+</li>
+</ul>
+<p>代码在 dcache.c path_lookup() 。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Kernel/" rel="tag"># Kernel</a>
+              <a href="/tags/FS/" rel="tag"># FS</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2023/05/15/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-PCI%E6%80%BB%E7%BA%BF%E6%A1%86%E6%9E%B6/" rel="prev" title="Linux - PCI总线框架（内核版本 2.4.22，32位x86）">
+                  <i class="fa fa-angle-left"></i> Linux - PCI总线框架（内核版本 2.4.22，32位x86）
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2024/01/01/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-%E7%AE%80%E5%8D%95%E7%9A%84%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F/" rel="next" title="Linux - 简单的驱动程序">
+                  Linux - 简单的驱动程序 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

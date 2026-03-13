@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="寻找背光驱动方式一：根据设备树去寻找一般来说，设备树内有一个名为 backlight 的节点。以全志 T113 为例，在 sun8iw20p1.dtsi 有一个 backlight 节点：">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - 屏幕PWM背光驱动浅析">
+<meta property="og:url" content="http://example.com/2024/05/24/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-%E5%B1%8F%E5%B9%95PWM%E8%83%8C%E5%85%89%E9%A9%B1%E5%8A%A8%E6%B5%85%E6%9E%90/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="寻找背光驱动方式一：根据设备树去寻找一般来说，设备树内有一个名为 backlight 的节点。以全志 T113 为例，在 sun8iw20p1.dtsi 有一个 backlight 节点：">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-%E5%B1%8F%E5%B9%95PWM%E8%83%8C%E5%85%89%E9%A9%B1%E5%8A%A8%E6%B5%85%E6%9E%90/backlight1.drawio.png">
+<meta property="article:published_time" content="2024-05-23T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-05-23T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Drivers">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="backlight">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-%E5%B1%8F%E5%B9%95PWM%E8%83%8C%E5%85%89%E9%A9%B1%E5%8A%A8%E6%B5%85%E6%9E%90/backlight1.drawio.png">
+
+
+<link rel="canonical" href="http://example.com/2024/05/24/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-%E5%B1%8F%E5%B9%95PWM%E8%83%8C%E5%85%89%E9%A9%B1%E5%8A%A8%E6%B5%85%E6%9E%90/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2024/05/24/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-%E5%B1%8F%E5%B9%95PWM%E8%83%8C%E5%85%89%E9%A9%B1%E5%8A%A8%E6%B5%85%E6%9E%90/","path":"2024/05/24/原理及实现/Drivers/Linux-屏幕PWM背光驱动浅析/","title":"Linux - 屏幕PWM背光驱动浅析"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - 屏幕PWM背光驱动浅析 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%BB%E6%89%BE%E8%83%8C%E5%85%89%E9%A9%B1%E5%8A%A8"><span class="nav-number">1.</span> <span class="nav-text">寻找背光驱动</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%96%B9%E5%BC%8F%E4%B8%80%EF%BC%9A%E6%A0%B9%E6%8D%AE%E8%AE%BE%E5%A4%87%E6%A0%91%E5%8E%BB%E5%AF%BB%E6%89%BE"><span class="nav-number">1.1.</span> <span class="nav-text">方式一：根据设备树去寻找</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%96%B9%E5%BC%8F%E4%BA%8C%EF%BC%9A%E4%BD%BF%E7%94%A8-sysfs-%E5%8E%BB%E6%9F%A5%E6%89%BE"><span class="nav-number">1.2.</span> <span class="nav-text">方式二：使用 sysfs 去查找</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%A6%E8%A7%A3%E8%83%8C%E5%85%89%E9%A9%B1%E5%8A%A8"><span class="nav-number">2.</span> <span class="nav-text">详解背光驱动</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%89%A9%E5%B1%95%EF%BC%9A%E8%83%8C%E5%85%89%E5%80%BC%E6%98%AF%E5%A6%82%E4%BD%95%E4%BC%A0%E8%BE%93%E5%88%B0-backlight-%E6%A8%A1%E5%9D%97%EF%BC%9F"><span class="nav-number">2.1.</span> <span class="nav-text">扩展：背光值是如何传输到 backlight 模块？</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2024/05/24/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-%E5%B1%8F%E5%B9%95PWM%E8%83%8C%E5%85%89%E9%A9%B1%E5%8A%A8%E6%B5%85%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - 屏幕PWM背光驱动浅析 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - 屏幕PWM背光驱动浅析
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2024-05-24 00:00:00" itemprop="dateCreated datePublished" datetime="2024-05-24T00:00:00+08:00">2024-05-24</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3.2k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>12 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="寻找背光驱动"><a href="#寻找背光驱动" class="headerlink" title="寻找背光驱动"></a>寻找背光驱动</h2><h3 id="方式一：根据设备树去寻找"><a href="#方式一：根据设备树去寻找" class="headerlink" title="方式一：根据设备树去寻找"></a>方式一：根据设备树去寻找</h3><p>一般来说，设备树内有一个名为 <code>backlight</code> 的节点。以全志 T113 为例，在 <code>sun8iw20p1.dtsi</code> 有一个 <code>backlight</code> 节点：</p>
+<span id="more"></span>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">backlight: backlight &#123;</span><br><span class="line">	compatible = <span class="string">&quot;pwm-backlight&quot;</span>;</span><br><span class="line">	brightness-levels = &lt;</span><br><span class="line">		  <span class="number">0</span>   <span class="number">1</span>   <span class="number">2</span>   <span class="number">3</span>   <span class="number">4</span>   <span class="number">5</span>   <span class="number">6</span>   <span class="number">7</span></span><br><span class="line">		  <span class="number">8</span>   <span class="number">9</span>  <span class="number">10</span>  <span class="number">11</span>  <span class="number">12</span>  <span class="number">13</span>  <span class="number">14</span>  <span class="number">15</span></span><br><span class="line">		 ...</span><br><span class="line">		<span class="number">240</span> <span class="number">241</span> <span class="number">242</span> <span class="number">243</span> <span class="number">244</span> <span class="number">245</span> <span class="number">246</span> <span class="number">247</span></span><br><span class="line">		<span class="number">248</span> <span class="number">249</span> <span class="number">250</span> <span class="number">251</span> <span class="number">252</span> <span class="number">253</span> <span class="number">254</span> <span class="number">255</span> &gt;;</span><br><span class="line">	df-brightness-level = &lt;<span class="number">50</span>&gt;;</span><br><span class="line">	pinctrl-names = <span class="string">&quot;default&quot;</span>;</span><br><span class="line">	pwm-cfg = &lt;<span class="number">0</span> <span class="number">500</span> <span class="number">0</span>&gt;; 	<span class="comment">//pwmid Hz 极性</span></span><br><span class="line">	pwm-delay-us = &lt;<span class="number">10000</span>&gt;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>再比如 imx6ull 的：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">backlight &#123;</span><br><span class="line">	compatible = <span class="string">&quot;pwm-backlight&quot;</span>;</span><br><span class="line">	pwms = &lt;&amp;pwm1 <span class="number">0</span> <span class="number">1000</span>&gt;;</span><br><span class="line">	brightness-levels = &lt;<span class="number">0</span> <span class="number">1</span> <span class="number">2</span> <span class="number">3</span> <span class="number">4</span> <span class="number">5</span> <span class="number">6</span> <span class="number">8</span> <span class="number">10</span>&gt;;</span><br><span class="line">	<span class="keyword">default</span>-brightness-level = &lt;<span class="number">8</span>&gt;;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>如果没找到名为 <code>backlight</code> 的节点，则揪着属性 <code>brightness-levels</code> 去找。<br>如果找到了，则根据属性 <code>compatible</code> 对应值去遍历查找就可找到相应的驱动源代码文件。</p>
+<h3 id="方式二：使用-sysfs-去查找"><a href="#方式二：使用-sysfs-去查找" class="headerlink" title="方式二：使用 sysfs 去查找"></a>方式二：使用 sysfs 去查找</h3><p>通常来说，我们使用如下的命令去调试背光：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> 10 &gt; /sys/class/backlight/backlight/brightness</span><br></pre></td></tr></table></figure>
+<p>“10” 是背光值，与上面说的 brightness-levels 对应。还有，注意 <code>/sys</code> ，这是 sysfs 的挂载点。该目录下的子目录 class 存储着不同种类的 class 子集，如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">root@T507:/ <span class="comment"># ls /sys/class/</span></span><br><span class="line">addr_mgt      bdi           cedar_dev     dma           graphics      ieee80211     koneplus      mem           ppp           rfkill        scsi_disk     sunxi_dump    tv            watchdog</span><br><span class="line">android_usb   block         cuse          extcon        hdmi          input         konepure      misc          pwm           rtc           scsi_host     sunxi_info    udc           xt_idletimer</span><br><span class="line">arvo          bluetooth     deinterlace   g2d           hidraw        iommu         kovaplus      mmc_host      pyra          ryos          sound         switch        vc            zram-control</span><br><span class="line">axp           bsg           devfreq       gpadc         hwmon         isku          leds          net           rc            savu          spi_master    thermal       video4linux</span><br><span class="line">backlight     cec           disp          gpio          i2c-dev       kone          mdio_bus      power_supply  regulator     scsi_device   spidev        <span class="built_in">tty</span>           vtconsole</span><br></pre></td></tr></table></figure>
+<p>如一个 class 子集 <code>bluetooth</code> ，该目录内存储的是蓝牙设备；再一个 class 子集 <code>backlight</code> ，它对应显示设备的背光，而且一个背光节点可以对应一到多个显示设备。<br>而且通过以上给出的例子可知，class 内的子集可以是一个实际的设备，也可以表示一个设备的具体功能。<br>但是，更准确的说法是，</p>
+<blockquote>
+<p>以上只是在“使用”层面去说明 class 的作用，在源码层面上讲，一个 class 对应一个子系统或模块。子系统或模块内有私有的描述符（内有 struct device）去表示一个真实的设备，或是一个物理设备的具体功能。而 struct device 可以表示一个真实的物理设备（如 platform device 子系统），可以是一个物理设备的一个功能（如 input 子系统的 input 设备），也可以表示一个逻辑设备（如 input 子系统的 event 设备）。</p>
+</blockquote>
+<p>在 class 集合 backlight 中，有一个背光设备 backlight ，我们可以进入该目录查看：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">root@T507:/ <span class="comment"># ls -l  /sys/class/backlight/backlight/</span></span><br><span class="line">total 0</span><br><span class="line">-r--r--r--    1 root     root          4096 Jan  1 08:43 actual_brightness</span><br><span class="line">-rw-r--r--    1 root     root          4096 Jan  1 08:43 bl_power</span><br><span class="line">-rw-r--r--    1 root     root          4096 Jan  1 08:01 brightness</span><br><span class="line">lrwxrwxrwx    1 root     root             0 Jan  1 08:43 device -&gt; ../../../soc@03000000:backlight</span><br><span class="line">-r--r--r--    1 root     root          4096 Jan  1 08:43 max_brightness</span><br><span class="line">drwxr-xr-x    2 root     root             0 Jan  1 08:43 power</span><br><span class="line">lrwxrwxrwx    1 root     root             0 Jan  1 08:43 subsystem -&gt; ../../../../../../class/backlight</span><br><span class="line">-r--r--r--    1 root     root          4096 Jan  1 08:43 <span class="built_in">type</span></span><br><span class="line">-rw-r--r--    1 root     root          4096 Jan  1 08:00 uevent</span><br></pre></td></tr></table></figure>
+<p>看链接文件 device ，使用该链接文件进入对应目录：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">root@T507:/sys/class/backlight/backlight/device <span class="comment"># ls -l</span></span><br><span class="line">total 0</span><br><span class="line">drwxr-xr-x    3 root     root             0 Jan  1 08:00 backlight</span><br><span class="line">lrwxrwxrwx    1 root     root             0 Jan  1 08:56 driver -&gt; ../../../../bus/platform/drivers/pwm-backlight</span><br><span class="line">-rw-r--r--    1 root     root          4096 Jan  1 08:56 driver_override</span><br><span class="line">-r--r--r--    1 root     root          4096 Jan  1 08:56 modalias</span><br><span class="line">lrwxrwxrwx    1 root     root             0 Jan  1 08:56 of_node -&gt; ../../../../firmware/devicetree/base/soc@03000000/backlight</span><br><span class="line">drwxr-xr-x    2 root     root             0 Jan  1 08:56 power</span><br><span class="line">lrwxrwxrwx    1 root     root             0 Jan  1 08:56 subsystem -&gt; ../../../../bus/platform</span><br><span class="line">-rw-r--r--    1 root     root          4096 Jan  1 08:00 uevent</span><br></pre></td></tr></table></figure>
+<p>其实看链接文件 driver 可知，它对应的值 “..&#x2F;..&#x2F;..&#x2F;..&#x2F;bus&#x2F;platform&#x2F;drivers&#x2F;pwm-backlight” 中的 pwm-backlight 是该背光设备的驱动名，对应 <code>(struct driver *)-&gt;name</code> ，可直接根据此去搜索对应的驱动源代码文件。</p>
+<h2 id="详解背光驱动"><a href="#详解背光驱动" class="headerlink" title="详解背光驱动"></a>详解背光驱动</h2><p>以背光驱动 pwm_backlight 为例子，相关的源文件在 drivers&#x2F;video&#x2F;backlight&#x2F;pwm_bl.c 。<br>该驱动的初始化是由 platform 子系统驱动，以下是背光驱动 pwm_backlight 在 platform 子系统的表示： </p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">platform_driver</span> <span class="title">pwm_backlight_driver</span> =</span> &#123;</span><br><span class="line">	.driver		= &#123;</span><br><span class="line">		.name		= <span class="string">&quot;pwm-backlight&quot;</span>,</span><br><span class="line">		.pm		= &amp;pwm_backlight_pm_ops,</span><br><span class="line">		.of_match_table	= of_match_ptr(pwm_backlight_of_match),</span><br><span class="line">	&#125;,</span><br><span class="line">	.probe		= pwm_backlight_probe,</span><br><span class="line">	.remove		= pwm_backlight_remove,</span><br><span class="line">	.shutdown	= pwm_backlight_shutdown,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>在 platform_bus_type 的 device 和 driver 匹配期间，如果匹配成功，则会调用 <code>.probe</code> 函数去做驱动的初始化工作，以函数 pwm_backlight_probe 为例。<br>先展示一部分代码：</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">pwm_backlight_probe</span><span class="params">(<span class="keyword">struct</span> platform_device *pdev)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">platform_pwm_backlight_data</span> *<span class="title">data</span> =</span> dev_get_platdata(&amp;pdev-&gt;dev);</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">platform_pwm_backlight_data</span> <span class="title">defdata</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">backlight_properties</span> <span class="title">props</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">backlight_device</span> *<span class="title">bl</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">device_node</span> *<span class="title">node</span> =</span> pdev-&gt;dev.of_node;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">pwm_bl_data</span> *<span class="title">pb</span>;</span></span><br><span class="line">	<span class="type">int</span> initial_blank = FB_BLANK_UNBLANK;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">pwm_args</span> <span class="title">pargs</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="type">int</span> ret;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!data) &#123;</span><br><span class="line">		ret = pwm_backlight_parse_dt(&amp;pdev-&gt;dev, &amp;defdata);</span><br><span class="line">		<span class="keyword">if</span> (ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">			dev_err(&amp;pdev-&gt;dev, <span class="string">&quot;failed to find platform data\n&quot;</span>);</span><br><span class="line">			<span class="keyword">return</span> ret;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		data = &amp;defdata;</span><br><span class="line">	&#125;</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>见第 3 行和第 14~22 行，这里主要是考虑到兼容性的问题，可以在 .c 文件定义 platform_device ，也可以通过设备树去生成 platform_device 。通过上文可知我们已经在设备树有一个 backlight 节点了，对应的 platform_device 在遍历设备树时生成且与 platform_bus_type-&gt;device 连接。所以 pdev-&gt;dev-&gt;platdata 自然为 <code>NULL</code> 。<br>当 data 为空时，调用函数 pwm_backlight_parse_dt() 在设备树节点 backlight 获取属性填充 defdata 。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">pwm_backlight_parse_dt</span><span class="params">(<span class="keyword">struct</span> device *dev,</span></span><br><span class="line"><span class="params">				  <span class="keyword">struct</span> platform_pwm_backlight_data *data)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">device_node</span> *<span class="title">node</span> =</span> dev-&gt;of_node;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">property</span> *<span class="title">prop</span>;</span></span><br><span class="line">	<span class="type">int</span> length;</span><br><span class="line">	u32 value;</span><br><span class="line">	<span class="type">int</span> ret;</span><br><span class="line"></span><br><span class="line">	...</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* determine the number of brightness levels */</span></span><br><span class="line">	prop = of_find_property(node, <span class="string">&quot;brightness-levels&quot;</span>, &amp;length);</span><br><span class="line">	...</span><br><span class="line">	data-&gt;max_brightness = length / <span class="keyword">sizeof</span>(u32);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* read brightness levels from DT property */</span></span><br><span class="line">	<span class="keyword">if</span> (data-&gt;max_brightness &gt; <span class="number">0</span>) &#123;</span><br><span class="line">		<span class="type">size_t</span> size = <span class="keyword">sizeof</span>(*data-&gt;levels) * data-&gt;max_brightness;</span><br><span class="line"></span><br><span class="line">		data-&gt;levels = devm_kzalloc(dev, size, GFP_KERNEL);</span><br><span class="line">		<span class="keyword">if</span> (!data-&gt;levels)</span><br><span class="line">			<span class="keyword">return</span> -ENOMEM;</span><br><span class="line"></span><br><span class="line">		ret = of_property_read_u32_array(node, <span class="string">&quot;brightness-levels&quot;</span>,</span><br><span class="line">						 data-&gt;levels,</span><br><span class="line">						 data-&gt;max_brightness);</span><br><span class="line">		...</span><br><span class="line"></span><br><span class="line">		ret = of_property_read_u32(node, <span class="string">&quot;df-brightness-level&quot;</span>,</span><br><span class="line">					   &amp;value);</span><br><span class="line">		...</span><br><span class="line"></span><br><span class="line">		data-&gt;dft_brightness = value;</span><br><span class="line">		data-&gt;max_brightness--;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	data-&gt;enable_gpio = -EINVAL;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过代码可知，获取了最主要的属性，如 <code>brightness-levels</code> 和 <code>df-brightness-level</code> 。<br>现在回到函数 pwm_backlight_parse_dt()</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">...</span><br><span class="line">pb = devm_kzalloc(&amp;pdev-&gt;dev, <span class="keyword">sizeof</span>(*pb), GFP_KERNEL);</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (data-&gt;levels) &#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> i;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> (i = <span class="number">0</span>; i &lt;= data-&gt;max_brightness; i++)</span><br><span class="line">		<span class="keyword">if</span> (data-&gt;levels[i] &gt; pb-&gt;scale)</span><br><span class="line">			pb-&gt;scale = data-&gt;levels[i];</span><br><span class="line"></span><br><span class="line">	pb-&gt;levels = data-&gt;levels;</span><br><span class="line">&#125; <span class="keyword">else</span></span><br><span class="line">	pb-&gt;scale = data-&gt;max_brightness;</span><br><span class="line"></span><br><span class="line">pb-&gt;notify = data-&gt;notify;</span><br><span class="line">pb-&gt;notify_after = data-&gt;notify_after;</span><br><span class="line">pb-&gt;check_fb = data-&gt;check_fb;</span><br><span class="line">pb-&gt;<span class="built_in">exit</span> = data-&gt;<span class="built_in">exit</span>;</span><br><span class="line">pb-&gt;dev = &amp;pdev-&gt;dev;</span><br><span class="line">pb-&gt;enabled = <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+<p>前面提到的 data 和 defdata 都是表示在 pdev-&gt;dev.platform_data ，即都还是在 platform device 子系统的数据。现在需要把这些数据写到相关模块的描述符当中。比如上述代码所使用到的结构体 struct pwm_bl_data ，该结构体是仅在当前驱动源文件使用，用于记录与 pwm 模块有关的数值和函数调用，同时还指向了 struct pwm_device 。</p>
+<blockquote>
+<p>后续的代码还会把 data 内的数据写到 backlight 模块的描述符当中。</p>
+</blockquote>
+<p>接下来的操作也是和 struct pwm_bl_data 相关：</p>
+<ul>
+<li>pwm 子系统、gpio 子系统以及 regulator 子系统在backlight 模块的关联与应用</li>
+</ul>
+<p>以上操作请自行看代码，这里就不赘述了。<br>继续看下面的操作：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">memset</span>(&amp;props, <span class="number">0</span>, <span class="keyword">sizeof</span>(<span class="keyword">struct</span> backlight_properties));</span><br><span class="line">props.type = BACKLIGHT_RAW;</span><br><span class="line">props.max_brightness = data-&gt;max_brightness;</span><br><span class="line">bl = backlight_device_register(dev_name(&amp;pdev-&gt;dev), &amp;pdev-&gt;dev, pb,</span><br><span class="line">			       &amp;pwm_backlight_ops, &amp;props);</span><br><span class="line">...</span><br><span class="line"></span><br><span class="line">bl-&gt;props.brightness = data-&gt;dft_brightness;</span><br><span class="line">bl-&gt;props.power = initial_blank;</span><br></pre></td></tr></table></figure>
+<p>现在是开始要对 pwm_backlight ，即背光设备在 backlight 模块中登记，关键函数 backlight_device_register() 。<br>详细操作就不讲了，直接看图理解：</p>
+<div align="center"><img src="/images/原理及实现/Drivers/Linux-屏幕PWM背光驱动浅析/backlight1.drawio.png"></div>
+
+<p>现在到最后一步了，准备开启背光</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">	backlight_update_status(bl);</span><br><span class="line"></span><br><span class="line">	platform_set_drvdata(pdev, bl);</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">err_alloc:</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>函数 backlight_update_status() 是 backlight 模块的接口函数，它里面的核心函数是背光设备提供。背光设备 pwm_backlight 提供了 pwm_backlight_ops 。先看函数 backlight_update_status() ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">int</span> <span class="title function_">backlight_update_status</span><span class="params">(<span class="keyword">struct</span> backlight_device *bd)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> ret = -ENOENT;</span><br><span class="line"></span><br><span class="line">	mutex_lock(&amp;bd-&gt;update_lock);</span><br><span class="line">	<span class="keyword">if</span> (bd-&gt;ops &amp;&amp; bd-&gt;ops-&gt;update_status)</span><br><span class="line">		ret = bd-&gt;ops-&gt;update_status(bd);</span><br><span class="line">	mutex_unlock(&amp;bd-&gt;update_lock);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from kernel&#x2F;linux-5.4&#x2F;include&#x2F;linux&#x2F;backlight.h</p>
+</blockquote>
+<p>pwm_backlight_ops：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">const</span> <span class="class"><span class="keyword">struct</span> <span class="title">backlight_ops</span> <span class="title">pwm_backlight_ops</span> =</span> &#123;</span><br><span class="line">	.update_status	= pwm_backlight_update_status,</span><br><span class="line">	.check_fb	= pwm_backlight_check_fb,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>直接进入函数 pwm_backlight_update_status() ：</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">pwm_backlight_update_status</span><span class="params">(<span class="keyword">struct</span> backlight_device *bl)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">pwm_bl_data</span> *<span class="title">pb</span> =</span> bl_get_data(bl);</span><br><span class="line">	<span class="type">int</span> brightness = bl-&gt;props.brightness;</span><br><span class="line">	<span class="type">int</span> duty_cycle;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (bl-&gt;props.power != FB_BLANK_UNBLANK ||</span><br><span class="line">	    bl-&gt;props.fb_blank != FB_BLANK_UNBLANK ||</span><br><span class="line">	    bl-&gt;props.state &amp; BL_CORE_FBBLANK)</span><br><span class="line">		brightness = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (pb-&gt;notify)</span><br><span class="line">		brightness = pb-&gt;notify(pb-&gt;dev, brightness);</span><br><span class="line"></span><br><span class="line">	log_d(<span class="string">&quot;polarity = %d\n, brightness = %d&quot;</span>, pb-&gt;polarity, brightness);</span><br><span class="line">	<span class="keyword">if</span> (pb-&gt;polarity != <span class="number">0</span>)&#123;</span><br><span class="line">		brightness = bl-&gt;props.max_brightness - brightness;</span><br><span class="line">	&#125;</span><br><span class="line">	log_d(<span class="string">&quot;polarity = %d\n, brightness = %d&quot;</span>, pb-&gt;polarity, brightness);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (brightness &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">		duty_cycle = compute_duty_cycle(pb, brightness);</span><br><span class="line">		pwm_config(pb-&gt;pwm, duty_cycle, pb-&gt;period);</span><br><span class="line">		pwm_backlight_power_on(pb, brightness);</span><br><span class="line">	&#125; </span><br><span class="line">	<span class="keyword">else</span></span><br><span class="line">		pwm_backlight_power_off(pb);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (pb-&gt;notify_after)</span><br><span class="line">		pb-&gt;notify_after(pb-&gt;dev, brightness);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>该函数是使用背光值更新背光，那么背光值从哪里来？<br>但我先按下不表，先把当前背光驱动的 probe 函数讲完。<br>函数 pwm_backlight_update_status() 是根据背光值去修改背光亮度。见 21~27 行，开启背光和关闭背光的核心函数是 pwm_backlight_power_on() 和 pwm_backlight_power_off() 。另外，在调用 pwm_backlight_power_on() 之前，还会调用 pwm_config() ，该函数的功能是根据刚用 brightness 计算的 duty_cycle 更新当前背光对应 pwm 的配置参数。<br>把背光开启后，调用 platform_set_drvdata() 把 struct backlight_device 的内存地址作为 pdev-&gt;dev-&gt;drvdata 的值。目的是通过 platform 子系统使用 struct platform_driver 内的函数集时（此时表示进入 struct platform_driver 对应的子系统），通过函数参数 struct platform_device 内的字段 drvdata ，能使用该驱动私有的描述符去执行相关操作。比如说在该背光驱动的源文件 pwm_bl.c 内的一段代码：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">platform_driver</span> <span class="title">pwm_backlight_driver</span> =</span> &#123;</span><br><span class="line">	.driver		= &#123;</span><br><span class="line">		.name		= <span class="string">&quot;pwm-backlight&quot;</span>,</span><br><span class="line">		...</span><br><span class="line">	&#125;,</span><br><span class="line">	...</span><br><span class="line">	.shutdown	= pwm_backlight_shutdown,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">pwm_backlight_shutdown</span><span class="params">(<span class="keyword">struct</span> platform_device *pdev)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">backlight_device</span> *<span class="title">bl</span> =</span> platform_get_drvdata(pdev);</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">pwm_bl_data</span> *<span class="title">pb</span> =</span> bl_get_data(bl);</span><br><span class="line"></span><br><span class="line">	pwm_backlight_power_off(pb);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="扩展：背光值是如何传输到-backlight-模块？"><a href="#扩展：背光值是如何传输到-backlight-模块？" class="headerlink" title="扩展：背光值是如何传输到 backlight 模块？"></a>扩展：背光值是如何传输到 backlight 模块？</h4><p>通过函数 pwm_backlight_update_status() 的内容可知，backlight 有两个来源，一是 (struct backlight_device *)-&gt;props.brightness ；二是调用 <code>pb-&gt;notify(pb-&gt;dev, brightness);</code> 。</p>
+<blockquote>
+<p>第二个来源就不说了，函数 pb-&gt;notify 是被 data-&gt;notify 赋值的，而且 data ，即 pdev-&gt;dev-&gt;platdata 是为 NULL 的，因为该 platform_device 是扫描设备树期间生成的，类 data 字段（设备私有数据）自然就没有被赋值。</p>
+</blockquote>
+<p>我们重点讲第一个来源，上文说过，我们一般是用如下的命令去调试屏幕背光：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> 10 &gt; /sys/class/backlight/backlight/brightness</span><br></pre></td></tr></table></figure>
+<p>那么为什么传递一个字符串 10 之后，屏幕的背光就会改变？<br>每个在 class 集合下的设备是一个目录，目录内都有一组“文件”，这些“文件”都是由 class 集合定义。就像不同的公司，员工服装和工牌的样式都不一样的。这些“文件”的作用就是记录该设备的参数，又或者说这些设备的属性。它们也像普通文本文件一样有读写权限，而且还能想普通文本文件一样使用诸如 cat、head、tail 命令去读文件；用诸如 echo 命令去写文件。但是它们的值和普通文件是不一样的，根据不同的设备有不同的限制，比如 “&#x2F;sys&#x2F;class&#x2F;backlight&#x2F;backlight&#x2F;brightness” ，该文件可读写，但是写的内容只能是在对应设备树节点 backlight 的属性 brightness-levels 规定的背光等级范围。如果超出范围，或不是数字的字符串，则会报错，比如：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[root@100ask:/sys/class/backlight/backlight]# <span class="built_in">echo</span> 10 &gt; brightness</span><br><span class="line">-bash: <span class="built_in">echo</span>: write error: Invalid argument</span><br></pre></td></tr></table></figure>
+
+<p>那么我在这些设备的属性文件输入了不该输入的值，系统又是如何知道这些值就是非法的？<br>前文说过，一个子系统或模块对应一个 class ，而在 class 下的设备必须有它规定的属性文件。在 backlight 模块中，它有一个名为 “backlight” 的 class 描述符，同时它也定义了一组在它模块内的属性文件。每当在它的 class 下注册设备，这些设备都会被它要求生成这些属性文件。该属性文件被抽象出来，且由以下结构体描述：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">device_attribute</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">attribute</span>	<span class="title">attr</span>;</span></span><br><span class="line">	<span class="type">ssize_t</span> (*show)(<span class="keyword">struct</span> device *dev, <span class="keyword">struct</span> device_attribute *attr,</span><br><span class="line">			<span class="type">char</span> *buf);</span><br><span class="line">	<span class="type">ssize_t</span> (*store)(<span class="keyword">struct</span> device *dev, <span class="keyword">struct</span> device_attribute *attr,</span><br><span class="line">			 <span class="type">const</span> <span class="type">char</span> *buf, <span class="type">size_t</span> count);</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>attr: 内有描述属性文件的权限和名字</li>
+<li>show：对应文件的读操作</li>
+<li>store：对应文件的写操作</li>
+</ul>
+<p>还是以 &#x2F;sys&#x2F;class&#x2F;backlight&#x2F;backlight&#x2F;brightness 举例，以下是它用 <code>struct device_attribute</code> 的定义：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> to_backlight_device(obj) container_of(obj, struct backlight_device, dev)</span></span><br><span class="line"><span class="type">static</span> <span class="type">ssize_t</span> <span class="title function_">brightness_show</span><span class="params">(<span class="keyword">struct</span> device *dev,</span></span><br><span class="line"><span class="params">		<span class="keyword">struct</span> device_attribute *attr, <span class="type">char</span> *buf)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">backlight_device</span> *<span class="title">bd</span> =</span> to_backlight_device(dev);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="built_in">sprintf</span>(buf, <span class="string">&quot;%d\n&quot;</span>, bd-&gt;props.brightness);</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">static</span> <span class="type">ssize_t</span> <span class="title function_">brightness_store</span><span class="params">(<span class="keyword">struct</span> device *dev,</span></span><br><span class="line"><span class="params">		<span class="keyword">struct</span> device_attribute *attr, <span class="type">const</span> <span class="type">char</span> *buf, <span class="type">size_t</span> count)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> rc;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">backlight_device</span> *<span class="title">bd</span> =</span> to_backlight_device(dev);</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> brightness;</span><br><span class="line"></span><br><span class="line">	rc = kstrtoul(buf, <span class="number">0</span>, &amp;brightness);</span><br><span class="line">	<span class="keyword">if</span> (rc)</span><br><span class="line">		<span class="keyword">return</span> rc;</span><br><span class="line"></span><br><span class="line">	rc = backlight_device_set_brightness(bd, brightness);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> rc ? rc : count;</span><br><span class="line">&#125;</span><br><span class="line"><span class="type">static</span> <span class="title function_">DEVICE_ATTR_RW</span><span class="params">(brightness)</span>;</span><br></pre></td></tr></table></figure>
+<p>以下是 DEVICE_ATTR_RW 的定义：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> DEVICE_ATTR_RW(_name) \</span></span><br><span class="line"><span class="meta">	struct device_attribute dev_attr_##_name = __ATTR_RW(_name)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> __ATTR_RW(_name) __ATTR(_name, (S_IWUSR | S_IRUGO),		\</span></span><br><span class="line"><span class="meta">			 _name##_show, _name##_store)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> __ATTR(_name, _mode, _show, _store) &#123;				\</span></span><br><span class="line"><span class="meta">	.attr = &#123;.name = __stringify(_name),				\</span></span><br><span class="line"><span class="meta">		 .mode = VERIFY_OCTAL_PERMISSIONS(_mode) &#125;,		\</span></span><br><span class="line"><span class="meta">	.show	= _show,						\</span></span><br><span class="line"><span class="meta">	.store	= _store,						\</span></span><br><span class="line"><span class="meta">&#125;</span></span><br></pre></td></tr></table></figure>
+<p>我们忽略详细的执行过程，就按上面提供的代码和修改背光值的命令去结合并理解。当数值字符串“10”通过重定向写入到文件 brightness 的期间，系统肯定会经过 vfs 层，sysfs 层等，通过“重重困难”找到 brightness_store() 并调用它。看该函数的实现，可知参数 dev 对应的是 <code>struct backlight_device</code>（看 backlight_device_register() 调用过程），把数值字符串转换为数值后，调用函数 backlight_device_set_brightness() ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">backlight_device_set_brightness</span><span class="params">(<span class="keyword">struct</span> backlight_device *bd,</span></span><br><span class="line"><span class="params">				    <span class="type">unsigned</span> <span class="type">long</span> brightness)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> rc = -ENXIO;</span><br><span class="line"></span><br><span class="line">	mutex_lock(&amp;bd-&gt;ops_lock);</span><br><span class="line">	<span class="keyword">if</span> (bd-&gt;ops) &#123;</span><br><span class="line">		<span class="keyword">if</span> (brightness &gt; bd-&gt;props.max_brightness)</span><br><span class="line">			rc = -EINVAL;</span><br><span class="line">		<span class="keyword">else</span> &#123;</span><br><span class="line">			pr_debug(<span class="string">&quot;set brightness to %lu\n&quot;</span>, brightness);</span><br><span class="line">			bd-&gt;props.brightness = brightness;</span><br><span class="line">			backlight_update_status(bd);</span><br><span class="line">			rc = <span class="number">0</span>;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	mutex_unlock(&amp;bd-&gt;ops_lock);</span><br><span class="line"></span><br><span class="line">	backlight_generate_event(bd, BACKLIGHT_UPDATE_SYSFS);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> rc;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到，该函数调用了 backlight_update_status() ，该函数上文已经讲过了。那么回过头，结合 pwm_backlight 的 pwm_backlight_ops 看，这背光亮度不就改变了吗？</p>
+<blockquote>
+<p>本文并没有涉及 class 等 Linux 设备框架的概念，以后再说。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Drivers/" rel="tag"># Drivers</a>
+              <a href="/tags/backlight/" rel="tag"># backlight</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/05/18/Hardware/device/%E5%B7%AE%E5%88%86%E4%BF%A1%E5%8F%B7LVDS%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/" rel="prev" title="差分信号LVDS学习笔记">
+                  <i class="fa fa-angle-left"></i> 差分信号LVDS学习笔记
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2024/06/03/Skill/normal/%E4%BB%A3%E7%A0%81%E9%98%85%E8%AF%BB%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/" rel="next" title="代码阅读环境搭建（clangd+bear）">
+                  代码阅读环境搭建（clangd+bear） <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

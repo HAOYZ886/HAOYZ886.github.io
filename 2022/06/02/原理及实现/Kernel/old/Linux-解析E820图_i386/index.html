@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="函数 setup_arch()跳转到 start_kernel() ，第一件事就是执行函数 setup_arch() ，每一个平台都有它们自己的 setup_arch()，EleOS 内核仅支持 i386 ，现说明它的 setup_arch() 的执行流程。目前 setup_arch() 首要的任务就是先解析 E820 图：">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - 解析E820图（内核版本 2.4.22，32位x86）">
+<meta property="og:url" content="http://example.com/2022/06/02/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E8%A7%A3%E6%9E%90E820%E5%9B%BE_i386/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="函数 setup_arch()跳转到 start_kernel() ，第一件事就是执行函数 setup_arch() ，每一个平台都有它们自己的 setup_arch()，EleOS 内核仅支持 i386 ，现说明它的 setup_arch() 的执行流程。目前 setup_arch() 首要的任务就是先解析 E820 图：">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E8%A7%A3%E6%9E%90E820%E5%9B%BE/UMA.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E8%A7%A3%E6%9E%90E820%E5%9B%BE/NUMA.png">
+<meta property="article:published_time" content="2022-06-01T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-10-27T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="Memory">
+<meta property="article:tag" content="X86">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E8%A7%A3%E6%9E%90E820%E5%9B%BE/UMA.png">
+
+
+<link rel="canonical" href="http://example.com/2022/06/02/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E8%A7%A3%E6%9E%90E820%E5%9B%BE_i386/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2022/06/02/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E8%A7%A3%E6%9E%90E820%E5%9B%BE_i386/","path":"2022/06/02/原理及实现/Kernel/old/Linux-解析E820图_i386/","title":"Linux - 解析E820图（内核版本 2.4.22，32位x86）"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - 解析E820图（内核版本 2.4.22，32位x86） | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-setup-arch"><span class="nav-number">1.</span> <span class="nav-text">函数 setup_arch()</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#E820-%E5%9B%BE%E4%BB%8E%E4%BD%95%E8%80%8C%E6%9D%A5"><span class="nav-number">2.</span> <span class="nav-text">E820 图从何而来</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">2.1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%AD%A3%E6%96%87"><span class="nav-number">2.2.</span> <span class="nav-text">正文</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E6%9E%90-E820-%E5%9B%BE"><span class="nav-number">3.</span> <span class="nav-text">解析 E820 图</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%87%BD%E6%95%B0-setup-memory-region-%E5%92%8C-copy-e820-map"><span class="nav-number">3.1.</span> <span class="nav-text">函数 setup_memory_region() 和 copy_e820_map()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8E-E820-%E5%9B%BE%E6%9C%89%E5%85%B3%E7%9A%84%E5%86%85%E6%A0%B8%E5%91%BD%E4%BB%A4"><span class="nav-number">3.2.</span> <span class="nav-text">与 E820 图有关的内核命令</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E5%8C%BA"><span class="nav-number">4.</span> <span class="nav-text">内存管理区</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%95%E5%AF%BC%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E5%99%A8"><span class="nav-number">5.</span> <span class="nav-text">引导内存分配器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E6%A0%B8%E9%A1%B5%E8%A1%A8"><span class="nav-number">6.</span> <span class="nav-text">内核页表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86%E5%8C%BA%E3%80%81%E5%86%85%E5%AD%98%E8%8A%82%E7%82%B9%E4%BB%A5%E5%8F%8A-struct-page"><span class="nav-number">7.</span> <span class="nav-text">内存管理区、内存节点以及 struct page</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E5%86%85%E5%AD%98%E8%8A%82%E7%82%B9%EF%BC%9F"><span class="nav-number">7.1.</span> <span class="nav-text">什么是内存节点？</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AE%A1%E7%90%86%E5%8C%BA%E6%8F%8F%E8%BF%B0%E7%AC%A6"><span class="nav-number">8.</span> <span class="nav-text">管理区描述符</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#struct-page"><span class="nav-number">9.</span> <span class="nav-text">struct page</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#linux-2-4-%E7%9A%84%E5%BC%95%E5%AF%BC%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E5%99%A8%E7%9A%84%E6%94%B9%E8%BF%9B"><span class="nav-number">10.</span> <span class="nav-text">linux 2.4 的引导内存分配器的改进</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/02/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E8%A7%A3%E6%9E%90E820%E5%9B%BE_i386/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - 解析E820图（内核版本 2.4.22，32位x86） | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - 解析E820图（内核版本 2.4.22，32位x86）
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2022-06-02 00:00:00" itemprop="dateCreated datePublished" datetime="2022-06-02T00:00:00+08:00">2022-06-02</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2022-10-28 00:00:00" itemprop="dateModified" datetime="2022-10-28T00:00:00+08:00">2022-10-28</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>7.6k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>28 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="函数-setup-arch"><a href="#函数-setup-arch" class="headerlink" title="函数 setup_arch()"></a>函数 setup_arch()</h2><p>跳转到 start_kernel() ，第一件事就是执行函数 setup_arch() ，每一个平台都有它们自己的 setup_arch()，EleOS 内核仅支持 i386 ，现说明它的 setup_arch() 的执行流程。<br>目前 setup_arch() 首要的任务就是先解析 E820 图：</p>
+<span id="more"></span>
+
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> __init <span class="title function_">setup_arch</span><span class="params">(<span class="type">char</span> ** command_line)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> max_low_pfn;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 注意：函数 setup_memory_region() 并不会对起始地址大</span></span><br><span class="line"><span class="comment">     * 于或等于结束地址（addr+size）的 E820 项进行处理，而是忽</span></span><br><span class="line"><span class="comment">     * 略它 </span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    setup_memory_region();</span><br><span class="line">    parse_cmdline_early(command_line);</span><br><span class="line">    max_low_pfn = setup_memory();</span><br><span class="line">    printk(<span class="string">&quot;max_low_pfn: %d\n&quot;</span>, max_low_pfn);</span><br><span class="line">    paging_init();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>看函数 setup_memory_region() 之前，我们需要知道 E820 图从何而来。</p>
+<h2 id="E820-图从何而来"><a href="#E820-图从何而来" class="headerlink" title="E820 图从何而来"></a>E820 图从何而来</h2><h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>如何知道内存的可用容量？<br>在 I386 平台，在实模式期间，我们可以使用 BIOS 中断来获取内存的可用容量。调用 INT 0x15 AH&#x3D;E820&#x2F;E801&#x2F;88 即可获取可用内存的范围。这些系统调用更多的是由外设提供，这些系统调用被映射在内存地址的640KB～1MB范围，在执行 BIOS 期间它们会被检索，即检查是否可用。EleOS 内核是被内核启动器 GURB2 Multiboot 加载，获取可用内存的这类信息已被启动器获取并传输给内核，看 Multiboot information structure 。  </p>
+<h3 id="正文"><a href="#正文" class="headerlink" title="正文"></a>正文</h3><p>看 multiboot ，它的某一个结构体 Multiboot information structure </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">        +-------------------+</span><br><span class="line">0       | flags             |    (required)</span><br><span class="line">        +-------------------+</span><br><span class="line">4       | mem_lower         |    (present if flags[0] is set)</span><br><span class="line">8       | mem_upper         |    (present if flags[0] is set)</span><br><span class="line">        +-------------------+</span><br><span class="line">12      | boot_device       |    (present if flags[1] is set)</span><br><span class="line">        +-------------------+</span><br><span class="line">16      | cmdline           |    (present if flags[2] is set)</span><br><span class="line">        +-------------------+</span><br><span class="line">20      | mods_count        |    (present if flags[3] is set)</span><br><span class="line">24      | mods_addr         |    (present if flags[3] is set)</span><br><span class="line">        +-------------------+</span><br><span class="line">28 - 40 | syms              |    (present if flags[4] or</span><br><span class="line">        |                   |                flags[5] is set)</span><br><span class="line">        +-------------------+</span><br><span class="line">44      | mmap_length       |    (present if flags[6] is set)</span><br><span class="line">48      | mmap_addr         |    (present if flags[6] is set)</span><br><span class="line">        +-------------------+</span><br><span class="line">52      | drives_length     |    (present if flags[7] is set)</span><br><span class="line">56      | drives_addr       |    (present if flags[7] is set)</span><br><span class="line">        +-------------------+</span><br><span class="line">60      | config_table      |    (present if flags[8] is set)</span><br><span class="line">        +-------------------+</span><br><span class="line">64      | boot_loader_name  |    (present if flags[9] is set)</span><br><span class="line">        +-------------------+</span><br><span class="line">68      | apm_table         |    (present if flags[10] is set)</span><br><span class="line">        +-------------------+</span><br><span class="line">72      | vbe_control_info  |    (present if flags[11] is set)</span><br><span class="line">76      | vbe_mode_info     |</span><br><span class="line">80      | vbe_mode          |</span><br><span class="line">82      | vbe_interface_seg |</span><br><span class="line">84      | vbe_interface_off |</span><br><span class="line">86      | vbe_interface_len |</span><br><span class="line">        +-------------------+</span><br><span class="line">88      | framebuffer_addr  |    (present if flags[12] is set)</span><br><span class="line">96      | framebuffer_pitch |</span><br><span class="line">100     | framebuffer_width |</span><br><span class="line">104     | framebuffer_height|</span><br><span class="line">108     | framebuffer_bpp   |</span><br><span class="line">109     | framebuffer_type  |</span><br><span class="line">110-115 | color_info        |</span><br><span class="line">        +-------------------+</span><br></pre></td></tr></table></figure>
+<p>注意看字段 mem_* 以及 mmap_* ，它们被设为可用是在 Multiboot header 的 flags 字段，在该字段的第1位置位表示 mem_* 和 mmap_* 可用。在 EleOS 内核，该位是必须要设置的，且已在 <a href="../../../src/arch/i386/boot/head.S">head.S</a> 设置</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Multiboot header 魔数，用于识别 */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MBOOT_HEADER_MAGIC  0x1BADB002</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Multiboot header 字段 flags 位</span></span><br><span class="line"><span class="comment"> * 位0 ： 被置位表示所有的引导模块必须以页面（4KB）边界上对齐</span></span><br><span class="line"><span class="comment"> * 位1 ： 被置位表示 Multiboot information structre 的字</span></span><br><span class="line"><span class="comment"> *       段 “mem_*”（内存空洞）以及“mmap_*”（内存可用信</span></span><br><span class="line"><span class="comment"> *       息）可用</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MBOOT_PAGE_ALIGN    (1 &lt;&lt; 0)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MBOOT_MEM_INFO      (1 &lt;&lt; 1)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MBOOT_HEADER_FLAGS  (MBOOT_PAGE_ALIGN | MBOOT_MEM_INFO)</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * checksum 是一个32位的无符号值，为字段 magic 以及 flags </span></span><br><span class="line"><span class="comment"> * 之和再转为负数。</span></span><br><span class="line"><span class="comment"> * 在执行由 Multiboot 加载的内核之前，Multiboot 会检查 </span></span><br><span class="line"><span class="comment"> *  magic 以及 checksum，检查 checksum 时，会执行运算：</span></span><br><span class="line"><span class="comment"> *  checksum + flags + magic。如果为0，表示检查通过。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> MBOOT_CHECKSUM     -(MBOOT_HEADER_MAGIC+MBOOT_HEADER_FLAGS)</span></span><br><span class="line"></span><br><span class="line">......</span><br><span class="line"></span><br><span class="line">.code32</span><br><span class="line">.section .text</span><br><span class="line"></span><br><span class="line">.<span class="keyword">extern</span> multiboot_info_pointer</span><br><span class="line">.<span class="keyword">extern</span> handle_multiboot_info</span><br><span class="line">.<span class="keyword">extern</span> start_kernel</span><br><span class="line">.<span class="keyword">extern</span> printk</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 符合Multiboot规范的 OS 映象需要 Multiboot header </span></span><br><span class="line"><span class="comment"> * </span></span><br><span class="line"><span class="comment"> * Multiboot header 分布如下：</span></span><br><span class="line"><span class="comment"> * ---------------------------------------------</span></span><br><span class="line"><span class="comment"> * offset   type    name    degree</span></span><br><span class="line"><span class="comment"> *   </span></span><br><span class="line"><span class="comment"> *   0      u32     magic    必需</span></span><br><span class="line"><span class="comment"> *   4      u32     flags    必需</span></span><br><span class="line"><span class="comment"> *   8      u32    checksum  必需</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> *  以上三个字段是必需的，剩下的字段是可选的（通过字段 </span></span><br><span class="line"><span class="comment"> *  flags 内的位置位选择）</span></span><br><span class="line"><span class="comment"> * ---------------------------------------------</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">.<span class="type">long</span> MBOOT_HEADER_MAGIC</span><br><span class="line">.<span class="type">long</span> MBOOT_HEADER_FLAGS</span><br><span class="line">.<span class="type">long</span> MBOOT_CHECKSUM</span><br></pre></td></tr></table></figure>
+
+<p>现在来看看 mem_* 字段：</p>
+<ol>
+<li>mem_lower ：记录 0～1MB 内存的可用范围，它记录的方式是：可用内存的结束地址&#x2F;1024 。它可记录最大的内存范围是 640 ，即 640*1024&#x3D;640KB ，表示 0～640KB 为内存的可用范围。  </li>
+<li>mem_upper ：记录 1MB～4GB 的可用内存范围，记录方式和上一个类似：(可用内存的结束地址-1MB)&#x2F;1024 。例如它需要记录 1MB～64MB 的内存范围，则存储：(64MB-1MB)&#x2F;1024&#x3D;63KB 。</li>
+</ol>
+<p>再到 mmap_* 字段</p>
+<ol>
+<li><p>mmap_length ：记录由 multiboot 创建的 E820 图的总字节大小。注意！是整个 E820 图的以字节为单位的总大小，而不是 E820 图内的项的个数。</p>
+</li>
+<li><p>mmap_addr ：这是指向 E820 图的指针，先来看看 E820 图内的个项结构体：</p>
+ <figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">        +-------------------+</span><br><span class="line">-4      | size              |</span><br><span class="line">        +-------------------+</span><br><span class="line">0       | base_addr         |</span><br><span class="line">8       | length            |</span><br><span class="line">16      | type              |</span><br><span class="line">        +-------------------+</span><br></pre></td></tr></table></figure>
+<ul>
+<li>size 记录当前项的字节大小（固定为20，没什么作用）</li>
+<li>base_addr 记录起始地址</li>
+<li>length 记录范围大小（以字节为单位）</li>
+<li>type 记录内存空间的类型</li>
+</ul>
+<p> Multiboot 就是使用该类型的结构体创建 E820 图，但这个结构体还是有不足之处。所以在把 Multiboot information structure 复制到 empty_zero_page 期间（看函数 <a href="../../../src/arch/i386/boot/multiboot.c">handle_multiboot_info()</a>），把该结构体转换为以下结构体：<br> <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">e820entry</span> &#123;</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> <span class="type">long</span> addr;    <span class="comment">/* 起始地址 */</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> <span class="type">long</span> size;    <span class="comment">/* 内存空间大小 */</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> type;         <span class="comment">/* 内存类型 */</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">e820map</span> &#123;</span></span><br><span class="line">    <span class="type">int</span> nr_map;     <span class="comment">/* E820图的数量 */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">e820entry</span> <span class="title">map</span>[<span class="title">E820MAX</span>];</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure><br> 转换完成后，就把转换完成的 E820 图复制到 empty_zero_page，setup_arch() 就可使用该 E820 图去解析。</p>
+</li>
+</ol>
+<p>现在已知 E820 图从何而来，就算没有 E820 图，我们也可以根据字段 mem_* 自己创建 E820 图。如果 multiboot 调用 BIOS INT 0x15 AH&#x3D;E820 不成功（主要原因是 BIOS 中断不支持该功能，没有相应的功能号），它也许通过调用 BIOS INT 0x15 AH&#x3D;E801&#x2F;88 获取内存可用信息创建 E820 图（至少字段 mem_* 是有的）。</p>
+<h2 id="解析-E820-图"><a href="#解析-E820-图" class="headerlink" title="解析 E820 图"></a>解析 E820 图</h2><h3 id="函数-setup-memory-region-和-copy-e820-map"><a href="#函数-setup-memory-region-和-copy-e820-map" class="headerlink" title="函数 setup_memory_region() 和 copy_e820_map()"></a>函数 setup_memory_region() 和 copy_e820_map()</h3><p>知道 E820 图从何而来之后，看函数 setup_memory_region() ，首先必须要做的事情就是调整 E820 图，虽说 Multiboot 可能已经调整好它了，以防万一，再自己调整一遍为好。主要需要调整的对象是：重复 E820 项、 E820 项乱序、可合并的 E820 项。该功能在函数 sanitize_e820_map() 实现（源代码内有详细说明）。</p>
+<p>调整之后，就把调整完的 E820 图复制到全局结构体 e820 当中，相关的函数是 copy_e820_map() 。<br>如果调整失败或者是复制失败，则说明 e820 图不存在，可通过字段 mem_* 自己创建 E820 图。</p>
+<h3 id="与-E820-图有关的内核命令"><a href="#与-E820-图有关的内核命令" class="headerlink" title="与 E820 图有关的内核命令"></a>与 E820 图有关的内核命令</h3><p>我们可以给内核赋予命令，给内核去解析作出相应操作。E820 图也存在相关的内核命令。那么我们在哪里输入内核命令给内核？很简单，在 GRUB2 脚本输入命令即可：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">menuentry <span class="string">&quot;EleOS&quot;</span> &#123;</span><br><span class="line">    <span class="built_in">set</span> root=<span class="string">&#x27;hd0&#x27;</span></span><br><span class="line">    # 加载 boot 目录下的 kernel.bin 文件</span><br><span class="line">    multiboot /boot/kernel.bin 输入内核命令处</span><br><span class="line">    boot</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>待执行完函数 setup_memory_region() 之后，我们对有关 E820 图的内核命令解析并做出相关操作。相关的操作有：重新定义一个 E820 图、添加一个新的 E820 项、调整内核的内存大小。</p>
+<blockquote>
+<p>还有处理一条对高端内存的内核命令，该命令的作用是设置高端内存的大小。  </p>
+</blockquote>
+<p>以上的操作都在函数 parse_cmdline_early() 当中实现。对于那些还没有解析的内核命令，会在函数 setup_arch() 执行完成之后解析（以后会说明）。</p>
+<blockquote>
+<p>每条有关 E820 图的内核命令已在函数 parse_cmdline_early() 内写明注释。</p>
+</blockquote>
+<h2 id="内存管理区"><a href="#内存管理区" class="headerlink" title="内存管理区"></a>内存管理区</h2><p>接下来就是重头戏了，我们调用函数 setup_memory() 使用调整后的 E820 图找出最大的可用内存范围，便于划分内存管理区 ZONE_DMA 、ZONE_NORMAL 、ZONE_HIGHMEM 的范围，然后初始化引导内存分配器。  </p>
+<p>首先我们需要知道内存管理区是什么。内存管理区被分为三种，它们各自的作用是：</p>
+<ol>
+<li>第一种管理区 ZONE_DMA 是用于满足 ISA 设备（Industry Standard Architecture devices），有些设备是不支持分页机制，多数是访问低端内存。所以划出 0～16MB 作为 ZONE_DMA 。  </li>
+<li>第二种管理区 ZONE_NORMAL 是直接映射到内核空间的区域，划出 16MB～896MB 作为 ZONE_NORMAL 。 <blockquote>
+<p>直接映射：物理地址 + 3GB</p>
+</blockquote>
+</li>
+<li>第三种管理区 ZONE_HIGHMEM 是包含 896MB 以后的内存区域。</li>
+</ol>
+<p>为什么需要管理区 ZONE_HIGHMEM ？<br>在内核空间中，已有 0～896MB 被直接映射，剩下 128MB 是用于能够使用 896MB 以后的内存页面。  </p>
+<p>函数 setup_memory() 的执行步骤为：  </p>
+<ol>
+<li>调用函数 find_max_pfn() 找出可用内存的结束地址（以页为单位）。</li>
+<li>调用函数 find_max_low_pfn() 划分出高端内存（如果有，且定义了 CONFIG_HIGHMEM）。</li>
+<li>为引导内存分配器分配位图（一位对应一个页），并填充不可用页对应的位。</li>
+</ol>
+<p>着重说明第二点和第三点。<br>首先第二点，先看函数 find_max_low_pfn() ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">unsigned</span> <span class="type">long</span> __init <span class="title function_">find_max_low_pfn</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> max_low_pfn;</span><br><span class="line"></span><br><span class="line">    max_low_pfn = max_pfn;</span><br><span class="line">    <span class="keyword">if</span> (max_low_pfn &gt; MAXMEM_PFN)</span><br><span class="line">    &#123;</span><br><span class="line">        <span class="comment">/* 如果没有通过内核命令指定高端内存的大小 */</span></span><br><span class="line">        <span class="keyword">if</span> (highmem_pages == <span class="number">-1</span>)</span><br><span class="line">            highmem_pages = max_low_pfn - MAXMEM_PFN;</span><br><span class="line">        <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (highmem_pages + MAXMEM_PFN &lt; max_pfn)</span><br><span class="line">                max_pfn = MAXMEM_PFN + highmem_pages;</span><br><span class="line">            <span class="keyword">if</span> (highmem_pages + MAXMEM_PFN &gt; max_pfn) &#123;</span><br><span class="line">                printk(PRINT_WARNING <span class="string">&quot;Only %luMB highmem pages available, ignoring highmem size of %luMB.\n&quot;</span>,</span><br><span class="line">                        pages_to_mb(max_pfn - MAXMEM_PFN), pages_to_mb(highmem_pages));</span><br><span class="line">                highmem_pages = <span class="number">0</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        max_low_pfn = MAXMEM_PFN;</span><br><span class="line">        ......</span><br><span class="line">    &#125;</span><br><span class="line">    ......</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>还记得上面说过有一条内核命令是关于设置高端内存的大小吗？现在，它的作用来了。可用内存不管是大于 896MB 还是小于等于 896MB ，它设置的高端内存也有所不同。  </p>
+<blockquote>
+<p>注意：为了方便理解，以下说明都是以定义了 CONFIG_HIGHMEM 为前提而开始。</p>
+</blockquote>
+<p>假设变量 max_low_pfn 大于 896MB ，如果没有通过内核命令指定高端内存的大小，则 max_low_pfn - 896MB 作为高端内存的页面数量；如果设置了，且小于可用内存的最大页面数，则调整 max_pfn ，如果大于可用内存的最大页面数，则所设置的高端内存页面数作废。所以由此可知，在此情形，这个设置高端内存大小的内核命令用于限制高端内存大小。<br>接下来再来看下半部分  </p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">else</span> </span><br><span class="line">    &#123;</span><br><span class="line">        <span class="keyword">if</span> (highmem_pages == <span class="number">-1</span>)</span><br><span class="line">            highmem_pages = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">/**</span></span><br><span class="line"><span class="comment">         * 真实可用的内存大小没有超过 896MiB，但如果开启了高端内存</span></span><br><span class="line"><span class="comment">         * ，而且传递给内核的命令包含设置高端内存的大小，所以尝试设置</span></span><br><span class="line"><span class="comment">         * 高端内存。</span></span><br><span class="line"><span class="comment">         * 在这种情况下设置高端内存还有另外的一个条件：</span></span><br><span class="line"><span class="comment">         * 直接映射的内存范围（高端内存以下的内存）不能小于 64MiB，</span></span><br><span class="line"><span class="comment">         * 即高端内存的范围必须大于等于 64MiB 小于等于 896MiB 。</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_HIGHMEM</span></span><br><span class="line">        <span class="comment">/**</span></span><br><span class="line"><span class="comment">         * 如果高端内存的容量大小大于等于真实可用的内存大小，则表明</span></span><br><span class="line"><span class="comment">         * 包含设置高端内存的大小的内核命令是有误的，未根据真实的内</span></span><br><span class="line"><span class="comment">         * 存容量去设置。</span></span><br><span class="line"><span class="comment">         */</span></span><br><span class="line">        <span class="keyword">if</span> (highmem_pages &gt;= max_pfn) &#123;</span><br><span class="line">            printk(PRINT_ERR <span class="string">&quot;highmem size specified (%uMB) is bigger than pages available (%luMB)!\n&quot;</span>,</span><br><span class="line">                    pages_to_mb(highmem_pages), pages_to_mb(max_pfn));</span><br><span class="line">            highmem_pages = <span class="number">0</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (highmem_pages) &#123;</span><br><span class="line">            <span class="keyword">if</span> (max_low_pfn - highmem_pages &lt; <span class="number">64</span>*<span class="number">1024</span>*<span class="number">1024</span> / PAGE_SIZE) &#123;</span><br><span class="line">                printk(PRINT_ERR <span class="string">&quot;highmem size %uMB results in smaller than 64MB lowmem, ignoring it.\n&quot;</span>,</span><br><span class="line">                        pages_to_mb(highmem_pages));</span><br><span class="line">                highmem_pages = <span class="number">0</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span></span><br><span class="line">                max_low_pfn -= highmem_pages;</span><br><span class="line">        &#125;</span><br><span class="line"><span class="meta">#<span class="keyword">else</span></span></span><br><span class="line">        <span class="keyword">if</span> (highmem_pages)</span><br><span class="line">            printk(PRINT_ERR <span class="string">&quot;ignoring highmem size on non-highmem kernel!\n&quot;</span>);</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> max_low_pfn;</span><br></pre></td></tr></table></figure>
+
+<p>假设变量 max_low_pfn 小于等于 896MB ，且还定义了 CONFIG_HIGHMEM ，使用了高端内存大小的内核命令，这意味着要空出一段内存空间作为高端内存。但也是有限制的，即 ZONE_DMA + ZONE_NORMAL 的内存大小要大于等于 64MB ，否则在 896MB 内添加高端内存失败。  </p>
+<p>好了，现在已通过函数 find_max_pfn() 以及 find_max_low_pfn() 知道高端内存的大小以及低端内存的大小（指的是 ZONE_DMA 以及 ZONE_NORMAL 的大小总和），且该类型的数据已在变量 max_low_pfn 、max_pfn 、highstart_pfn 以及 highend_pfn 存储。  </p>
+<h2 id="引导内存分配器"><a href="#引导内存分配器" class="headerlink" title="引导内存分配器"></a>引导内存分配器</h2><p>现在到初始化引导内存分配器，引导内存分配器就是位图内存位图分配器，以位图当中的一位当作一个页，按位分配内存页面。<br>它的优势有：</p>
+<ol>
+<li>初始化位图分配器简单且快速，这对于内核初始化阶段的执行效率要求很重要。而且过渡到伙伴分配器前需要很多的内存空间，这些内存空间用于 struct page 和伙伴分配器描述符，而且这些内存空间也需要使用其他内存分配器分配。  </li>
+<li>便于设置保留的内存页（外设在内存地址的映射，在内存的内核映像，内核页表，位图等）。</li>
+<li>在使用引导内存分配器期间，因为分配到的页面是不会释放的（极少概率），那么产生内存碎片的概率也极少。</li>
+</ol>
+<p>引导内存分配器描述符</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">bootmem_data</span> &#123;</span></span><br><span class="line">    <span class="comment">/* 位图对应的内存空间的起始地址 */</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> node_boot_start;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">/* 位图对应的内存空间的结束地址 */</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> node_low_pfn;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 位图地址 */</span></span><br><span class="line">    <span class="type">void</span>* node_bootmem_map;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">/* 上一次分配所在的页面的偏移，为0表示页全部使用 */</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> last_offset;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 上一次分配所在的页面帧数 */</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> last_pos;</span><br><span class="line">&#125; <span class="type">bootmem_data_t</span>;</span><br></pre></td></tr></table></figure>
+
+<p>接下来要做的就是给引导内存分配器分配位图，</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bootmap_size = init_bootmem(start_pfn, max_low_pfn);</span><br></pre></td></tr></table></figure>
+<p>其中，变量 start_pfn 存储的是内核在内存中结束的地址。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 我们先把内核映像的结束地址作为 1MB 以后可用的内</span></span><br><span class="line"><span class="comment"> * 存起始地址</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">start_pfn = PFN_UP(__pa(&amp;_end));</span><br></pre></td></tr></table></figure>
+<p>其中，__pa(x) 作用是把 x 作为直接映射的内核虚拟地址转换为物理地址，即 虚拟地址 - 3GB &#x3D; 物理地址 。PFN_UP(x) 的作用是把 x 以一个页面的方式上对齐。<br>所以由此可知，我们把引导内存分配器位图放在内核映像的后面。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">unsigned</span> <span class="type">long</span> __init <span class="title function_">init_bootmem</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> start, <span class="type">unsigned</span> <span class="type">long</span> pages)</span></span><br><span class="line">&#123;</span><br><span class="line">    max_low_pfn = pages;</span><br><span class="line">    min_low_pfn = start;</span><br><span class="line">    <span class="keyword">return</span> init_bootmem_core(&amp;contig_page_data, start, <span class="number">0</span>, pages);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 初始化引导内存分配器的结构体，每个节点 pgdata 都有自己的引导内</span></span><br><span class="line"><span class="comment"> * 存分配器结构体。 mapstart 为存储位图的起始地址；start/end 为</span></span><br><span class="line"><span class="comment"> * 位图对应的内存空间的起始/结束地址（以页为单位）。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">static</span> <span class="type">unsigned</span> <span class="type">long</span> __init <span class="title function_">init_bootmem_core</span></span><br><span class="line"><span class="params">(<span class="type">pg_data_t</span> *pgdata, u_long mapstart, u_long start, u_long end)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">bootmem_data_t</span> *bdata = pgdata-&gt;bdata;</span><br><span class="line">    u_long mapsize = ((((end-start)+<span class="number">7</span>) / <span class="number">8</span>)+<span class="keyword">sizeof</span>(u_long)<span class="number">-1UL</span>)</span><br><span class="line">                         &amp; ~(<span class="keyword">sizeof</span>(u_long)<span class="number">-1UL</span>);</span><br><span class="line"></span><br><span class="line">    pgdata-&gt;node_next = pgdat_list;</span><br><span class="line">    pgdat_list = pgdata;</span><br><span class="line"></span><br><span class="line">    bdata-&gt;node_bootmem_map = (<span class="type">void</span>*)__va(mapstart &lt;&lt; PAGE_SHIFT);</span><br><span class="line">    bdata-&gt;node_boot_start = (start &lt;&lt; PAGE_SHIFT);</span><br><span class="line">    bdata-&gt;node_low_pfn = end;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 现在我们把位图的全部设置为1</span></span><br><span class="line"><span class="comment">     * </span></span><br><span class="line"><span class="comment">     * 为什么不把它设置为0，又或者不根据类型为1的 E820 而设置位图会怎样？</span></span><br><span class="line"><span class="comment">     * 当该函数执行完成之前，已把 E820图 进行调整，包括因为无 BIOS E820图</span></span><br><span class="line"><span class="comment">     * 而新建新的 E820图 ，以及根据内核命令重新生成新的 E820图 。这些操作都</span></span><br><span class="line"><span class="comment">     * 是优先设置类型为1的 E820项。该函数执行完成后，针对类型为1的 E820图 </span></span><br><span class="line"><span class="comment">     * 继续续在该位图设置，把可用的内存页对应的 bit 置0。</span></span><br><span class="line"><span class="comment">     * 不用检测其他类型的 E820图，因为其他类型的 E820图都不是可用内存，针对</span></span><br><span class="line"><span class="comment">     * 它们去检测就是浪费时间。</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    __constant_c_memset(bdata-&gt;node_bootmem_map, <span class="number">0xFFFFFFFFU</span>L, mapsize);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> mapsize;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后根据可用内存的范围，在位图中清除位。再根据需求保留页。  </p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">register_bootmem_low_pages(max_low_pfn);</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 把内核以及引导内存分配器的位图本身所在的内存页设置</span></span><br><span class="line"><span class="comment"> * 为占用保留 </span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">reserve_bootmem(HIGH_MEMORY, (PFN_PHYS(start_pfn) + </span><br><span class="line">        bootmap_size + PAGE_SIZE<span class="number">-1</span>) - (HIGH_MEMORY));</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 该内存范围是给 BIOS 的 SMP 操作的，应保留</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line">reserve_bootmem(<span class="number">0</span>, PAGE_SIZE);</span><br></pre></td></tr></table></figure>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** </span></span><br><span class="line"><span class="comment"> * max_low_pfn 以内，在 E820图 找出类型为1（可用内存）的 E820项 ，</span></span><br><span class="line"><span class="comment"> * 在引导内存分配器的位图置0标注可用的内存页</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> __init <span class="title function_">register_bootmem_low_pages</span><span class="params">(u_long max_low_pfn)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">for</span> (<span class="type">int</span> i = <span class="number">0</span>; i &lt; e820.nr_map; i++) &#123;</span><br><span class="line">        <span class="type">unsigned</span> <span class="type">long</span> curr_pfn, last_pfn, size;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (e820.<span class="built_in">map</span>[i].type != E820_RAM)</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line"></span><br><span class="line">        curr_pfn = PFN_UP(e820.<span class="built_in">map</span>[i].addr);</span><br><span class="line">        <span class="keyword">if</span> (curr_pfn &gt;= max_low_pfn)</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        </span><br><span class="line">        last_pfn = PFN_DOWN(e820.<span class="built_in">map</span>[i].addr + e820.<span class="built_in">map</span>[i].size);</span><br><span class="line">        <span class="keyword">if</span> (last_pfn &gt; max_low_pfn)</span><br><span class="line">            last_pfn = max_low_pfn;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (curr_pfn &gt;= last_pfn)</span><br><span class="line">            <span class="keyword">continue</span>;</span><br><span class="line">        </span><br><span class="line">        size = last_pfn - curr_pfn;</span><br><span class="line">        free_bootmem(PFN_PHYS(curr_pfn), PFN_PHYS(size));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>有关于引导内存分配器的分配和释放，看 <a href="../../../src/mm/bootmem.c">bootmem.c</a> 以及《深入理解Linux虚拟内存管理》的第五章第4节和第五节。  </p>
+</blockquote>
+<h2 id="内核页表"><a href="#内核页表" class="headerlink" title="内核页表"></a>内核页表</h2><p>由于我们目前还在使用 8MB 临时页表，现在知道了可用内存的范围，所以接下来就是设置内核页表。看函数 paging_init()  </p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** </span></span><br><span class="line"><span class="comment"> * 设置内核页表，注意在 head.S 设置了一个 8MB 的临时页表，</span></span><br><span class="line"><span class="comment"> * 现在我们也把 E820图 解析完毕得到可用内存的范围，现在根据</span></span><br><span class="line"><span class="comment"> * max_low_pfn 设置内存页表的直接映射。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">void</span> __init <span class="title function_">paging_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    pagetable_init();</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 重新加载 swapper_pg_dir，其目的是刷新 LTB，因为 8MB</span></span><br><span class="line"><span class="comment">     * 临时页表不是的表项不是全局的，由上一个函数定义的新目录表</span></span><br><span class="line"><span class="comment">     * 内的表项是全局的。</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    load_cr3(swapper_pg_dir);</span><br><span class="line"></span><br><span class="line">    zone_sizes_init();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>设置内核页表在函数 pagetable_init() 。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 根据 max_low_pfn 设置内核页表</span></span><br><span class="line"><span class="comment"> * 注意：没有开启 PAE 的 I386 结构仅支持二级页表，所以</span></span><br><span class="line"><span class="comment"> * PMD 对标的是 PGD。而且仅为页表使用引导内存分配器获取</span></span><br><span class="line"><span class="comment"> * 4KB 的内存存放 PTD 。PTD 内的物理地址可直接加上</span></span><br><span class="line"><span class="comment"> * 0xC0000000 作为虚拟地址，所以在 896MB 内，内核是可</span></span><br><span class="line"><span class="comment"> * 以直接映射访问前物理内存 896MB（最大）</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> __init <span class="title function_">pagetable_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> vaddr, end;</span><br><span class="line">    <span class="type">pgd_t</span> *pgd, *pgd_base;</span><br><span class="line">    <span class="type">int</span> i, j, k;</span><br><span class="line">    <span class="type">pmd_t</span> *pmd;</span><br><span class="line">    <span class="type">pte_t</span> *pte, *pte_base;</span><br><span class="line"></span><br><span class="line">    end = (<span class="type">unsigned</span> <span class="type">long</span>)__va(max_low_pfn*PAGE_SIZE);</span><br><span class="line"></span><br><span class="line">    pgd_base = swapper_pg_dir;</span><br><span class="line"></span><br><span class="line">    i = __pgd_offset(PAGE_OFFSET);</span><br><span class="line">    pgd = pgd_base + i;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (; i &lt; PTRS_PER_PGD; pgd++, i++) </span><br><span class="line">    &#123;</span><br><span class="line">        vaddr = i * PGDIR_SIZE;</span><br><span class="line">        <span class="keyword">if</span> (end &amp;&amp; (vaddr &gt;= end))</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">        pmd = (<span class="type">pmd_t</span>*)pgd;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (pmd != pmd_offset(pgd, <span class="number">0</span>))</span><br><span class="line">            BUG();</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; PTRS_PER_PMD; pmd++, j++) </span><br><span class="line">        &#123;</span><br><span class="line">            vaddr = i * PGDIR_SIZE + j * PMD_SIZE;</span><br><span class="line">            <span class="keyword">if</span> (end &amp;&amp; (vaddr &gt;= end))</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">            pte_base = pte = (<span class="type">pte_t</span> *) </span><br><span class="line">                    alloc_bootmem_low_pages(PAGE_SIZE);</span><br><span class="line"></span><br><span class="line">            <span class="keyword">for</span> (k = <span class="number">0</span>; k &lt; PTRS_PER_PTE; pte++, k++) &#123;</span><br><span class="line">                vaddr = i*PGDIR_SIZE + j*PMD_SIZE + k*PAGE_SIZE;</span><br><span class="line">                <span class="keyword">if</span> (end &amp;&amp; (vaddr &gt;= end))</span><br><span class="line">                    <span class="keyword">break</span>;</span><br><span class="line">                *pte = mk_pte_phys(__pa(vaddr), PAGE_KERNEL);</span><br><span class="line">            &#125;</span><br><span class="line">            set_pmd(pmd, __pmd(_KERNPG_TABLE + __pa(pte_base)));</span><br><span class="line">            <span class="keyword">if</span> (pte_base != pte_offset(pmd, <span class="number">0</span>))</span><br><span class="line">                BUG();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>设置完毕内核页表之后，重新加载内核页表，刷新 LTB ，因为 8MB 临时页表的表项不是全局。</p>
+<h2 id="内存管理区、内存节点以及-struct-page"><a href="#内存管理区、内存节点以及-struct-page" class="headerlink" title="内存管理区、内存节点以及 struct page"></a>内存管理区、内存节点以及 struct page</h2><p>然后调用 zone_sizes_init() 设置各个管理区的大小</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 设置管理区的内存大小</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> __init <span class="title function_">zone_sizes_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> zones_size[MAX_NR_ZONES] = &#123;<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>&#125;;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> max_dma, low;</span><br><span class="line"></span><br><span class="line">    max_dma = virt_to_phys((<span class="type">char</span>*)MAX_DMA_ADDRESS) &gt;&gt; PAGE_SHIFT;</span><br><span class="line">    low = max_low_pfn;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (low &lt; max_dma)</span><br><span class="line">        zones_size[ZONE_DMA] = low;</span><br><span class="line">    <span class="keyword">else</span> &#123;</span><br><span class="line">        zones_size[ZONE_DMA] = max_dma;</span><br><span class="line">        zones_size[ZONE_NORMAL] = low - max_dma;</span><br><span class="line"><span class="meta">#<span class="keyword">ifdef</span> CONFIG_HIGHMEM</span></span><br><span class="line">        zones_size[ZONE_HIGHMEM] = highend_pfn - low;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span></span></span><br><span class="line">    &#125;</span><br><span class="line">    free_area_init(zones_size);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后调用函数 free_area_init() </p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> __init <span class="title function_">free_area_init</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> *zones_size)</span></span><br><span class="line">&#123;</span><br><span class="line">    free_area_init_core(<span class="number">0</span>, &amp;contig_page_data, </span><br><span class="line">                    &amp;mem_map, zones_size, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们先来看看 free_area_init_core() 的参数</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> __init <span class="title function_">free_area_init_core</span><span class="params">(<span class="type">int</span> nid, <span class="type">pg_data_t</span> * pgdat, </span></span><br><span class="line"><span class="params">                                <span class="keyword">struct</span> page ** gmap,</span></span><br><span class="line"><span class="params">                                <span class="type">unsigned</span> <span class="type">long</span> * zones_size, </span></span><br><span class="line"><span class="params">                                <span class="type">unsigned</span> <span class="type">long</span> zone_start_paddr,</span></span><br><span class="line"><span class="params">                                <span class="type">unsigned</span> <span class="type">long</span> * zholes_size, </span></span><br><span class="line"><span class="params">                                <span class="keyword">struct</span> page * lmem_map)</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li>nid ：pgdat 内存节点的 ID</li>
+<li>pgdat ：需要被初始化的内存节点描述符</li>
+<li>gmap ：在 UMA ，它就是全局 mem_map ，在 NUMA ，无需管它</li>
+<li>zones_size ：pgdat 里各管理区的大小</li>
+<li>zone_start_paddr ：内存节点和第一个管理区的起始地址</li>
+<li>zholes_size ：pgdat 里各管理区的空洞，空洞是指因外设的内存直接映射等原因而保留的页面，该参数一般为赋为 NULL</li>
+<li>lmem_map ：在 UMA ，它一般为0，因为 gmap&#x3D;mem_map ；在 NUMA，它就是 pgdat 的局部 mem_map 。即在 NUMA ，每一个内存节点都有它们自己的 mem_map 。</li>
+</ul>
+<h3 id="什么是内存节点？"><a href="#什么是内存节点？" class="headerlink" title="什么是内存节点？"></a>什么是内存节点？</h3><p>解释什么是内存节点之前，先需要知道什么是 UMA ，什么是 NUMA 。UMA 全称是 Uniform Memory Access ，译为一致内存访问。它的意思是在多核连接着一条通向内存的数据总线和一条地址总线，每个处理器核心共享相同的内存地址空间。但随着 CPU 内核数量的增加，有很多缺陷：</p>
+<ol>
+<li>由于仅有一条总线（地址&#x2F;数据），有多个内核在同一时间周期访问内存会导致拥堵。  </li>
+<li>如果多个内核同时访问同一个内存地址，一般需要前缀指令 LOCK 确保数据一致性。一旦执行 LOCK 指令，CPU 内核会发出一个 #LOCK 信号，使得其他 CPU 内核总线接口被锁住，仅有执行发出该信号的 CPU 独享内存。但由于在 UMA ，总线的吞吐量巨大，所以因为 #LOCK 信号也会导致其他内核 CPU 的效率降低。</li>
+</ol>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-解析E820图/UMA.png"></div>   
+
+<p>带着这个问题，NUMA 出现了。NUMA 的全称是 Non-Uniform Memory Access ，译为非一致性内存访问。即一整块可用内存被分为多个簇，一个簇对应一个内存节点，一个内存节点对应一个或多个 CPU 内核。通俗点来说，就是主板的一个&#x2F;多个内存条插槽对应一个内存节点。有了这个，缓解了 UMA 的问题。<br>有了 NUMA ，线程更多地是在执行它的 CPU 内核的所在的内存节点分配&#x2F;释放内存页面。如果本地内存节点没有足够的空闲页面让线程去获取，但是其他内存节点有足够的空闲页面，如果单靠把不活跃的页面换出到硬盘当中是不行，所以可以在其他内存节点去获取内存。这里访问本地内存节点的策略叫做 Local-Access ，跨内存节点访问的策略叫做 Remote-Access ，执行效率前者比后者快。  </p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-解析E820图/NUMA.png"></div>   
+
+<p>所以由此可知，内存节点代表着一个内存空间，有一组 CPU 内核属于同一个内存节点，也有另一组 CPU 内核属于另一个内存节点。<br>在 EleOS 内核，内存节点的描述符是：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">pglist_data</span> &#123;</span></span><br><span class="line">    <span class="type">zone_t</span>              node_zones[MAX_NR_ZONES];</span><br><span class="line">    <span class="type">zonelist_t</span>          node_zonelists[GFP_ZONEMASK+<span class="number">1</span>];</span><br><span class="line">    <span class="type">int</span>                 nr_zones;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">page</span>         *<span class="title">node_mem_map</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">bootmem_data</span> *<span class="title">bdata</span>;</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>       node_start_paddr;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>       node_start_mapnr;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>       node_size;</span><br><span class="line">    <span class="type">int</span>                 node_id;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">pglist_data</span>  *<span class="title">node_next</span>;</span></span><br><span class="line">&#125;<span class="type">pg_data_t</span>;</span><br></pre></td></tr></table></figure>
+<p>这里直接截出《内存管理》的片段吧</p>
+<blockquote>
+<p><strong>node_zones</strong> The zones for this node are ZONE HIGHMEM, ZONE NORMAL, ZONE DMA.<br><strong>node_zonelists</strong> This is the order of zones that allocations are preferred from. build zonelists() in mm&#x2F;page_alloc.c sets up the order when called by free_area_init_core(). A failed allocation in ZONE_HIGHMEM may fall back to ZONE_NORMAL or back to ZONE_DMA.<br><strong>nr_zones</strong> This is the number of zones in this node between one and three. Not all nodes will have three. A CPU bank may not have ZONE_DMA, for example.<br><strong>node_mem_map</strong> This is the ﬁrst page of the struct page array that represents each physical frame in the node. It will be placed somewhere within the global mem map array.<br><strong>bdata</strong> This is only of interest to the boot memory allocator.<br><strong>node_start_paddr</strong> This is the starting physical address of the node. An unsigned long does not work optimally because it breaks for ia32 with Physical Address Extension (PAE) and for some PowerPC variants such as the PPC440GP. A more suitable solution would be to record this as a Page Frame Number (PFN). A PFN is simply an index within physical memory that is counted in page-sized units. PFN for a physical address could be trivially deﬁned as (page phys addr &gt;&gt; PAGE SHIFT).<br><strong>node_start_mapnr</strong> This gives the page oﬀset within the global mem_map. It is calculated in free_ area_init_core() by calculating the number of pages between mem_map and the local mem_map for this node called lmem_map.<br><strong>node_size</strong> This is the total number of pages in this zone.<br><strong>node_id</strong> This is the Node ID (NID) of the node and starts at 0.<br><strong>node_next</strong> Pointer to next node in a NULL terminated list.  </p>
+</blockquote>
+<p>而 contig_page_data 就是：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">pg_data_t</span> contig_page_data = &#123; bdata: &amp;contig_bootmem_data &#125;;</span><br></pre></td></tr></table></figure>
+<p>另外，上面所讲解的物理内存是处于 UMA ，EleOS 内核暂不支持 NUMA 。</p>
+<h2 id="管理区描述符"><a href="#管理区描述符" class="headerlink" title="管理区描述符"></a>管理区描述符</h2><p>每一个管理区都被描述符描述，它的描述符就是：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">zone_struct</span> &#123;</span></span><br><span class="line">    <span class="type">spinlock_t</span>          lock;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>       free_pages;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>       pages_min, pages_low, pages_high;</span><br><span class="line">    <span class="type">int</span>                 need_balance;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 不同大小的可用空闲内存区域</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">free_area_t</span>         free_area[MAX_ORDER];</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * wait_table       -- the array holding the hash table</span></span><br><span class="line"><span class="comment">     * wait_table_size  -- the size of the hash table array</span></span><br><span class="line"><span class="comment">     * wait_table_shift -- wait_table_size ==</span></span><br><span class="line"><span class="comment">     *                  BITS_PER_LONG (1 &lt;&lt; wait_table_bits)</span></span><br><span class="line"><span class="comment">     * </span></span><br><span class="line"><span class="comment">     * The purpose of all these is to keep track of the people</span></span><br><span class="line"><span class="comment">     * waiting for a page to become available and make them </span></span><br><span class="line"><span class="comment">     * runnable again when possible. the trouble is that this </span></span><br><span class="line"><span class="comment">     * consumes a lot of space, especially when so few things</span></span><br><span class="line"><span class="comment">     * wait on pages at a given time. So instead of using per-</span></span><br><span class="line"><span class="comment">     * page waitqueues, we use a wait queue hash table.</span></span><br><span class="line"><span class="comment">     * </span></span><br><span class="line"><span class="comment">     * The bucket discipline is to sleep on the same queue when</span></span><br><span class="line"><span class="comment">     * colliding and wake all in that wait queue when removing.</span></span><br><span class="line"><span class="comment">     * When something wakes, it must check to be sure its page </span></span><br><span class="line"><span class="comment">     * is truly available, a la thundering herd. The cost of a </span></span><br><span class="line"><span class="comment">     * collision is great, but given the expected load of the </span></span><br><span class="line"><span class="comment">     * table, they should be so rare as to be outweighed by the </span></span><br><span class="line"><span class="comment">     * benefits from the saved space.</span></span><br><span class="line"><span class="comment">     * </span></span><br><span class="line"><span class="comment">     * __wait_on_page() and unlock_page() in mm/filemap.c, are </span></span><br><span class="line"><span class="comment">     * the primary users of these fields, and in mm/page_alloc.c</span></span><br><span class="line"><span class="comment">     * free_area_init_core() performs the initialization of them.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line"></span><br><span class="line">    <span class="type">wait_queue_head_t</span>   *wait_table;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>       wait_table_size;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>       wait_table_shift;</span><br><span class="line"></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">pglist_data</span>  *<span class="title">zone_pgdat</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">page</span>         *<span class="title">zone_mem_map</span>;</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>       zone_start_paddr;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>       zone_start_mapnr;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 以下字段较少被使用，所以根据缓存行的使用原则，把它们放在后面</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">char</span>                *name;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>       size;</span><br><span class="line">&#125;<span class="type">zone_t</span>;</span><br></pre></td></tr></table></figure>
+<p>这里直接截出《内存管理》的片段吧</p>
+<blockquote>
+<p><strong>lock</strong> Spinlock protects the zone from concurrent accesses.<br><strong>free_pages</strong> The total number of free pages in the zone.<br><strong>pages_min, pages_low and pages_high</strong> These are zone watermarks that are described in the next section.<br><strong>need_balance</strong> This ﬂag tells the pageout kswapd to balance the zone. A zone is said to need balance when the number of available pages reaches one of the zone_watermarks. Watermarks are discussed in the next section.<br><strong>free_area</strong> These are free area bitmaps used by the buddy allocator.<br><strong>wait_table, wait_table_size and wait_table_shift</strong> These field are introduced in the coding block up.<br><strong>zone_pgdat</strong> This points to the parent pg_data_t.<br><strong>zone_mem_map</strong> This is the ﬁrst page in the global mem_map that this zone refers to.<br><strong>zone_start_paddr</strong> This uses the same principle as node start paddr.<br><strong>zone_start_mapnr</strong> This uses the same principle as node start mapnr.<br><strong>name</strong> This is the string name of the zone: “DMA”, “Normal” or “HighMem”.<br><strong>size</strong> This is the size of the zone in pages.</p>
+</blockquote>
+<h2 id="struct-page"><a href="#struct-page" class="headerlink" title="struct page"></a>struct page</h2><p>每一个物理页面都有描述符被描述。如果是在 UMA ，描述符被存储在全局数组 mem_map ，如果是在 NUMA ，内存节点内的物理页面描述符存储在它自己的本地数组 lmem_map 。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Each physical page in the system has a struct page </span></span><br><span class="line"><span class="comment"> * associated with it to keep track of whatever it is </span></span><br><span class="line"><span class="comment"> * we are using the page for at the moment. Note that</span></span><br><span class="line"><span class="comment"> * we have no way to track which tasks are using a page.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * Try to keep the most commonly accessed fields in single</span></span><br><span class="line"><span class="comment"> * cache lines here (16 bytes ot greater). This ordering </span></span><br><span class="line"><span class="comment"> * should be particularly beneficial on 32-bit processors.</span></span><br><span class="line"><span class="comment"> * </span></span><br><span class="line"><span class="comment"> * The first line is data used in page cache lookup, the </span></span><br><span class="line"><span class="comment"> * second line is used for linear searches (eg. clock </span></span><br><span class="line"><span class="comment"> * algorithm scans).</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">page</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>        <span class="title">list</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">address_space</span>    *<span class="title">mapping</span>;</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>           index;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">page</span>             *<span class="title">next_hash</span>;</span></span><br><span class="line">    <span class="type">atomic_t</span>                count;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>           flags;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>        <span class="title">lru</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">page</span>             **<span class="title">pprev_hash</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">buffer_head</span>      *<span class="title">buffers</span>;</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * On machines where all RAM is mapped into kernel </span></span><br><span class="line"><span class="comment">     * address space, we can simply calculate the virtual</span></span><br><span class="line"><span class="comment">     * address. On machines with highmem some memory is</span></span><br><span class="line"><span class="comment">     * mapped into kernel virtual memory dynamically, </span></span><br><span class="line"><span class="comment">     * so we need a place to store that address.</span></span><br><span class="line"><span class="comment">     * Note that this field could be 16 bits on x86, </span></span><br><span class="line"><span class="comment">     * because 12 bits before is for the offest in a page,</span></span><br><span class="line"><span class="comment">     * and the 4 bits after is due to 896 MB before in </span></span><br><span class="line"><span class="comment">     * kernel address space.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="keyword">if</span> defined(CONFIG_HIGHMEM) || defined(WANT_PAGE_VIRTUAL)</span></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Kernel virtual address (NULL if not kmapped, </span></span><br><span class="line"><span class="comment">     * ie. highmem) </span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">void</span>                    *virtual;</span><br><span class="line"><span class="meta">#<span class="keyword">endif</span> <span class="comment">/* CONFIG_HIGMEM || WANT_PAGE_VIRTUAL */</span></span></span><br><span class="line">&#125; <span class="type">mem_map_t</span>;</span><br></pre></td></tr></table></figure>
+<p>这里直接截出《内存管理》的片段</p>
+<blockquote>
+<p><strong>list</strong> Pages may belong to many lists, and this ﬁeld is used as the list head. For example, pages in a mapping will be in one of three circular linked links kept by the address space. These are clean pages, dirty pages and locked pages. In the slab allocator, this ﬁeld is used to store pointers to the slab and cache structures managing the page when it has been allocated by the slab allocator. It is also used to link blocks of free pages together.<br><strong>mapping</strong> When ﬁles or devices are memory mapped, their inode has an associated address space. This ﬁeld will point to this address space if the page belongs to the ﬁle. If the page is anonymous and mapping is set, the address space is swapper space, which manages the swap address space.<br><strong>index</strong> This ﬁeld has two uses, and the state of the page determines what it means. If the page is part of a ﬁle mapping, it is the oﬀset within the ﬁle. If the page is part of the swap cache, this will be the oﬀset within the address space for the swap address space (swapper space). Second, if a block of pages is being freed for a particular process, the order (power of two number of pages being freed) of the block being freed is stored in index. This is set in the function<br>free_pages_ok().<br><strong>next_hash</strong> Pages that are part of a ﬁle mapping are hashed on the inode and oﬀset. This ﬁeld links pages together that share the same hash bucket.<br><strong>count</strong> This is the reference count to the page. If it drops to zero, it may be freed. If it is any greater, it is in use by one or more processes or is in use by the kernel like when waiting for I&#x2F;O.<br><strong>ﬂags</strong> These are ﬂags that describe the status of the page. All of them are declared in &lt;linux&#x2F;mm.h&gt;. A number of macros deﬁned for testing, clearing and setting the bits are all listed in &lt;linux&#x2F;mm.h&gt;. The only really interesting ﬂag is SetPageUptodate(), which calls an architecture-speciﬁc function, arch set page uptodate(), if it is deﬁned before setting the bit.<br><strong>lru</strong> For the page replacement policy, pages that may be swapped out will exist on either the active list or the inactive list declared in page alloc.c.<br>This is the list head for these Least Recently Used (LRU) lists. These two lists are discussed in detail in Chapter 10.<br><strong>pprev_hash</strong> This complement to next hash is so that the hash can work as a doubly linked list.<br><strong>buﬀers</strong> If a page has buﬀers for a block device associated with it, this ﬁeld is used to keep track of the buffer head. An anonymous page mapped by a process may also have an associated buffer head if it is backed by a swap ﬁle. This is necessary because the page has to be synced with backing storage in block-sized chunks deﬁned by the underlying ﬁle system.<br><strong>virtual</strong> Normally only pages from ZONE_NORMAL are directly mapped by the kernel. To address pages in ZONE_HIGHMEM, kmap() is used to map the page for the<br>kernel, which is described further in Chapter 9. Only a ﬁxed number of pages may be mapped. When a page is mapped, this is its virtual address.</p>
+</blockquote>
+<p>接下来可以看 <a href="../../../src/mm/page_alloc.c">free_area_init_core()</a> 的源码，由于代码太长，但多数是容易理解的，所以就不贴出了。</p>
+<h2 id="linux-2-4-的引导内存分配器的改进"><a href="#linux-2-4-的引导内存分配器的改进" class="headerlink" title="linux 2.4 的引导内存分配器的改进"></a>linux 2.4 的引导内存分配器的改进</h2><p>已知由于NUMA的机制，内存被分为多个簇，一个簇对应一个内存节点。简单点来说，主板的一条内存插槽对应一个内存节点。一个内存节点对应一个或多个 CPU 内核。在linux 2.4，每一个内存节点描述符都有一个存储引导内存分配器描述符的字段。我们知道，内存分配器指向的内存范围是前 896MB 。如果一个内存节点对应 64MB 内存空间，那么内存节点的引导内存分配器描述符字段都是利用得当的；如果对应 1GB ，那么该字段是很浪费的，应该把这个字段移出到内存节点描述符。根据单个内存节点的内存容量以及系统的最大可用内存，创建引导内存分配器描述符数组。<br>已知内存被分为三大管理区，其中管理区 zone_dma 和 zone_normal 内的内存页面是引导内存分配器的被分配对象。已知内存节点最多包含三个管理区，在 NUMA ，一个节点可能就仅有一到两个管理区，那么是有 zone_dma 和 zone_normal ，那么就有 zone_normal 和 zone_highmem ，又或者说就仅有三个管理区当中的其中一个（多数是 zone_highmem）。而且从分配内存的使用习惯来说，想要在哪里获取到内存页面更多的是在以0为起始以及以16MB为起始地址。那么从内存管理区的角度来说，这不就是以管理区 zone_dma 或 zone_normal 为起始获取页面吗？那么可以根据内存节点以及管理区把引导内存分配器描述符分成多个，与上一段所说的引导内存分配器描述符数组结合。然后根据上面说的第三点，把引导内存分配描述符中记录最近分配页面的位置的字段的功能扩展起来，即获取页面时，就在它所记录的位置的下一个页面获取。这样就不用在以0或16MB等为起始，在位图从头检索为0的位去获取对应的内存页面，从而加快分配效率。<br>比如内存节点0记录0-512MB的内存空间，存在两个管理区，分别是zone_dma和zone_normal；内存节点1记录512-1024MB的内存空间，存在两个管理区，分别是zone_normal和zone_highmem。那么引导内存分配器将存在三个元素，前两个元素是属于内存节点0的，即第一个元素是内存节点0内的 zone_dma 的，第二个是它的 zone_normal 的。而第三个元素是属于内存节点1的 zone_normal 。<br>那么在某个内存节点分配页面时如何在该数组获得对应的元素？<br>根据公式：zone编号+nid，比如获取在nid为0的内存节点的 zone_dma 的页面，则对应元素索引就是0；如果是获取同一内存节点的 zone_normal 的页面，则是1；如果是获取nid为1的内存节点，则是2。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Memory/" rel="tag"># Memory</a>
+              <a href="/tags/X86/" rel="tag"># X86</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/06/02/Skill/normal/LD%E8%84%9A%E6%9C%AC%E7%9A%84%E4%BD%BF%E7%94%A8/" rel="next" title="LD脚本的使用">
+                  LD脚本的使用 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

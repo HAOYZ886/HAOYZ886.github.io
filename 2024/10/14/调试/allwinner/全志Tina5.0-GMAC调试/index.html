@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言这是在全志 T536 调试 GMAC 的总结心得，但是方法是通用的。">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="全志Tina5.0 - GMAC调试">
+<meta property="og:url" content="http://example.com/2024/10/14/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="前言这是在全志 T536 调试 GMAC 的总结心得，但是方法是通用的。">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/1744092781446-c8f16574-616d-4298-947c-077ff0f05aa0.png">
+<meta property="og:image" content="http://example.com/images/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/1728358570947-cffa00fa-6ed7-4079-8e79-c98d49fc15a2.png">
+<meta property="og:image" content="http://example.com/images/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/1728358637521-de1d69f0-808e-4513-9ccb-3d57c109ca26.png">
+<meta property="og:image" content="http://example.com/images/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/1728358748534-149d806a-a7dd-4aab-bdca-f1a042774abb.png">
+<meta property="og:image" content="http://example.com/images/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/1728366952055-b08cd664-047c-4b8d-97d3-c556b63a0ba9.png">
+<meta property="og:image" content="http://example.com/images/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/EPHY-100M-Addr.png">
+<meta property="og:image" content="http://example.com/images/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/1728367048923-12ca9db3-4bc3-420b-8eaa-db57d066795d.png">
+<meta property="og:image" content="http://example.com/images/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/1728368756799-dd738343-3353-4239-a8c0-5c9d5b4c3387.png">
+<meta property="og:image" content="http://example.com/images/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/1726020964852-ee1a268f-3dea-409f-b11d-79d201e04945.png">
+<meta property="og:image" content="http://example.com/images/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/1726020993198-f0c2b7b5-9c5f-4d05-8854-26618fa669a5.png">
+<meta property="og:image" content="http://example.com/images/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/1726022096741-256322ee-29d0-4b46-ac49-0aea3db8c437.png">
+<meta property="og:image" content="http://example.com/images/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/1726022427365-40878e3c-be67-4beb-aa35-b9c2bc8301f8.png">
+<meta property="og:image" content="http://example.com/images/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/1726024619666-55c0cde9-b52d-4e0d-92d7-c01cdbfa449e.jpeg">
+<meta property="og:image" content="http://example.com/images/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/1726024628054-34a2fddd-b930-46b3-885c-3f1f778ae151.jpeg">
+<meta property="article:published_time" content="2024-10-13T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-10-13T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Allwinner">
+<meta property="article:tag" content="GMAC">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="Tina5.0">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/1744092781446-c8f16574-616d-4298-947c-077ff0f05aa0.png">
+
+
+<link rel="canonical" href="http://example.com/2024/10/14/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2024/10/14/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/","path":"2024/10/14/调试/allwinner/全志Tina5.0-GMAC调试/","title":"全志Tina5.0 - GMAC调试"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>全志Tina5.0 - GMAC调试 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%88%9D%E6%AD%A5%E8%B0%83%E8%AF%95"><span class="nav-number">2.</span> <span class="nav-text">初步调试</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A3%80%E6%9F%A5-EPHY-%E7%9A%84-MODE"><span class="nav-number">2.1.</span> <span class="nav-text">检查 EPHY 的 MODE</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A3%80%E6%9F%A5-EPHY-%E7%9A%84-Reset-%E5%BC%95%E8%84%9A"><span class="nav-number">2.2.</span> <span class="nav-text">检查 EPHY 的 Reset 引脚</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A3%80%E6%9F%A5-EPHY-%E7%9A%84-25M-%E6%97%B6%E9%92%9F"><span class="nav-number">2.3.</span> <span class="nav-text">检查 EPHY 的 25M 时钟</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A3%80%E6%9F%A5-PHY-%E8%8A%AF%E7%89%87%E7%9A%84-Address-%E9%85%8D%E7%BD%AE"><span class="nav-number">2.4.</span> <span class="nav-text">检查 PHY 芯片的 Address 配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A3%80%E6%9F%A5-PHY-%E7%9A%84%E4%BE%9B%E7%94%B5"><span class="nav-number">2.5.</span> <span class="nav-text">检查 PHY 的供电</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A3%80%E6%9F%A5-TX-RX-%E7%9A%84-Delay-%E9%85%8D%E7%BD%AE"><span class="nav-number">2.6.</span> <span class="nav-text">检查 TX &amp; RX 的 Delay 配置</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%BC%80%E5%A7%8B%E9%AA%8C%E8%AF%81"><span class="nav-number">3.</span> <span class="nav-text">开始验证</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BD%91%E5%8D%A1%E4%BD%BF%E8%83%BD"><span class="nav-number">3.1.</span> <span class="nav-text">网卡使能</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%8C%E7%BD%91%E5%8D%A1%E5%AF%B9%E6%B5%8B"><span class="nav-number">3.2.</span> <span class="nav-text">双网卡对测</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8D%E5%90%8C%E6%9D%BF%E5%AD%90%E5%AF%B9%E6%B5%8B"><span class="nav-number">3.2.1.</span> <span class="nav-text">不同板子对测</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%8C%E4%B8%80%E5%9D%97%E6%9D%BF%E5%AD%90"><span class="nav-number">3.2.2.</span> <span class="nav-text">同一块板子</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A3%80%E6%9F%A5-RX-%E5%92%8C-TX-%E7%9A%84%E6%B3%A2%E5%BD%A2"><span class="nav-number">3.3.</span> <span class="nav-text">检查 RX 和 TX 的波形</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2024/10/14/%E8%B0%83%E8%AF%95/allwinner/%E5%85%A8%E5%BF%97Tina5.0-GMAC%E8%B0%83%E8%AF%95/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="全志Tina5.0 - GMAC调试 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          全志Tina5.0 - GMAC调试
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2024-10-14 00:00:00" itemprop="dateCreated datePublished" datetime="2024-10-14T00:00:00+08:00">2024-10-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E8%B0%83%E8%AF%95/" itemprop="url" rel="index"><span itemprop="name">调试</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>1.8k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>7 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>这是在全志 T536 调试 GMAC 的总结心得，但是方法是通用的。</p>
+<span id="more"></span>
+
+<h1 id="初步调试"><a href="#初步调试" class="headerlink" title="初步调试"></a>初步调试</h1><h2 id="检查-EPHY-的-MODE"><a href="#检查-EPHY-的-MODE" class="headerlink" title="检查 EPHY 的 MODE"></a>检查 EPHY 的 MODE</h2><p>一般来说，在 EPHY 的硬件原理图中有标注使用的模式，如：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/调试/allwinner/全志Tina5.0-GMAC调试/1744092781446-c8f16574-616d-4298-947c-077ff0f05aa0.png"></div>
+
+<p>根据以上信息，在 EPHY 对应的设备树节点中，找到属性<code>phy-mode</code>，把它改为相应的模式：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&amp;gmac1 &#123;</span><br><span class="line">	phy-mode = <span class="string">&quot;rmii&quot;</span>;</span><br><span class="line">	...</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h2 id="检查-EPHY-的-Reset-引脚"><a href="#检查-EPHY-的-Reset-引脚" class="headerlink" title="检查 EPHY 的 Reset 引脚"></a>检查 EPHY 的 Reset 引脚</h2><p>检查 Eth0 的 PHY 芯片的原理图，以下是它的 Reset 引脚：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/调试/allwinner/全志Tina5.0-GMAC调试/1728358570947-cffa00fa-6ed7-4079-8e79-c98d49fc15a2.png"></div>
+
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/调试/allwinner/全志Tina5.0-GMAC调试/1728358637521-de1d69f0-808e-4513-9ccb-3d57c109ca26.png"></div>
+
+<p>检查板级设备树：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&amp;gmac0_phy0 &#123;</span><br><span class="line">	/* format: ethernet-phy-id + ID <span class="keyword">for</span> PHY chip */</span><br><span class="line">	compatible = <span class="string">&quot;ethernet-phy-id4f51.e91b&quot;</span>; </span><br><span class="line">	reset-gpios = &lt;&amp;pio PA 3 GPIO_ACTIVE_LOW&gt;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>根据原理图，更改属性 <code>reset-gpios</code> 。</p>
+<h2 id="检查-EPHY-的-25M-时钟"><a href="#检查-EPHY-的-25M-时钟" class="headerlink" title="检查 EPHY 的 25M 时钟"></a>检查 EPHY 的 25M 时钟</h2><p>检查 PHY 芯片的时钟源是外部晶振，还是 SoC 引出的，检查硬件原理图：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/调试/allwinner/全志Tina5.0-GMAC调试/1728358748534-149d806a-a7dd-4aab-bdca-f1a042774abb.png"></div>
+
+<p>在对应的驱动中，有对相关的设备树节点属性作解析，分别是：</p>
+<ul>
+<li><code>aw,soc-phy25m</code>：使用 SoC 的内部时钟</li>
+<li><code>aw,rgmii-clk-ext</code>：使用外部时钟，如外部晶振</li>
+</ul>
+<p>而且两者仅能存在一个。比如说我想使用内部时钟，则：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&amp;gmac1 &#123;</span><br><span class="line">	...</span><br><span class="line">	aw,soc-phy25m;</span><br><span class="line">	/delete-property/ aw,rgmii-clk-ext;</span><br><span class="line">	...</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h2 id="检查-PHY-芯片的-Address-配置"><a href="#检查-PHY-芯片的-Address-配置" class="headerlink" title="检查 PHY 芯片的 Address 配置"></a>检查 PHY 芯片的 Address 配置</h2><p>检查 EPHY 的 Address ，以下是千兆 PHY 的地址定义：</p>
+<div align="center"><img src="/images/调试/allwinner/全志Tina5.0-GMAC调试/1728366952055-b08cd664-047c-4b8d-97d3-c556b63a0ba9.png"></div>
+
+<p>以下是百兆 PHY 的地址定义：</p>
+<div align="center"><img src="/images/调试/allwinner/全志Tina5.0-GMAC调试/EPHY-100M-Addr.png"></div>
+
+<p>在相关设备树节点中，找到属性 <code>reg</code> ，该属性对应 PHY 的地址：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">gmac0_phy0: ethernet-phy@1 &#123;</span><br><span class="line">	compatible = <span class="string">&quot;ethernet-phy-ieee802.3-c22&quot;</span>;</span><br><span class="line">	reg = &lt;0x1&gt;;</span><br><span class="line">	max-speed = &lt;1000&gt;;  /* Max speed capability */</span><br><span class="line">	reset-gpios = &lt;&amp;pio PB 7 GPIO_ACTIVE_LOW&gt;;</span><br><span class="line">	/* PHY datasheet rst <span class="keyword">time</span> */</span><br><span class="line">	reset-assert-us = &lt;10000&gt;;</span><br><span class="line">	reset-deassert-us = &lt;150000&gt;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h2 id="检查-PHY-的供电"><a href="#检查-PHY-的供电" class="headerlink" title="检查 PHY 的供电"></a>检查 PHY 的供电</h2><p>相关硬件原理图：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/调试/allwinner/全志Tina5.0-GMAC调试/1728367048923-12ca9db3-4bc3-420b-8eaa-db57d066795d.png"></div>
+
+<p>在设备树文件中，发现属性 <code>dwmac3v3-supply</code> 和 <code>phy3v3-supply</code> 没有问题：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">&amp;gmac0 &#123;</span><br><span class="line">	phy-mode = <span class="string">&quot;rgmii&quot;</span>;</span><br><span class="line">	pinctrl-names = <span class="string">&quot;default&quot;</span>, <span class="string">&quot;sleep&quot;</span>;</span><br><span class="line">	pinctrl-0 = &lt;&amp;gmac0_pins_default&gt;;</span><br><span class="line">	pinctrl-1 = &lt;&amp;gmac0_pins_sleep&gt;;</span><br><span class="line">	aw,soc-phy25m;</span><br><span class="line">	tx-delay = &lt;10&gt;;</span><br><span class="line">	rx-delay = &lt;1&gt;;</span><br><span class="line">	sunxi,phy-clk-type = &lt;0&gt;;</span><br><span class="line">	dwmac3v3-supply = &lt;&amp;reg_cldo3&gt;;</span><br><span class="line">	phy3v3-supply = &lt;&amp;reg_cldo4&gt;;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">reg_cldo3: cldo3 &#123;</span><br><span class="line">	regulator-name = <span class="string">&quot;axp2202-cldo3&quot;</span>;</span><br><span class="line">	regulator-min-microvolt = &lt;500000&gt;;</span><br><span class="line">	regulator-max-microvolt = &lt;3500000&gt;;</span><br><span class="line">	regulator-ramp-delay = &lt;2500&gt;;</span><br><span class="line">	regulator-enable-ramp-delay = &lt;1000&gt;;</span><br><span class="line">	regulator-boot-on;</span><br><span class="line">	regulator-always-on;</span><br><span class="line">&#125;;</span><br><span class="line">reg_cldo4: cldo4 &#123;</span><br><span class="line">	regulator-name = <span class="string">&quot;axp2202-cldo4&quot;</span>;</span><br><span class="line">	regulator-min-microvolt = &lt;500000&gt;;</span><br><span class="line">	regulator-max-microvolt = &lt;3500000&gt;;</span><br><span class="line">	regulator-enable-ramp-delay = &lt;1000&gt;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h2 id="检查-TX-RX-的-Delay-配置"><a href="#检查-TX-RX-的-Delay-配置" class="headerlink" title="检查 TX &amp; RX 的 Delay 配置"></a>检查 TX &amp; RX 的 Delay 配置</h2><p>Delay 的单位为 ns ，在设备树中的属性 <code>tx-delay</code> 和 <code>rx-delay</code> 表示：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">&amp;gmac0 &#123;</span><br><span class="line">	phy-mode = <span class="string">&quot;rgmii&quot;</span>;</span><br><span class="line">	pinctrl-names = <span class="string">&quot;default&quot;</span>, <span class="string">&quot;sleep&quot;</span>;</span><br><span class="line">	pinctrl-0 = &lt;&amp;gmac0_pins_default&gt;;</span><br><span class="line">	pinctrl-1 = &lt;&amp;gmac0_pins_sleep&gt;;</span><br><span class="line">	aw,soc-phy25m;</span><br><span class="line">	tx-delay = &lt;10&gt;;</span><br><span class="line">	rx-delay = &lt;1&gt;;</span><br><span class="line">	sunxi,phy-clk-type = &lt;0&gt;;</span><br><span class="line">	dwmac3v3-supply = &lt;&amp;reg_cldo3&gt;;</span><br><span class="line">	phy3v3-supply = &lt;&amp;reg_cldo4&gt;;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>这些属性涉及到 PCB 设计的信号稳定性，如果测试发现速率跑不满，比如使用千兆 PHY ，但是跑不满千兆。由于信号传输是使用差分信号，DDR 采样，这就涉及到眼图质量了（这里不展开说明眼图）。总得来说，属性 <code>tx-delay</code> 和 <code>rx-delay</code> 的作用就是作为眼图的斜率，找到最佳采样点。所以说，这些属性是需要 SoC 原厂和 PHY 厂商协助才能得到最佳的数值。</p>
+<p>在 Tina5.0 中，获取这些属性的函数是：sunxi_dwmac_resource_get()<br>解析并设置这些属性的函数是：sunxi_dwmac_hw_init() -&gt; sunxi_dwmac210_set_delaychain()</p>
+<p>另外，在 PHY 芯片 YT8531H 中，也有 Delay 配置：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/调试/allwinner/全志Tina5.0-GMAC调试/1728368756799-dd738343-3353-4239-a8c0-5c9d5b4c3387.png"></div>
+
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$ phytool write eth1/0/30 0xa001</span><br><span class="line">$ phytool eth1/0/31</span><br><span class="line">ieee-phy: reg:0x1f val:0x8100</span><br><span class="line">$ phytool write eth1/0/30 0xa003</span><br><span class="line">$ phytool eth1/0/31</span><br><span class="line">ieee-phy: reg:0x1f val:0x00f1</span><br></pre></td></tr></table></figure>
+
+<h1 id="开始验证"><a href="#开始验证" class="headerlink" title="开始验证"></a>开始验证</h1><h2 id="网卡使能"><a href="#网卡使能" class="headerlink" title="网卡使能"></a>网卡使能</h2><p>网卡正常使能的输出信息如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">$ ifconfig eth0 192.168.1.11</span><br><span class="line">[  212.822861] dwmac-sunxi 4500000.ethernet eth0: PHY [stmmac-0:01] driver [Generic PHY] (irq=POLL)</span><br><span class="line">[  212.843105] dwmac4: Master AXI performs fixed burst length</span><br><span class="line">[  212.849408] dwmac-sunxi 4500000.ethernet eth0: Enabling Safety Features</span><br><span class="line">[  212.867340] dwmac-sunxi 4500000.ethernet eth0: IEEE 1588-2008 Advanced Timestamp supported</span><br><span class="line">[  212.877403] dwmac-sunxi 4500000.ethernet eth0: configuring for phy/rgmii link mode</span><br><span class="line">[  215.957540] dwmac-sunxi 4500000.ethernet eth0: Link is Up - 1Gbps/Full - flow control off</span><br><span class="line">[  215.967218] IPv6: ADDRCONF(NETDEV_CHANGE): eth0: link becomes ready</span><br></pre></td></tr></table></figure>
+
+<h2 id="双网卡对测"><a href="#双网卡对测" class="headerlink" title="双网卡对测"></a>双网卡对测</h2><p>测试网卡是否能正常通信</p>
+<h3 id="不同板子对测"><a href="#不同板子对测" class="headerlink" title="不同板子对测"></a>不同板子对测</h3><p>板 B <code>PING</code> 板 A ，在板 B 使用 <code>tcpdump -i eth0</code> 去抓包：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/调试/allwinner/全志Tina5.0-GMAC调试/1726020964852-ee1a268f-3dea-409f-b11d-79d201e04945.png"></div>
+
+<p>在板 A 使用 <code>tcpdump -i eth0</code> 去抓包：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/调试/allwinner/全志Tina5.0-GMAC调试/1726020993198-f0c2b7b5-9c5f-4d05-8854-26618fa669a5.png"></div>
+
+<p>这是 Ping 不通的案例，通过对比可知，板 B 往板 A 发送数据，板 A 是能正常接收的。同时也发现板 A 发出 reply 包给板 B ，但这是 <code>tcpdump</code> 从<strong>软件驱动层面</strong>上捕获的数据包，我们并不清楚这个数据包是否传输给对端。看板 B ，它接收不到来自板 A 的 reply 包，而且先前已确认板 B 的 eth0 能正常通信，所以可确定板 A 的 eth0 的 TX 有问题。</p>
+<p>为了再次定位问题，重新给板 A 的 eth0 与交换机连接，使用 <code>tcpdump -i eth0</code> 去抓包：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/调试/allwinner/全志Tina5.0-GMAC调试/1726022096741-256322ee-29d0-4b46-ac49-0aea3db8c437.png"></div>
+
+<p>发现是能正常接收的，结合以上总总原因和结果，确定 TX 通信有问题。</p>
+<h3 id="同一块板子"><a href="#同一块板子" class="headerlink" title="同一块板子"></a>同一块板子</h3><p>如果一块板子有两个及以上的网卡，可参考以下文章去对测：</p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/u012611644/article/details/82688114">双网口回环测试(亲自测试有效)_多网口回环测试-CSDN博客</a></p>
+<h2 id="检查-RX-和-TX-的波形"><a href="#检查-RX-和-TX-的波形" class="headerlink" title="检查 RX 和 TX 的波形"></a>检查 RX 和 TX 的波形</h2><p>查看硬件原理图，看 TX 和 RX 的时钟：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/调试/allwinner/全志Tina5.0-GMAC调试/1726022427365-40878e3c-be67-4beb-aa35-b9c2bc8301f8.png"></div>
+
+<p>使用示波器看它们两的时钟波形（当前网卡的模式是 100M FULL ）：</p>
+<p><strong>RX：</strong></p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/调试/allwinner/全志Tina5.0-GMAC调试/1726024619666-55c0cde9-b52d-4e0d-92d7-c01cdbfa449e.jpeg"></div>
+
+<p><strong>TX：</strong></p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/调试/allwinner/全志Tina5.0-GMAC调试/1726024628054-34a2fddd-b930-46b3-885c-3f1f778ae151.jpeg"></div>
+
+<p>发现 RX 的时钟频率为 25M ，是正常的。但是 TX 的时钟频率仅有 5M ，正常来说，TX 的时钟频率是 25M 。</p>
+<p>所以从硬件上定位到问题，就是 TX 的时钟频率过低，导致根据 5M 时钟频率从 TX 发出的数据，对端 RX（时钟频率 25M ）无法正常接收。</p>
+<p>最终检测得知是因为配置设备树节点属性 <code>aw,soc-phy25m</code> 和 <code>aw,rgmii-clk-ext</code> 问题。开发板的 PHY 使用 SoC 引出的时钟源，但是在设备树却使用 <code>aw,rgmii-clk-ext</code> 表示用外部晶振。把属性 <code>aw,rgmii-clk-ext</code> 删除，添加属性 <code>aw,soc-phy25m</code> 即可。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Allwinner/" rel="tag"># Allwinner</a>
+              <a href="/tags/Tina5-0/" rel="tag"># Tina5.0</a>
+              <a href="/tags/GMAC/" rel="tag"># GMAC</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/07/27/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-IMX8MP_LOGO%E5%BB%B6%E7%BB%AD/" rel="prev" title="Linux - IMX8MP LOGO延续">
+                  <i class="fa fa-angle-left"></i> Linux - IMX8MP LOGO延续
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2024/12/29/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-IMX8MP_LOGO%E5%BB%B6%E7%BB%AD(%E7%BB%AD)/" rel="next" title="Linux - IMX8MP LOGO延续（续）">
+                  Linux - IMX8MP LOGO延续（续） <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

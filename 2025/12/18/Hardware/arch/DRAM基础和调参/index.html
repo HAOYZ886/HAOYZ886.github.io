@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="DRAM的基础概念DRAM子系统DRAM子系统是我们整个嵌入式系统的核心，由多个硬件和逻辑组件协同工作，实现数据的存储、访问和管理。">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="DRAM基础和调参">
+<meta property="og:url" content="http://example.com/2025/12/18/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="DRAM的基础概念DRAM子系统DRAM子系统是我们整个嵌入式系统的核心，由多个硬件和逻辑组件协同工作，实现数据的存储、访问和管理。">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/dram_subsystem.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/ddr_ip.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765448747114-46cdccb9-bf2b-4bcb-9dab-27107f66d074.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765448857431-86d1fe0b-8ed0-4ff9-bd12-38911155ba43.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765503893078-2233d422-f899-4c7d-b4a8-3af6279263ae.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765504335258-a37ad846-5690-4916-a8d8-d02484046bdb.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765504604453-a26d8fbe-b329-474b-bff2-122e1bf46bea.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/channel.drawio.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765510677652-92c35043-96ed-450f-9f55-a6654f73aebe.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765510868943-39679b52-5c8a-4b5b-a848-061f3bf73de1.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765867510032-cb4c2a80-5442-4ef4-9042-15a0b646c69c.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765867754653-126fca0b-083f-4f4e-89ec-90fa6b3f8637.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765867771219-3ff5411e-8c1a-4baf-95e2-986f1d11e911.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765867813572-b4d49ea4-1286-4153-b107-8e85f430eb6b.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765867854484-8c061f7c-32d2-4841-84cf-61274a0fe8b4.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765868007918-f68c24e5-37cb-4c14-aaf9-b451d154cad8.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765868048738-bf3a48ff-ebfc-41a6-a42b-494df8465ba0.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765868240378-82d3bbad-9a0e-4c27-815b-9fc9b75ddc1e.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765512603954-bb0fe149-d390-4664-a69a-a071cd3f3967.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765512617798-5d45e4a1-166e-46d9-ae1a-16cd2cdb71e1.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765512641139-8d7991da-ae34-42c9-a89d-6a0137e9cc62.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765512652431-fc473e7e-61fb-4ffd-912b-eb4e82bda8e9.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765514497108-3656f74a-f8fb-4e59-addb-03170c46f4c7.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765514543947-5c1a9b2e-70bb-4bb4-91d8-bb155b708001.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765868462496-4ffbf9b3-d7c0-4604-aa66-f31630cedd33.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765868510742-e9629035-c583-45bd-8fb3-e386e7bc33be.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765868574170-a86173ba-ef75-44cf-9ed8-55ac426fdeab.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765868602508-41fa1791-37db-4c7f-a449-8797f32636c0.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765868717992-6c6b61bc-fb05-49f8-a616-53528782f614.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765869912819-fe3e1631-0ad7-461a-8556-aa21212f7ff0.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765871644363-64c9e8f1-dad1-4dca-8b32-9deea62391fb.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765871655588-665ad244-6d37-4f44-b530-37740b36344e.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765873396815-7413cd17-f10f-4553-8894-0f6870600340.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765942096690-37abd0d0-2faf-44ac-8494-6a8aa4ba9877.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765873601163-90ff0a97-87cc-46e0-8658-146510975fd1.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765942308209-c84f9468-a1cb-47f3-a62a-84d2def5d6a8.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765942315800-325da894-2751-4e54-9a59-301c502b95ea.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765942381161-acb95985-6ea5-41b9-addb-4a38b9412987.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765942383499-cca79ad0-2419-4d66-803a-3b2dc030a982.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765876502419-9569c6b3-f648-43e8-91cc-de5fafcdf13d.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765876545892-e2b62ecf-13d1-452a-9676-9339b0878dbe.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765876588394-5c9a3adc-d602-4cf0-a4a0-249ffa427ada.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765876839243-6986de3d-f52c-45bd-a152-6429ddd56b80.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765876883686-cb302ddf-55c5-4296-83ce-da9707c7262f.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765876907890-a421ab81-6f61-4d91-8a47-d3dd999e16a6.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765877065677-7c569c8e-62ed-4ae3-b7dd-2300280358dd.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765877095389-1c8e2eb6-694f-4769-aabf-5c4e124e76be.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765877113143-410f42f7-2a45-40b3-8672-60b9afc5b187.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765877126734-f88f4450-329a-4612-b115-19504c03402b.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765877158387-4414a0bb-dff3-4662-8995-4e73a8e9f083.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765877167260-8b45b294-b32b-47ed-92f9-236aeca75656.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765877348413-61302dc9-2de0-49cf-82df-540dda2be4a8.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765877363312-e8a06945-d196-4a8a-99ad-225725a6b1a6.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763451339318-34a87985-97da-471f-a101-7ac9c6c400f2.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763451542987-b15e406a-237e-48a4-bee5-c87b102cd5db.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763451647273-735c615f-3d37-4e4e-b978-7e2550fce8e6.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763451754599-fa9c621a-7fa0-4085-8e4c-6efb3d8addb1.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763451921271-c02c0259-3dd0-4481-8471-d748f885a846.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763452289618-ddb38371-13b1-4e30-9929-4f9939471e9c.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763452217908-9fcc0f7b-1906-42e2-9cc8-dc7e2a8b7e37.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763452455537-883d860e-4ba0-415f-888a-a9d55a3c0ab2.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763452495407-d5d73f97-7c55-4982-9ded-7d8f16058621.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763452533506-21e2ab45-2075-4b5c-b2bd-d38fa0615272.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763453090898-64a2e758-7ca1-4234-9f23-f21c875d161c.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763453163460-de6d6411-27d9-43dc-8d16-acfb447cd60b.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763453201130-58851ab9-366d-433f-835b-97defec8fe71.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765877996911-1cc5c0dd-c167-41a8-a74d-e1fb2285c93f.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1766036518892-aa1cecb3-3616-4165-96c6-92e7a2e3c28c.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765947224815-e05db85c-8b9d-478c-ba66-831aefb41bc7.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765942663338-44b7b1d8-0afb-4235-85c4-3cc72cac4472.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765942962494-f7f785c9-1f02-49cf-a018-bc373b0658a2.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765944282189-8685f910-b8c4-4e3d-b36d-f66af2eec5ce.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765944405050-73f35dd9-779a-46e1-896c-3fd0ef70e8e7.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765946701440-3e233bd8-c321-4f53-9742-fa1473c49d0a.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765946688776-204f2b76-2654-426f-b68b-af65c5947839.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1765878609538-192b9ff5-9595-4b55-b6c5-e06f1c997dfe.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763454503370-fbc7ee2d-9a2d-4cf1-90a7-b3f6b35bcea7.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763455613069-e7560884-9677-4663-9f29-7d62e8098a12.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763454503370-fbc7ee2d-9a2d-4cf1-90a7-b3f6b35bcea7.png">
+<meta property="og:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/1763455613069-e7560884-9677-4663-9f29-7d62e8098a12.png">
+<meta property="article:published_time" content="2025-12-17T16:00:00.000Z">
+<meta property="article:modified_time" content="2025-12-17T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Architecture">
+<meta property="article:tag" content="DRAM">
+<meta property="article:tag" content="Hardware">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/dram_subsystem.drawio.png">
+
+
+<link rel="canonical" href="http://example.com/2025/12/18/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2025/12/18/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/","path":"2025/12/18/Hardware/arch/DRAM基础和调参/","title":"DRAM基础和调参"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>DRAM基础和调参 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#DRAM%E7%9A%84%E5%9F%BA%E7%A1%80%E6%A6%82%E5%BF%B5"><span class="nav-number">1.</span> <span class="nav-text">DRAM的基础概念</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#DRAM%E5%AD%90%E7%B3%BB%E7%BB%9F"><span class="nav-number">1.1.</span> <span class="nav-text">DRAM子系统</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#DDR-IP"><span class="nav-number">1.2.</span> <span class="nav-text">DDR IP</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BC%A0%E8%BE%93%E9%93%BE%E8%B7%AF%E8%AE%BE%E8%AE%A1"><span class="nav-number">1.3.</span> <span class="nav-text">传输链路设计</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#DRAM%E9%A2%97%E7%B2%92-Die"><span class="nav-number">1.4.</span> <span class="nav-text">DRAM颗粒(Die)</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E6%95%B0%E8%B0%83%E8%AF%95%E5%8E%9F%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">参数调试原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#DRAM%E8%B0%83%E8%AF%95%E5%86%85%E5%AE%B9"><span class="nav-number">2.1.</span> <span class="nav-text">DRAM调试内容</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E7%9C%BC%E5%9B%BE"><span class="nav-number">2.2.</span> <span class="nav-text">什么是眼图</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%BB%E5%86%99%E8%AE%AD%E7%BB%83"><span class="nav-number">2.3.</span> <span class="nav-text">读写训练</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%A6%81%E6%B1%82"><span class="nav-number">2.3.1.</span> <span class="nav-text">要求</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%B0%83%E8%AF%95%E4%BF%A1%E5%8F%B7%E7%9C%BC%E5%AE%BD%E8%8C%83%E5%9B%B4"><span class="nav-number">2.3.2.</span> <span class="nav-text">调试信号眼宽范围</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%95%B0%E6%8D%AEIO%E7%AB%AF%E6%8E%A5%E6%A8%A1%E5%9E%8B"><span class="nav-number">2.3.3.</span> <span class="nav-text">数据IO端接模型</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%90%86%E8%AE%BA%E6%9C%80%E4%BD%B3Vref%E9%85%8D%E7%BD%AE"><span class="nav-number">2.3.4.</span> <span class="nav-text">理论最佳Vref配置</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%9E%E9%99%85%E6%9C%80%E4%BD%B3Vref-Training"><span class="nav-number">2.3.5.</span> <span class="nav-text">实际最佳Vref Training</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%9C%BC%E5%9B%BE%E8%B0%83%E4%BC%98"><span class="nav-number">2.3.6.</span> <span class="nav-text">眼图调优</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BA%86%E8%A7%A3DRAM%E5%8F%82%E6%95%B0"><span class="nav-number">2.4.</span> <span class="nav-text">了解DRAM参数</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#DRAM%E6%97%B6%E9%92%9F%E5%92%8C%E7%B1%BB%E5%9E%8B"><span class="nav-number">2.4.1.</span> <span class="nav-text">DRAM时钟和类型</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%B9%E9%87%8F%E9%85%8D%E7%BD%AE"><span class="nav-number">2.4.2.</span> <span class="nav-text">容量配置</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E9%A9%B1%E5%8A%A8ODT"><span class="nav-number">2.4.3.</span> <span class="nav-text">驱动ODT</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Delay"><span class="nav-number">2.4.4.</span> <span class="nav-text">Delay</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#VREF"><span class="nav-number">2.4.5.</span> <span class="nav-text">VREF</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%B0%E7%89%A9%E6%96%99%E9%80%82%E9%85%8D%E6%B5%81%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">新物料适配流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E6%95%99%E7%A8%8B"><span class="nav-number">3.1.</span> <span class="nav-text">训练教程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AE%AD%E7%BB%83%E8%BF%87%E7%A8%8B"><span class="nav-number">3.2.</span> <span class="nav-text">训练过程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%BC%E5%AE%B9%E6%80%A7%E9%AA%8C%E8%AF%81"><span class="nav-number">4.</span> <span class="nav-text">兼容性验证</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%AA%8C%E8%AF%81%E6%A0%87%E5%87%86"><span class="nav-number">4.1.</span> <span class="nav-text">验证标准</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8A%A5%E9%94%99%E4%BF%AE%E5%A4%8D"><span class="nav-number">4.2.</span> <span class="nav-text">报错修复</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E5%B8%A6%E5%AE%BD%E6%B5%8B%E8%AF%95"><span class="nav-number">4.3.</span> <span class="nav-text">内存带宽测试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E5%AE%8C%E6%95%B4%E6%80%A7%E6%B5%8B%E8%AF%95"><span class="nav-number">4.4.</span> <span class="nav-text">内存完整性测试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-number">4.5.</span> <span class="nav-text"></span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/12/18/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="DRAM基础和调参 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          DRAM基础和调参
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2025-12-18 00:00:00" itemprop="dateCreated datePublished" datetime="2025-12-18T00:00:00+08:00">2025-12-18</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Hardware/" itemprop="url" rel="index"><span itemprop="name">Hardware</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>9.1k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>33 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="DRAM的基础概念"><a href="#DRAM的基础概念" class="headerlink" title="DRAM的基础概念"></a>DRAM的基础概念</h2><h3 id="DRAM子系统"><a href="#DRAM子系统" class="headerlink" title="DRAM子系统"></a>DRAM子系统</h3><p>DRAM子系统是我们整个嵌入式系统的核心，由多个硬件和逻辑组件协同工作，实现数据的存储、访问和管理。</p>
+<span id="more"></span>
+<p>DRAM子系统组成：主控SOC、传输链路、DRAM颗粒、电源。见示例图：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/dram_subsystem.drawio.png"></div>
+
+<p>见以下各组件的解释：</p>
+<ul>
+<li><strong>主控SOC</strong>：SOC 内的 DRAM 子系统包含控制器和 PHY ，通常称为 <strong>DDR IP 。</strong></li>
+<li><strong>传输链路</strong>：通常包含基板、PCB 走线等，影响信号质量，与子系统的极限性能有直接关系，设计与制造均需要关注</li>
+<li><strong>DRAM颗粒</strong>：占子系统成本的主要部分，其 IO 性能以及存储单元稳定性是主要关注点</li>
+<li><strong>电源</strong>：容易忽略部分，主要关注路径直流压降以及应用端的纹波系数</li>
+</ul>
+<p>见以下各条链路的解释：</p>
+<ul>
+<li><strong>CK</strong>：时钟信号，由 SOC 发送到 DRAM 。它是差分信号，包含 CK_t 和 CK_c 。用于提供时序同步基准，DRAM的所有操作（命令、地址、数据传输）均以CK的**边沿（上升沿&#x2F;下降沿）**为触发条件。数据传输时，DQ和DQS的时序也需与CK对齐。</li>
+<li><strong>CA</strong>：命令&#x2F;地址总线，由 SOC 发送到 DRAM 。传输<strong>内存操作指令和地址信息</strong>，是 SOC 控制 DRAM 的核心信号。命令信号 <strong>CKE、RST_N、CS#、ODT、RAS、CAS、WE、ACT</strong> 和地址信号** A0-A17、BG0-BG1、BA0-BA2 **等，用于发送DRAM的相关控制命令和寻址，依据JEDEC协议规定。<ul>
+<li>命令：如<code>激活（Activate）</code>（打开某行）、<code>读（Read）</code>、<code>写（Write）</code>、<code>预充电（Precharge）</code>等。</li>
+<li>地址：行地址（Row Address）、列地址（Column Address）、Bank地址（内存分区标识）。</li>
+</ul>
+</li>
+<li><strong>DQS <strong>：数据选通信号，双向。解决数据与参考时钟的</strong>相位偏差</strong>问题，确保数据采样准确。<ul>
+<li>写操作 <strong>wDQS</strong>（SOC→DRAM）：SOC 生成 DQS ，与 DQ 数据同步。DRAM 在 DQS 边沿采样 DQ 上的数据（例如：DQS 上升沿时捕获 DQ 值）。</li>
+<li>读操作 <strong>rDQS</strong>（DRAM→SOC）：DRAM 生成 DQS ，SOC 以 DQS 边沿为基准捕获 DQ 数据（避免因 PCB 走线延迟导致数据错位）。</li>
+</ul>
+</li>
+<li><strong>DQ</strong>：数据线，双向（写时SOC→DRAM，读时DRAM→SOC）。实际传输数据的物理通道，直接决定内存带宽。<ul>
+<li>写操作 **wDQ **：SOC 将 CPU 需要存储的数据通过 DQ 发送到 DRAM 。</li>
+<li>读操作 **rDQ **：DRAM 将存储的数据通过 DQ 返回给 SOC（最终送至 CPU ）。</li>
+<li>位宽影响：DQ 的位宽（如64位）越大，单次传输数据量越高（例如：64bit×800MHz&#x3D;5.12GB&#x2F;s带宽）。</li>
+</ul>
+</li>
+<li><strong>VCC&#x2F;VREF</strong>：电源&#x2F;参考电压，电源管理 → DRAM。<ul>
+<li>VCC：DRAM的工作电源电压，为芯片内部电路（如存储单元、控制逻辑）提供能量。见以下供电链路：<ul>
+<li>VCC18-DRAM：用于给内部PHY等供电</li>
+<li>VDD-DRAM：给数字电路供电，一般与VDD-SYS合并</li>
+<li>VCC-DRAM&#x2F;VCC-DRAML：IO供电，对应颗粒VDDQ</li>
+<li>VDD18-LPDDR：颗粒端VDD1供电</li>
+<li>VPP25-DRAM：DDR4专有，行激活电压</li>
+</ul>
+</li>
+<li>VREF：参考电压，用于 DQ 信号的电平判决。<ul>
+<li>例如：DRAM 和 SOC 根据 VREF 设定阈值（如 VRE F&#x3D; 0.5V ），判断 DQ 是逻辑1（&gt;VREF）还是逻辑0（&lt;VREF）。</li>
+<li>若 VREF 不稳定，会导致数据误判（如噪声干扰时本应是1却判为0）。</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="DDR-IP"><a href="#DDR-IP" class="headerlink" title="DDR IP"></a>DDR IP</h3><p>DDR IP（知识产权核）是集成电路设计中用于连接处理器与动态随机存储器（DRDRAM）的关键模块，涵盖控制器（Controller）和物理层接口（PHY）。</p>
+<p>DDR IP 的组成：Host Controller 、PHY 。见以下示例图：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/ddr_ip.drawio.png"></div>
+
+<p>见以下各组件的解释：</p>
+<ul>
+<li>控制器：整个子系统的性能、功能、稳定性的根本，所有控制&#x2F;操作命令的发起者</li>
+<li>PHY：DDR PHY是连接DDR颗粒和DDR Controller的桥梁。负责把DDR Controller发过来的数据转换成符合DDR协议的信号，并发送到DDR颗粒；也负责把DRAM发送过来的数据转换成符合DFI协议的信号并发送给内存控制器。</li>
+</ul>
+<h3 id="传输链路设计"><a href="#传输链路设计" class="headerlink" title="传输链路设计"></a>传输链路设计</h3><p>DRAM子系统链路设计，内容覆盖高速信号设计的各个关键点，主要包括但不限于以下部分： </p>
+<ul>
+<li>DIE内设计  </li>
+<li>基板设计  </li>
+<li>封装ball设计  </li>
+<li>原理图设计  </li>
+<li>PCB设计</li>
+</ul>
+<p>以上设计是构建高性能内存架构的核心环节，需兼顾 信号完整性（SI）、电源完整性（PI）、时序收敛 和 成本控制，所以成熟的DRAM模板不可轻易修改。</p>
+<h3 id="DRAM颗粒-Die"><a href="#DRAM颗粒-Die" class="headerlink" title="DRAM颗粒(Die)"></a>DRAM颗粒(Die)</h3><p><font style="color:rgb(29, 29, 32);">DRAM颗粒是物理 DRAM 芯片，比如内存条上的黑色小方块或核心板上的黑色小方块。</font></p>
+<p>DRAM 的内部结构主要由一系列的物理结构和逻辑单元组成。</p>
+<p>DRAM 颗粒的组成：Rank、Channel、Bank、Row 和 Column 。</p>
+<p> 以下是 DRAM 颗粒的逻辑结构图（放大查看）： <!-- 这是一张图片，ocr 内容为： --></p>
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765448747114-46cdccb9-bf2b-4bcb-9dab-27107f66d074.png"></div>
+
+<p>以下是内部各组件的解释（放大查看）：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765448857431-86d1fe0b-8ed0-4ff9-bd12-38911155ba43.png"></div>
+
+<p>以下是一个 Bank 的内部逻辑，它就是一个个的晶体管，每个晶体管对应 1Bit 数据：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765503893078-2233d422-f899-4c7d-b4a8-3af6279263ae.png"></div>
+
+<p>其中，**Column（列） **是由多个 Bit Line 组成，一列包含多少 Bit Lane ，取决于颗粒的位宽。比如位宽为 8Bit ，则 Column 由 8Bit 组成。</p>
+<p>**Row（行）**等同于 Word Line ，将多个存储体晶体管的 Gate 端挂在一条线。</p>
+<p>结合 Row（行）和 Column（列），其中 Column 包含 8Bit ，则：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765504335258-a37ad846-5690-4916-a8d8-d02484046bdb.png"></div>
+
+<p>另外，还有一个 DRAM 颗粒的概念，叫做 <strong>Page Size</strong> ，它表示一 Row 的 Bit 长度是多少。比如上图中的 Row0 对应的 Page Size 大小为 4*8&#x3D;32bit 。</p>
+<p>一个 DRAM 颗粒有若干个 <strong>Bank</strong> ，Bank 就是一个个独立的内存阵列，用于提高并行访问效率：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765504604453-a26d8fbe-b329-474b-bff2-122e1bf46bea.png"></div>
+
+<p>需要注意的是，同一个 Bank 不能同时 Active 两个 Row 。另外，在访问当前的 Bank 时，可以提前对即将访问的下一个 Bank 进行预充电（Precharge），目的是减少等待时间，加快访问效率。</p>
+<p>**Channel **是 CPU 内存控制器与 DRAM 颗粒之间的物理接口（比如说 双通道 和 四通道），每个 Channel 拥有一组独立的数据线、地址线和控制信号（如时钟、片选信号），多个 Channel 可并行传输数据，对带宽有提升效果。</p>
+<p><strong>位宽</strong>就是 Bit 的长度。全志 SoC 的 DRAM 位宽一般为 32 Bit 。DDR3&#x2F;DDR4 的单颗粒一般为 16bit ，LPDDR4&#x2F;LPDDR4X 单颗粒为 32bit 。Channel 也有位宽的概念，这等同于它的数据线 DQ 的数量。</p>
+<p>假设 SoC 的 DRAM 位宽为 32bit ，对应的 DRAM 的位宽也要 32bit ，则：</p>
+<ul>
+<li>对于 DDR3&#x2F;DDR4 ：假设它们的单颗粒位宽为 16bit ，Channel 也为 16bit ，则需要两个 DRAM 颗粒组成 32bit 。</li>
+<li>对于 LPDDR4&#x2F;LPDDR4X ：假设它们的单颗粒位宽为 32bit ，但内部的 Channel 位宽为 16bit ，则单颗粒内部由 2 个 Channel 组成，见以下例图：</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/channel.drawio.png"></div>
+
+<p>换句话说，DRAM颗粒的位宽取决于它内部的 Channel 。比如说 DDR3&#x2F;DDR4 颗粒的位宽为 16bit ，它内部仅有一个 16 bit 的 Channel ；LPDDR4&#x2F;LPDDR4X 颗粒的位宽为 32bit ，它内部有 2 个 16 bit 的 Channel ，组成 32 bit 位宽。</p>
+<p><strong>Rank</strong> 是内存的逻辑结构的概念，由多个 DRAM 颗粒组成一个 Rank ，共享同一组控制信号协同工作，通过 CS_n 片选信号选择不同 Rank 。举个简单的例子，比如说电脑主板的内存插槽，一个内存插槽对应一个 Rank 。</p>
+<p>通过下列例子计算颗粒的容量，以此来辅助理解以上简述的概念。</p>
+<p>以下截至 LPDDR4 的规格书：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765510677652-92c35043-96ed-450f-9f55-a6654f73aebe.png"></div>
+
+<p>从 Datasheet 抓取以下信息：</p>
+<ul>
+<li>Row Address：R0-R15</li>
+<li>Column Address：C0-C9</li>
+<li>Number of Banks per Channel：8</li>
+<li>Number of Channel per die：2</li>
+<li>Bit ：16（等同于 DQ 位数）</li>
+</ul>
+<p>换算过来，得出：</p>
+<ul>
+<li>行bit数 &#x3D; 2^16  &#x3D;  65536</li>
+<li>列bit数 &#x3D; 2^10  &#x3D; 1024</li>
+<li>bank数 &#x3D; 2^3 &#x3D; 8</li>
+<li>位宽：16bit per channel * 2 CH &#x3D; 32bit</li>
+</ul>
+<p>则颗粒容量为：65536 * 1024 * 8 * 16 * 2 &#x3D; 16Gb &#x3D; 2GB 。</p>
+<p>以下截至 DDR4 的规格书：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765510868943-39679b52-5c8a-4b5b-a848-061f3bf73de1.png"></div>
+
+<p>从 Datasheet 抓取以下信息：</p>
+<ul>
+<li>Row Address：R0-R14</li>
+<li>Column Address：C0-C9</li>
+<li>Bit ：16</li>
+<li>Number of Banks ：4</li>
+<li>Number of Bank ：2</li>
+<li>Number of Channel per die：1</li>
+</ul>
+<p>换算过来，得出：</p>
+<ul>
+<li>行bit数 &#x3D; 2^15  &#x3D;  32768</li>
+<li>列bit数 &#x3D; 2^10  &#x3D; 1024</li>
+<li>bank数 &#x3D; 4*2 &#x3D; 8</li>
+<li>位宽：16bit</li>
+</ul>
+<p>则颗粒容量为：32768 * 1024 * 8 * 16 * 1 &#x3D; 4Gb &#x3D; 512MB 。</p>
+<p>如果使用两片 512MB DDR4 ，则组成 1 Rank 的 1GB 内存。</p>
+<h2 id="参数调试原理"><a href="#参数调试原理" class="headerlink" title="参数调试原理"></a>参数调试原理</h2><h3 id="DRAM调试内容"><a href="#DRAM调试内容" class="headerlink" title="DRAM调试内容"></a>DRAM调试内容</h3><ul>
+<li>读写训练<ul>
+<li>DRAM的读写训练是确保内存子系统稳定运行的核心环节，DRAM IO信号读写眼图以及采样点的选择，决定了DRAM系统的性能和稳定性。</li>
+<li>时序参数：时序参数定义了DRAM操作的时间约束，DRAM调试需确保时序参数满足DRAM规格，并且均衡稳定性以及提高带宽、降低延迟之间的关系，此外还要匹配不同的DRAM颗粒等。</li>
+<li>信号Skew：在高频的应用下，各信号之间的skew会影响到其能否被接收端正常采样，skew的来源多种多样，有SOC控制器内部的链路、SOC基板打线和走线、PCB走线、颗粒基板及其Die内部链路、PVT等各种因素的影响。</li>
+</ul>
+</li>
+<li>信号完整性调试<ul>
+<li>信号完整性调试就是结合仿真和实测，对阻抗匹配、眼图质量、时序裕量和电源噪声等关键指标进行优化的过程</li>
+<li>比如调整驱动电阻、ODT电阻优化眼图，优化走线长度匹配来减小时序偏差、提升时序裕量</li>
+<li>比如优化电源层、参考层设计、调整合适的去耦电容来抑制电源纹波，提升高频的稳定性</li>
+<li>比如针对CA裕量窄的模板，优化CA信号端接，来解决其阻抗不匹配问题，提升CA裕量</li>
+<li>比如利用示波器捕获信号眼图，通过叠加波形的信号完整性进行问题的定位</li>
+</ul>
+</li>
+</ul>
+<h3 id="什么是眼图"><a href="#什么是眼图" class="headerlink" title="什么是眼图"></a>什么是眼图</h3><p>DRAM 使用差分信号传输数据，这时需要时钟信号为数据信号进行时序定位，采用双边沿 DDR 采集数据，见下图。</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765867510032-cb4c2a80-5442-4ef4-9042-15a0b646c69c.png"></div>
+
+<p>TCLKp 对应一个时钟周期，1UI 对应 0.5 个时钟周期，要求在上升沿或下降沿前，在 T_SETUP 期间准备好数据，且要在 T_HOLD 期间保持数据。</p>
+<p>注意数据链路时序的阴影部分，这是信号转换区域（时域），它是眼图中重要的区域之一。这个区域由无数个的上升沿和下降沿信号叠加而成，形成交叉点（称之为 Jitter）。另外，这张例图还未展示电压轴，这是无数个高低电平信号叠加而成，形成“眼皮”（称之为 Noise）。</p>
+<p>眼图由无数的信号叠加而来，在目前的行业标准中，以时钟为基准，使用 3bit 电平的波形叠加组合，以此形成眼图：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765867754653-126fca0b-083f-4f4e-89ec-90fa6b3f8637.png"></div>
+
+<p><font style="color:rgb(56, 57, 66);background-color:rgb(249, 249, 249);">眼图中的信号抖动（Jitter）和噪声（Noise）的表现为：</font></p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765867771219-3ff5411e-8c1a-4baf-95e2-986f1d11e911.png"></div>
+
+<ul>
+<li>在横轴（时间轴）上，阴影区域的水平范围体现了时域抖动（Jitter）。假设眼高固定，眼宽越窄，即左右两边的阴影区域越宽，中间的空白区域越窄，则 T_SETUP 和 T_HOLD 时序越小，无法采样到数据。</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765867813572-b4d49ea4-1286-4153-b107-8e85f430eb6b.png"></div>
+
+<ul>
+<li>在纵轴（电压轴）上，阴影区域的垂直范围体现了电压噪声（Noise）。假设眼宽固定，眼高越矮，即上下两边的阴影区域越高，中间的空白区域越矮，则高低电平达不到接收端的 V_IHHS 和 V_ILHS（对应图 D-PHY_Signaling_and_Contention_Voltage_Levels ），无法采集到数据。</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765867854484-8c061f7c-32d2-4841-84cf-61274a0fe8b4.png"></div>
+
+<p>结合在一起理解，由于多次信号的叠加，如果：</p>
+<ul>
+<li>眼图的信息线变粗：出现模糊（Blur）现象，表示眼图越小，裕量越不充足，信号质量越差，接收端无法获取到数据。即阴影区域变宽，空白区域变窄。</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765868007918-f68c24e5-37cb-4c14-aaf9-b451d154cad8.png"></div>
+
+<ul>
+<li>眼图的信息线变细：不会出现模糊（Blur）现象，表示眼图越大，裕量越充足，信号质量越好，接收端能很好地获取到数据。即阴影区域变窄，空白区域变宽。</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765868048738-bf3a48ff-ebfc-41a6-a42b-494df8465ba0.png"></div>
+
+<p>在后续的读写训练中，涉及到一个名为“相位”的概念，这也是和数据线和时钟线之间的最佳采样点有关。和 Skew 不同的是，它用角度域表示。在理想状态下，数据线和时钟线之间的相位差为 180 度来作为最佳采样点，见下图：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765868240378-82d3bbad-9a0e-4c27-815b-9fc9b75ddc1e.png"></div>
+
+<blockquote>
+<p>多个相位（0°、90°、180°、270°、360°）只是一个标注拆分，并不表示采样点。</p>
+</blockquote>
+<h3 id="读写训练"><a href="#读写训练" class="headerlink" title="读写训练"></a>读写训练</h3><h4 id="要求"><a href="#要求" class="headerlink" title="要求"></a>要求</h4><p>读写训练就是为了帮助每个信号找到眼图上的最佳采样点，这个最佳的点包含时间轴和电压轴两个方向。</p>
+<p>电压轴：寻找时间裕量最大的电压值，为最佳Vref值：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765512603954-bb0fe149-d390-4664-a69a-a071cd3f3967.png"></div>
+
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765512617798-5d45e4a1-166e-46d9-ae1a-16cd2cdb71e1.png"></div>
+
+<p>时间轴：在最佳Vref点上找到左右边界，确定中心值为最佳采样点：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765512641139-8d7991da-ae34-42c9-a89d-6a0137e9cc62.png"></div>
+
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765512652431-fc473e7e-61fb-4ffd-912b-eb4e82bda8e9.png"></div>
+
+<ul>
+<li>CK、CA、CS信号的相位：<ul>
+<li>初始时的相位要求：CK的相位比CA&#x2F;CS<strong>大90度</strong>，从而满足采样的时序要求</li>
+</ul>
+</li>
+<li>WDQS、WDQ信号的相位<ul>
+<li>wDQS信号与CK之间的相位，从PHY端发出是基本对齐的</li>
+<li>初始时的相位要求：DDR3&#x2F;DDR4&#x2F;LPDDR3要求wDQS的相位要比wDQ<strong>大90度</strong>；LPDDR4&#x2F;4X要求wDQ的相位要比wDQS<strong>大90度</strong></li>
+</ul>
+</li>
+<li>RDQS、RDQ信号的相位<ul>
+<li>rDQS信号与CK之间的相位关系由颗粒端保证。</li>
+<li>颗粒发出的rDQS和rDQ是边沿对齐的</li>
+<li>初始时的相位要求：主控端要将rDQS的相位设置得比rDQ大90度</li>
+</ul>
+</li>
+</ul>
+<p>以下是 DRAM 时序图（放大查看）：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765514497108-3656f74a-f8fb-4e59-addb-03170c46f4c7.png"></div>
+
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765514543947-5c1a9b2e-70bb-4bb4-91d8-bb155b708001.png"></div>
+
+<h4 id="调试信号眼宽范围"><a href="#调试信号眼宽范围" class="headerlink" title="调试信号眼宽范围"></a>调试信号眼宽范围</h4><p>在保证DRAM能正常读写的前提下，通过调节信号及其采样信号的时序，便可得出每个信号的可用范围，再将其所使用到的delay值设至可用范围的中心点，即为当前相对较优的位置：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765868462496-4ffbf9b3-d7c0-4604-aa66-f31630cedd33.png"></div>
+
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765868510742-e9629035-c583-45bd-8fb3-e386e7bc33be.png"></div>
+
+<p>找到较优采样点：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765868574170-a86173ba-ef75-44cf-9ed8-55ac426fdeab.png"></div>
+
+<p>如果时钟链路和数据链路之间的相位有限制，比如数据链路的相位范围有限制，无法寻找右边界：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765868602508-41fa1791-37db-4c7f-a449-8797f32636c0.png"></div>
+
+<p>则移动时钟链路的相位来寻找：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765868717992-6c6b61bc-fb05-49f8-a616-53528782f614.png"></div>
+
+<p>方法一：当被采样信号的delay够用，足以让被采样信号的眼图从左到右经过采样信号边沿，那么可以直接调试被采样信号的delay值，得出其可用的范围。</p>
+<p>方法二：当被采样信号的delay不够用，delay设置为0的时候，仍然可被正常采样到时，需同步调节采样信号的相位，以得出被采样信号眼图的右边界，DQ的delay设置为0时，仍可被DQS正常采样，故先调大DQ delay至其采样异常，得出DQ眼图左边界；再将DQ delay设置为0，调大DQS的delay，得出DQ delay的右边界。两者相加，即可得到DQ总的眼图可用范围，再取其中心点即可。</p>
+<h4 id="数据IO端接模型"><a href="#数据IO端接模型" class="headerlink" title="数据IO端接模型"></a>数据IO端接模型</h4><p>接下来到调试信号眼高范围，不同的DRAM类型，最优的电压轴的采样点位置不同，因为其端接电阻（ODT）的接法不同，导致其信号眼图的摆幅不同。</p>
+<ul>
+<li>输出驱动模型：输出高电平时上拉导通，输出低电平时下拉导通</li>
+<li>端接ODT模型：各类型的IO端接模型根据协议规定不尽相同</li>
+</ul>
+<p>DDR3、DDR4、LPDDR3只有DQS、DQ和DM上有端接电阻，而LPDDR4和LPDDR4X除了DQS、DQ和DM之外，在CK和CA信号（除RESET和CKE）上也有端接电阻。</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765869912819-fe3e1631-0ad7-461a-8556-aa21212f7ff0.png"></div>
+
+<ul>
+<li>DDR3端接电阻是接到VDDQ&#x2F;2，故其最优点在VDDQ&#x2F;2左右；</li>
+<li>DDR4和LPDDR3端接电阻是接到VDDQ，故其最优电压采样点在VDDQ到VDDQ&#x2F;2之间；</li>
+<li>LPDDR4和LPDDR4X端接电阻是接到VSSQ（即VDDQ的地），故其最优电压采样点在VDDQ&#x2F;2到VSSQ之间。</li>
+</ul>
+<p>具体的最优电压点采样数值与IO驱动电阻阻值和终端端接电阻阻值相关，需由实际调试来确定。</p>
+<p>下图是 DDR3 高低电平示例（DQ驱动能力设置为40ohm，ODT电阻设置为120ohm）：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765871644363-64c9e8f1-dad1-4dca-8b32-9deea62391fb.png"></div>
+
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765871655588-665ad244-6d37-4f44-b530-37740b36344e.png"></div>
+
+<p>以此来计算Vh、Vl和Vref：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765873396815-7413cd17-f10f-4553-8894-0f6870600340.png"></div>
+
+<h4 id="理论最佳Vref配置"><a href="#理论最佳Vref配置" class="headerlink" title="理论最佳Vref配置"></a>理论最佳Vref配置</h4><p>各DRAM类型根据其协议以及端接模型，可归纳得到理论最佳参考电平如下：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765942096690-37abd0d0-2faf-44ac-8494-6a8aa4ba9877.png"></div>
+
+<h4 id="实际最佳Vref-Training"><a href="#实际最佳Vref-Training" class="headerlink" title="实际最佳Vref Training"></a>实际最佳Vref Training</h4><p>于Vref能通过“MR调节”和“寄存器设置”完成调节的信号，在DRAM驱动（如果该项目驱动支持的情况下）中将该信号每个Vref对应的可用delay范围扫描出来，并打印出来，即可得到该信号的软件眼图：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765873601163-90ff0a97-87cc-46e0-8658-146510975fd1.png"></div>
+
+<h4 id="眼图调优"><a href="#眼图调优" class="headerlink" title="眼图调优"></a>眼图调优</h4><p>提频的过程中，信号的眼图可用范围会出现眼宽或者眼高变小的情况，可通过驱动电阻和端接电阻来调节</p>
+<ul>
+<li>驱动电阻阻值越小，驱动能力越强，信号边沿越陡，眼图眼高越大</li>
+<li>端接电阻阻值越小，导流能力越强，信号边沿越陡，眼图眼高越小</li>
+</ul>
+<p>驱动电阻&#x3D;60ohm：							驱动电阻&#x3D;40ohm：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765942308209-c84f9468-a1cb-47f3-a62a-84d2def5d6a8.png"></div><!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765942315800-325da894-2751-4e54-9a59-301c502b95ea.png"></div>
+
+<p>端接电阻&#x3D;无穷大：							端接电阻&#x3D;60ohm：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765942381161-acb95985-6ea5-41b9-addb-4a38b9412987.png"></div><!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765942383499-cca79ad0-2419-4d66-803a-3b2dc030a982.png"></div>
+
+
+
+<h3 id="了解DRAM参数"><a href="#了解DRAM参数" class="headerlink" title="了解DRAM参数"></a>了解DRAM参数</h3><h4 id="DRAM时钟和类型"><a href="#DRAM时钟和类型" class="headerlink" title="DRAM时钟和类型"></a>DRAM时钟和类型</h4><ul>
+<li>dram_clk ：DRAM 时钟信号频率，单位 MHz 。例如，672 表示 DRAM 时钟信号频率为 672MHz， 数据率相应为 672x2&#x3D;1344Mbps，dram_clk 调整最小步进单位为 12M 。</li>
+<li>dram_type ：DRAM 类型配置</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765876502419-9569c6b3-f648-43e8-91cc-de5fafcdf13d.png"></div>
+
+<h4 id="容量配置"><a href="#容量配置" class="headerlink" title="容量配置"></a>容量配置</h4><ul>
+<li>dram_para1：配置bank_group、bank、row、col数目</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765876545892-e2b62ecf-13d1-452a-9676-9339b0878dbe.png"></div>
+
+<ul>
+<li>dram_para2 ：配置DRAM使用空间、rank数量、位宽width</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765876588394-5c9a3adc-d602-4cf0-a4a0-249ffa427ada.png"></div>
+
+<h4 id="驱动ODT"><a href="#驱动ODT" class="headerlink" title="驱动ODT"></a>驱动ODT</h4><ul>
+<li>dram_dx_odt：控制器数据DX读ODT阻抗</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765876839243-6986de3d-f52c-45bd-a152-6429ddd56b80.png"></div>
+
+<ul>
+<li>dram_dx_dri ：控制器数据DX输出驱动能力</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765876883686-cb302ddf-55c5-4296-83ce-da9707c7262f.png"></div>
+
+<ul>
+<li>dram_ca_dri ：控制器CK、CA输出驱动能力</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765876907890-a421ab81-6f61-4d91-8a47-d3dd999e16a6.png"></div>
+
+<h4 id="Delay"><a href="#Delay" class="headerlink" title="Delay"></a>Delay</h4><blockquote>
+<p>以下的参数建议以 16 为一档进行调配。</p>
+</blockquote>
+<ul>
+<li>dram_para0：调整DQS写方向的相位延迟</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765877065677-7c569c8e-62ed-4ae3-b7dd-2300280358dd.png"></div>
+
+<ul>
+<li>dram_tpr14：调整DQS读方向的相位延迟</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765877095389-1c8e2eb6-694f-4769-aabf-5c4e124e76be.png"></div>
+
+<ul>
+<li>dram_tpr11：调整DQ写方向的相位延迟</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765877113143-410f42f7-2a45-40b3-8672-60b9afc5b187.png"></div>
+
+<ul>
+<li>dram_tpr12：调整DQ写方向的相位延迟</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765877126734-f88f4450-329a-4612-b115-19504c03402b.png"></div>
+
+<ul>
+<li>dram_tpr0：调整CK、CA、CS信号的相位延迟</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765877158387-4414a0bb-dff3-4662-8995-4e73a8e9f083.png"></div>
+
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765877167260-8b45b294-b32b-47ed-92f9-236aeca75656.png"></div>
+
+<h4 id="VREF"><a href="#VREF" class="headerlink" title="VREF"></a>VREF</h4><ul>
+<li>dram_tpr6：配置主控端DX读数据内部VREF</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765877348413-61302dc9-2de0-49cf-82df-540dda2be4a8.png"></div>
+
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765877363312-e8a06945-d196-4a8a-99ad-225725a6b1a6.png"></div>
+
+<ul>
+<li>dram_mr6：for DDR4， [7:0]配置颗粒端DX写数据VrefDQ</li>
+<li>dram_mr14：for LPDDR4， [5:0]配置颗粒端DX写数据VrefDQ</li>
+</ul>
+<h2 id="新物料适配流程"><a href="#新物料适配流程" class="headerlink" title="新物料适配流程"></a>新物料适配流程</h2><h3 id="训练教程"><a href="#训练教程" class="headerlink" title="训练教程"></a>训练教程</h3><p>需要用到全志原厂提供的工具：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763451339318-34a87985-97da-471f-a101-7ac9c6c400f2.png"></div>
+
+<blockquote>
+<p>注意：该工具与全志的烧录工具 PhoenixSuit 冲突，使用时需要把烧录工具关闭。</p>
+</blockquote>
+<p>根据以下步骤操作：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763451542987-b15e406a-237e-48a4-bee5-c87b102cd5db.png"></div>
+
+<p>如果适配一个新物料，则建议从最低档的 clk 频率开始训练。</p>
+<blockquote>
+<p>建议准备3片进行测试。</p>
+</blockquote>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763451647273-735c615f-3d37-4e4e-b978-7e2550fce8e6.png"></div>
+
+<p>多数为 LPDDR4 ，选择以下配置：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763451754599-fa9c621a-7fa0-4085-8e4c-6efb3d8addb1.png"></div>
+
+<p>这里建议追加配置“memtester”和“dma3_test”，加上内存测试。</p>
+<p>memtester 是在内存中连续读写测试；dma3_test 是在内存中随机跳转空间去读写测试。</p>
+<p>把鼠标放在“dram_init”处，鼠标右键：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763451921271-c02c0259-3dd0-4481-8471-d748f885a846.png"></div>
+
+<p>出现以下界面，这个是内存序列模板，需要在全志一号通找到最新的模板：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763452289618-ddb38371-13b1-4e30-9929-4f9939471e9c.png"></div>
+
+<p>在全志一号通，根据以下指引操作，根据DDR类型查找内存模板：</p>
+<blockquote>
+<p>这些模板是全志自己验证过的，验证方法为用3片进行眼图测试，取参数的平均值作为新模板。把新模板放到3K台测试。如果途中出现问题，则重新调参，另外用100台做验证。</p>
+</blockquote>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763452217908-9fcc0f7b-1906-42e2-9cc8-dc7e2a8b7e37.png"></div>
+
+<p>复制模板：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763452455537-883d860e-4ba0-415f-888a-a9d55a3c0ab2.png"></div>
+
+<p>把内容粘贴到下图中选中的文本：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763452495407-d5d73f97-7c55-4982-9ded-7d8f16058621.png"></div>
+
+<p>把该文本软件关闭后，出现以下界面，选中“是”即可：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763452533506-21e2ab45-2075-4b5c-b2bd-d38fa0615272.png"></div>
+
+<p>以上操作完成后，在“循环测试次数”中，输入要测试的次数，然后点击“启动”。</p>
+<p>然后像USB烧录烧录那样，在板子上先按住“reset”键，然后按住“FEL”键，然后先松开“reset”，接着松开“FEL”。这里仅连接一个评估板作为例子：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763453090898-64a2e758-7ca1-4234-9f23-f21c875d161c.png"></div>
+
+<p>板子连接串口，输出以下起始信息：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763453163460-de6d6411-27d9-43dc-8d16-acfb447cd60b.png"></div>
+
+<p>类似以下输出信息的是眼图：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763453201130-58851ab9-366d-433f-835b-97defec8fe71.png"></div>
+
+<p>测试完成后，出现以下信息表示成功：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765877996911-1cc5c0dd-c167-41a8-a74d-e1fb2285c93f.png"></div>
+
+<p>注意红框的内容，训练完成后，会出现这些信息，可以把这些信息回写到内存序列模板，提高 DDR CLK频率，再重新训练，获取新的参数，回写到内存系列模板，以此往复，直到 1400MHz 左右即可（视板卡的功耗要求而定）。</p>
+<p>把训练好的参数写到 SDK 的 sys_config.fex 内：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1766036518892-aa1cecb3-3616-4165-96c6-92e7a2e3c28c.png"></div>
+
+<h3 id="训练过程"><a href="#训练过程" class="headerlink" title="训练过程"></a>训练过程</h3><p>第一步是稳定性测试，检查 DRAM 颗粒的功能是否正常：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765947224815-e05db85c-8b9d-478c-ba66-831aefb41bc7.png"></div>
+
+<p>确认正常后，把时钟频率切换为你指定的时钟频率。</p>
+<p>本次训练出现的第一个眼图是 RDQ 的，接着是 WDQ ，最后是 RDQ 的。RDQ的眼图以第二个为准，因为第二个是精确结果。</p>
+<blockquote>
+<p>以下眼图是 LPDDR4&#x2F;LPDDR4X 。</p>
+</blockquote>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765942663338-44b7b1d8-0afb-4235-85c4-3cc72cac4472.png"></div>
+
+<p>出现“xxx”的表示相对较优采样点。</p>
+<p>读写方向二维眼图中合格的 vref 裕量满足优秀标准 ：</p>
+<ul>
+<li>LPDDR4≥300mv </li>
+<li>DDR3&#x2F;DDR4&#x2F;LPDDR3≥500mv</li>
+</ul>
+<p>合格裕量标准：每行中“0”与“X”的个数和 ≥3 。</p>
+<p>如下图，360mV-103mV&#x3D;257mV ，只能是一般合格。</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765942962494-f7f785c9-1f02-49cf-a018-bc373b0658a2.png"></div>
+
+<p>DRAM的类型为 LPDDR4&#x2F;LPDDR4X ，结合它们的 ODT 电阻可知，下降沿幅度比上升沿幅度快。</p>
+<p>红色区域为抖动（Jitter）部分：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765944282189-8685f910-b8c4-4e3d-b36d-f66af2eec5ce.png"></div>
+
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765944405050-73f35dd9-779a-46e1-896c-3fd0ef70e8e7.png"></div>
+
+<p>以下这些也是读写训练，通过多次读写，适当增加&#x2F;减少延迟，找到左右边界，收集每次的采样点，找到相对较优的采样点：</p>
+<blockquote>
+<p>range 表示眼宽的范围，width表示眼宽宽度，center 表示眼宽范围的中间节点。</p>
+</blockquote>
+<p>读写方向每根 DQ 眼宽均 ≥ 1&#x2F;2 UI，即 <strong>32 档及以上</strong>。</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765946701440-3e233bd8-c321-4f53-9742-fa1473c49d0a.png"></div>
+
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765946688776-204f2b76-2654-426f-b68b-af65c5947839.png"></div>
+
+<h2 id="兼容性验证"><a href="#兼容性验证" class="headerlink" title="兼容性验证"></a>兼容性验证</h2><h3 id="验证标准"><a href="#验证标准" class="headerlink" title="验证标准"></a>验证标准</h3><ul>
+<li><strong>高带宽读写压力测试</strong>：高低温下，不出现DRAM读写错误、memtester报错，系统不跑飞、不卡死，DRAM带宽满足要求，测试时长满足标准。</li>
+<li><strong>反复初始化DRAM（Reboot重启）测试</strong>：高低温下，系统正常重启，不出现系统跑飞、卡死、硬件关机无法启动等现象，测试时长满足标准</li>
+<li><strong>DRAM自刷新（休眠唤醒）测试</strong>：高低温下，系统正常待机休眠和唤醒，不出现系统跑飞，卡死，硬件关机无法启动等现象，测试时长满足标准</li>
+</ul>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1765878609538-192b9ff5-9595-4b55-b6c5-e06f1c997dfe.png"></div>
+
+<h3 id="报错修复"><a href="#报错修复" class="headerlink" title="报错修复"></a>报错修复</h3><p>如果出现跑飞，卡死，则检查：</p>
+<ul>
+<li>排查是否裕量不足，参数是否还能优化</li>
+<li>降低DRAM工作频率来定位</li>
+<li>补焊颗粒是否有效</li>
+<li>确认是否与温度相关<ul>
+<li>如与低温相关，可考虑给DRAM电源提压</li>
+<li>如与高温相关，是否刷新率不够等等</li>
+</ul>
+</li>
+</ul>
+<h3 id="内存带宽测试"><a href="#内存带宽测试" class="headerlink" title="内存带宽测试"></a>内存带宽测试</h3><p>该内存压力测试是在Linux终端下进行的，建议给评估板加上散热片。</p>
+<p>使用以下命令，查看空闲内存：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat /proc/meminfo</span><br></pre></td></tr></table></figure>
+
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763454503370-fbc7ee2d-9a2d-4cf1-90a7-b3f6b35bcea7.png"></div>
+
+<p>换算得知有 874MiB 内存可用，则这里拿建议用空闲内存的四分之一用于压力测试：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">stream -v 2 -M 200M -P 4 -N 20 -W 1</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>-v：选择测试版本，推荐用版本 2 </li>
+<li>-M：测试时用到的内存大小</li>
+<li>-P：并行测试数</li>
+<li>-N：重复迭代次数，多次迭代获得稳定结果（推荐 20-50 次）</li>
+<li>-W：预热次数，充分预热（推荐 5-10 次），冷启动（1次）。</li>
+</ul>
+<blockquote>
+<p>因为使用该命令进行测试时需要连续的物理内存作为数组去测试，所以只能用空闲内存的四分之一去测试，不然很容易出现 OMM Killer 。</p>
+</blockquote>
+<p>执行该命令的过程中，如果出现以下错误，则表示因内存不足而触发OOM Killer，需要适当减低内存空间去测试：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763455613069-e7560884-9677-4663-9f29-7d62e8098a12.png"></div>
+
+<p>输出结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">STREAM2 fill latency: 4.20 nanoseconds</span><br><span class="line">STREAM2 fill bandwidth: 7624.19 MB/sec</span><br><span class="line">STREAM2 copy latency: 10.19 nanoseconds</span><br><span class="line">STREAM2 copy bandwidth: 6278.26 MB/sec</span><br><span class="line">STREAM2 daxpy latency: 19.67 nanoseconds</span><br><span class="line">STREAM2 daxpy bandwidth: 4881.39 MB/sec</span><br><span class="line">STREAM2 sum latency: 5.88 nanoseconds</span><br><span class="line">STREAM2 sum bandwidth: 5444.07 MB/sec</span><br></pre></td></tr></table></figure>
+
+<p>解析：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">STREAM2 fill latency: 4.19 nanoseconds</span><br><span class="line">STREAM2 fill bandwidth: 7628.91 MB/sec</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong><font style="color:rgb(15, 17, 21);">延迟</font></strong><font style="color:rgb(15, 17, 21);">: 4.19纳秒 - 非常低的延迟</font></li>
+<li><strong><font style="color:rgb(15, 17, 21);">带宽</font></strong><font style="color:rgb(15, 17, 21);">: 7628.91 MB&#x2F;s - 相对较高的带宽</font></li>
+<li><strong><font style="color:rgb(15, 17, 21);">分析</font></strong><font style="color:rgb(15, 17, 21);">: Fill操作只是简单地将内存区域填充固定值，属于纯写入操作。</font></li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">STREAM2 copy latency: 10.19 nanoseconds</span><br><span class="line">STREAM2 copy bandwidth: 6282.29 MB/sec</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong><font style="color:rgb(15, 17, 21);">延迟</font></strong><font style="color:rgb(15, 17, 21);">: 10.19纳秒 - 比Fill高约2.4倍</font></li>
+<li><strong><font style="color:rgb(15, 17, 21);">带宽</font></strong><font style="color:rgb(15, 17, 21);">: 6282.29 MB&#x2F;s - 比Fill低约17.6%</font></li>
+<li><strong><font style="color:rgb(15, 17, 21);">分析</font></strong><font style="color:rgb(15, 17, 21);">: Copy需要读取源数据并写入目标位置，涉及读写两种操作，因此延迟更高，带宽相对降低。</font></li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">STREAM2 daxpy latency: 19.57 nanoseconds</span><br><span class="line">STREAM2 daxpy bandwidth: 4904.68 MB/sec</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong><font style="color:rgb(15, 17, 21);">延迟</font></strong><font style="color:rgb(15, 17, 21);">: 19.57纳秒 - 最高的延迟</font></li>
+<li><strong><font style="color:rgb(15, 17, 21);">带宽</font></strong><font style="color:rgb(15, 17, 21);">: 4904.68 MB&#x2F;s - 最低的带宽</font></li>
+<li><strong><font style="color:rgb(15, 17, 21);">分析</font></strong><font style="color:rgb(15, 17, 21);">: DAXPY涉及浮点计算（乘法和加法）和内存访问，是最复杂的操作。计算开销增加了整体延迟，降低了有效带宽。</font></li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">STREAM2 sum latency: 5.82 nanoseconds</span><br><span class="line">STREAM2 sum bandwidth: 5494.85 MB/sec</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong><font style="color:rgb(15, 17, 21);">延迟</font></strong><font style="color:rgb(15, 17, 21);">: 5.82纳秒 - 相对较低</font></li>
+<li><strong><font style="color:rgb(15, 17, 21);">带宽</font></strong><font style="color:rgb(15, 17, 21);">: 5494.85 MB&#x2F;s - 中等水平</font></li>
+<li><strong><font style="color:rgb(15, 17, 21);">分析</font></strong><font style="color:rgb(15, 17, 21);">: Sum主要是读取操作加上简单的累加计算，计算强度较低。</font></li>
+</ul>
+<h3 id="内存完整性测试"><a href="#内存完整性测试" class="headerlink" title="内存完整性测试"></a>内存完整性测试</h3><p>该内存完整性测试（主要检测内存硬件问题）是在Linux终端下进行的，建议给评估板加上散热片。</p>
+<p>使用以下命令，查看空闲内存：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat /proc/meminfo</span><br></pre></td></tr></table></figure>
+
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763454503370-fbc7ee2d-9a2d-4cf1-90a7-b3f6b35bcea7.png"></div>
+
+<p>换算得知有 874MiB 内存可用，则这里拿建议用800M用于压力测试：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">memtester 800M 1</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>1</code>是测试次数。</li>
+</ul>
+<p>执行该命令的过程中，如果出现以下错误，则表示因内存不足而触发OOM Killer，需要适当减低内存空间去测试：</p>
+<!-- 这是一张图片，ocr 内容为： -->
+<div align="center"><img src="/images/Hardware/arch/DRAM基础和调参/1763455613069-e7560884-9677-4663-9f29-7d62e8098a12.png"></div>
+
+<p>输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">memtester version 4.5.0 (64-bit)</span><br><span class="line">Copyright (C) 2001-2020 Charles Cazabon.</span><br><span class="line">Licensed under the GNU General Public License version 2 (only).</span><br><span class="line"></span><br><span class="line">pagesize is 4096</span><br><span class="line">pagesizemask is 0xfffffffffffff000</span><br><span class="line">want 800MB (838860800 bytes)</span><br><span class="line">got  800MB (838860800 bytes), trying mlock ...locked.</span><br><span class="line">Loop 1/2:</span><br><span class="line">  Stuck Address       : ok</span><br><span class="line">  Random Value        : ok</span><br><span class="line">  Compare XOR         : ok</span><br><span class="line">  Compare SUB         : ok</span><br><span class="line">  Compare MUL         : ok</span><br><span class="line">  Compare DIV         : ok</span><br><span class="line">  Compare OR          : ok</span><br><span class="line">  Compare AND         : ok</span><br><span class="line">  Sequential Increment: ok</span><br><span class="line">  Solid Bits          : ok</span><br><span class="line">  Block Sequential    : ok</span><br><span class="line">  Checkerboard        : ok</span><br><span class="line">  Bit Spread          : ok</span><br><span class="line">  Bit Flip            : ok</span><br><span class="line">  Walking Ones        : ok</span><br><span class="line">  Walking Zeroes      : ok</span><br><span class="line">  8-bit Writes        : ok</span><br><span class="line">  16-bit Writes       : ok</span><br><span class="line"></span><br><span class="line">Done.</span><br></pre></td></tr></table></figure>
+
+<h3 id=""><a href="#" class="headerlink" title=""></a></h3>
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Hardware/" rel="tag"># Hardware</a>
+              <a href="/tags/Architecture/" rel="tag"># Architecture</a>
+              <a href="/tags/DRAM/" rel="tag"># DRAM</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/11/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-MIPI-DSI%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/" rel="prev" title="Linux - MIPI-DSI开发要点">
+                  <i class="fa fa-angle-left"></i> Linux - MIPI-DSI开发要点
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/01/16/%E9%85%8D%E7%BD%AE/allwinner/Buildroot%E7%B3%BB%E7%BB%9F%E8%87%AA%E5%8A%A8%E7%99%BB%E5%BD%95/" rel="next" title="Buildroot系统自动登录">
+                  Buildroot系统自动登录 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

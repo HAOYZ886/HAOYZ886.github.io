@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="从用户层出发，浅析 poll()函数原型123#include &lt;poll.h&gt;int poll(struct pollfd *fds, nfds_t nfds, int timeout); 函数 poll() 的功能是在 timeout 内监视 fds ，在此时间内在 fds 捕获用户指定的行为。">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - 对poll()实现原理的浅析（内核版本 4.9.88）">
+<meta property="og:url" content="http://example.com/2024/03/13/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E5%AF%B9poll()%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E7%9A%84%E6%B5%85%E6%9E%90/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="从用户层出发，浅析 poll()函数原型123#include &lt;poll.h&gt;int poll(struct pollfd *fds, nfds_t nfds, int timeout); 函数 poll() 的功能是在 timeout 内监视 fds ，在此时间内在 fds 捕获用户指定的行为。">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2024-03-12T16:00:00.000Z">
+<meta property="article:modified_time" content="2024-06-14T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Kernel">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="poll">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2024/03/13/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E5%AF%B9poll()%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E7%9A%84%E6%B5%85%E6%9E%90/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2024/03/13/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E5%AF%B9poll()%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E7%9A%84%E6%B5%85%E6%9E%90/","path":"2024/03/13/原理及实现/Kernel/Linux-对poll()实现原理的浅析/","title":"Linux - 对poll()实现原理的浅析（内核版本 4.9.88）"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - 对poll()实现原理的浅析（内核版本 4.9.88） | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%8E%E7%94%A8%E6%88%B7%E5%B1%82%E5%87%BA%E5%8F%91%EF%BC%8C%E6%B5%85%E6%9E%90-poll"><span class="nav-number">1.</span> <span class="nav-text">从用户层出发，浅析 poll()</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%87%BD%E6%95%B0%E5%8E%9F%E5%9E%8B"><span class="nav-number">1.1.</span> <span class="nav-text">函数原型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E6%95%B0"><span class="nav-number">1.2.</span> <span class="nav-text">参数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%86%E8%8A%82%E8%A6%81%E7%82%B9"><span class="nav-number">1.3.</span> <span class="nav-text">细节要点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#sys-poll-%E6%B5%85%E6%9E%90"><span class="nav-number">2.</span> <span class="nav-text">sys_poll() 浅析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%87%BD%E6%95%B0%E5%8E%9F%E5%9E%8B-1"><span class="nav-number">2.1.</span> <span class="nav-text">函数原型</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2024/03/13/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E5%AF%B9poll()%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E7%9A%84%E6%B5%85%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - 对poll()实现原理的浅析（内核版本 4.9.88） | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - 对poll()实现原理的浅析（内核版本 4.9.88）
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2024-03-13 00:00:00" itemprop="dateCreated datePublished" datetime="2024-03-13T00:00:00+08:00">2024-03-13</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2024-06-15 00:00:00" itemprop="dateModified" datetime="2024-06-15T00:00:00+08:00">2024-06-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>4.5k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>16 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="从用户层出发，浅析-poll"><a href="#从用户层出发，浅析-poll" class="headerlink" title="从用户层出发，浅析 poll()"></a>从用户层出发，浅析 poll()</h2><h3 id="函数原型"><a href="#函数原型" class="headerlink" title="函数原型"></a>函数原型</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;poll.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">poll</span><span class="params">(<span class="keyword">struct</span> pollfd *fds, <span class="type">nfds_t</span> nfds, <span class="type">int</span> timeout)</span>;</span><br></pre></td></tr></table></figure>
+<p>函数 <code>poll()</code> 的功能是在 timeout 内监视 fds ，在此时间内在 fds 捕获用户指定的行为。</p>
+<span id="more"></span>
+<h3 id="参数"><a href="#参数" class="headerlink" title="参数"></a>参数</h3><ul>
+<li>struct pollfd *fds：记录将被监控的文件，其中不乏包含 普通文件、设备文件、管道文件和套接字。</li>
+<li>nfds_t nfds：需要被监控的文件数量</li>
+<li>int timeout：等待事件发生的超时时间（毫秒）。<ul>
+<li>-1：无限期等待。</li>
+<li>0：立即返回，不阻塞。</li>
+<li>&gt;0：等待指定的毫秒数。<blockquote>
+<p>后面会讲解 poll 时间机制的设计。</p>
+</blockquote>
+</li>
+</ul>
+</li>
+</ul>
+<h3 id="细节要点"><a href="#细节要点" class="headerlink" title="细节要点"></a>细节要点</h3><p>以下是 struct pollfd 的声明：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">pollfd</span></span></span><br><span class="line"><span class="class">&#123;</span></span><br><span class="line">    <span class="type">int</span> fd;</span><br><span class="line">    <span class="type">short</span> <span class="type">int</span> events;</span><br><span class="line">    <span class="type">short</span> <span class="type">int</span> revents;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>fd：需要监视的文件对应的描述符</li>
+<li>events：需要监视的事件。</li>
+<li>revents：在监视期间或结束后，存储相应的结果。</li>
+</ul>
+<p>监控的事件类型：</p>
+<ul>
+<li>POLLIN：数据可读。</li>
+<li>POLLOUT：写数据不会导致阻塞。</li>
+<li>POLLERR：错误条件。</li>
+<li>POLLHUP：挂起条件。</li>
+<li>POLLNVAL：非法请求。</li>
+</ul>
+<p>例子：假设要监控的文件是一个字符设备文件，该文件对应的是开发板的一个按钮， 用户设置 events 为 POLLIN 。在监视期间，如果捕获到按钮被按下，相应的驱动 poll 需要返回 POLLIN 到 revents ，表示已捕获到用户想要的事件。</p>
+<h2 id="sys-poll-浅析"><a href="#sys-poll-浅析" class="headerlink" title="sys_poll() 浅析"></a>sys_poll() 浅析</h2><p>poll() 的核心是在内核层的 sys_poll() ，poll 通过系统调用，跳转到 sys_poll() 执行。</p>
+<h3 id="函数原型-1"><a href="#函数原型-1" class="headerlink" title="函数原型"></a>函数原型</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">SYSCALL_DEFINE3(poll, <span class="keyword">struct</span> pollfd __user *, ufds, <span class="type">unsigned</span> <span class="type">int</span>, nfds,</span><br><span class="line">		<span class="type">int</span>, timeout_msecs);</span><br></pre></td></tr></table></figure>
+<p>SYSCALL_DEFINEx() 是定义 Linux 系统调用的模板。对于上面的定义，可简化且转化为：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">long</span> <span class="title function_">sys_poll</span><span class="params">(<span class="keyword">struct</span> pollfd __user * ufds, <span class="type">unsigned</span> <span class="type">int</span> nfds, <span class="type">int</span> timeout_msecs)</span>;</span><br></pre></td></tr></table></figure>
+<p>以下是它的详细定义：</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">SYSCALL_DEFINE3(poll, <span class="keyword">struct</span> pollfd __user *, ufds, <span class="type">unsigned</span> <span class="type">int</span>, nfds,</span><br><span class="line">		<span class="type">int</span>, timeout_msecs)</span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">timespec64</span> <span class="title">end_time</span>, *<span class="title">to</span> =</span> <span class="literal">NULL</span>;</span><br><span class="line">	<span class="type">int</span> ret;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (timeout_msecs &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">		to = &amp;end_time;</span><br><span class="line">		poll_select_set_timeout(to, timeout_msecs / MSEC_PER_SEC,</span><br><span class="line">			NSEC_PER_MSEC * (timeout_msecs % MSEC_PER_SEC));</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	ret = do_sys_poll(ufds, nfds, to);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (ret == -EINTR) &#123;</span><br><span class="line">		<span class="class"><span class="keyword">struct</span> <span class="title">restart_block</span> *<span class="title">restart_block</span>;</span></span><br><span class="line"></span><br><span class="line">		restart_block = &amp;current-&gt;restart_block;</span><br><span class="line">		restart_block-&gt;fn = do_restart_poll;</span><br><span class="line">		restart_block-&gt;poll.ufds = ufds;</span><br><span class="line">		restart_block-&gt;poll.nfds = nfds;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (timeout_msecs &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">			restart_block-&gt;poll.tv_sec = end_time.tv_sec;</span><br><span class="line">			restart_block-&gt;poll.tv_nsec = end_time.tv_nsec;</span><br><span class="line">			restart_block-&gt;poll.has_timeout = <span class="number">1</span>;</span><br><span class="line">		&#125; <span class="keyword">else</span></span><br><span class="line">			restart_block-&gt;poll.has_timeout = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">		ret = -ERESTART_RESTARTBLOCK;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>该函数的参数和用户层时的参数一致，注意 <code>struct pollfd __user * ufds</code> ，需要调用 <code>copy_from_user()</code> ，把用户空间的 ufds 复制到内核空间。<br>该函数可以分为两大部分，一是 4 ~ 13 行，是执行 poll 的核心路线；二是 15 ~ 31 行，错误处理路线，通常是因为在第一阶段期间被信号打断后执行，尝试重新执行 poll 。  </p>
+<blockquote>
+<p>对于第二阶段只了解了大概，详细细节暂且未知。  </p>
+</blockquote>
+<p>对于第一阶段，可知参数 timeout_msecs 需要转换为 Linux 的时钟子系统的结构体 struct timespec64 存储。这里有一个疑问，timeout_msecs 为 -1 时相应操作是什么？  </p>
+<blockquote>
+<p>在后面需要进行计时阻塞操作时就清楚了。  </p>
+</blockquote>
+<p>当转换完成后，调用 do_sys_poll() ，进入核心函数（分段说明）。  </p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> POLL_STACK_ALLOC    256</span></span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">do_sys_poll</span><span class="params">(<span class="keyword">struct</span> pollfd __user *ufds, <span class="type">unsigned</span> <span class="type">int</span> nfds,</span></span><br><span class="line"><span class="params">		<span class="keyword">struct</span> timespec64 *end_time)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">poll_wqueues</span> <span class="title">table</span>;</span></span><br><span class="line"> 	<span class="type">int</span> err = -EFAULT, fdcount, len, size;</span><br><span class="line">	<span class="comment">/* Allocate small arguments on the stack to save memory and be</span></span><br><span class="line"><span class="comment">	   faster - use long to make sure the buffer is aligned properly</span></span><br><span class="line"><span class="comment">	   on 64 bit archs to avoid unaligned access */</span></span><br><span class="line">	<span class="type">long</span> stack_pps[POLL_STACK_ALLOC/<span class="keyword">sizeof</span>(<span class="type">long</span>)];</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">poll_list</span> *<span class="title">const</span> <span class="title">head</span> =</span> (<span class="keyword">struct</span> poll_list *)stack_pps;</span><br><span class="line"> 	<span class="class"><span class="keyword">struct</span> <span class="title">poll_list</span> *<span class="title">walk</span> =</span> head;</span><br><span class="line"> 	<span class="type">unsigned</span> <span class="type">long</span> todo = nfds;</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>先看局部变量定义，struct poll_list 的作用是什么，先看它的声明：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">poll_list</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">poll_list</span> *<span class="title">next</span>;</span></span><br><span class="line">	<span class="type">int</span> len;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">pollfd</span> <span class="title">entries</span>[0];</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>可知，它是用于存储 struct pollfd ，但为什么不直接用 struct pollfd ，而是用 struct poll_list 间接存储、间接表示？<br>回看 do_sys_poll() 局部变量的定义和实际情况来理解：<br>看数组 stack_pps ，它是作为 <code>struct poll_list *const head</code> 的存储空间，该数组是在内核栈内划分的，即 esp - OLL_STACK_ALLOC&#x2F;sizeof(long) 得到该数组的基地址。另外，根据实际情况可知，通常情况下用户调用 poll() 来监控文件的数量不会太多。Linux 开发者根据内核栈的使用情况和用户监控文件的数量分析，且利用空间换取时间，把多个 struct pollfd 进行分布式存储，这就是 struct poll_list 的由来。  </p>
+<blockquote>
+<p>struct poll_wqueues 稍后讲解。</p>
+</blockquote>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">do_sys_poll</span><span class="params">(<span class="keyword">struct</span> pollfd __user *ufds, <span class="type">unsigned</span> <span class="type">int</span> nfds,</span></span><br><span class="line"><span class="params">		<span class="keyword">struct</span> timespec64 *end_time)</span></span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (nfds &gt; rlimit(RLIMIT_NOFILE))</span><br><span class="line">		<span class="keyword">return</span> -EINVAL;</span><br><span class="line"></span><br><span class="line">	len = <span class="type">min_t</span>(<span class="type">unsigned</span> <span class="type">int</span>, nfds, N_STACK_PPS);</span><br><span class="line">	<span class="keyword">for</span> (;;) &#123;</span><br><span class="line">		walk-&gt;next = <span class="literal">NULL</span>;</span><br><span class="line">		walk-&gt;len = len;</span><br><span class="line">		<span class="keyword">if</span> (!len)</span><br><span class="line">			<span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (copy_from_user(walk-&gt;entries, ufds + nfds-todo,</span><br><span class="line">					<span class="keyword">sizeof</span>(<span class="keyword">struct</span> pollfd) * walk-&gt;len))</span><br><span class="line">			<span class="keyword">goto</span> out_fds;</span><br><span class="line"></span><br><span class="line">		todo -= walk-&gt;len;</span><br><span class="line">		<span class="keyword">if</span> (!todo)</span><br><span class="line">			<span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">		len = min(todo, POLLFD_PER_PAGE);</span><br><span class="line">		size = <span class="keyword">sizeof</span>(<span class="keyword">struct</span> poll_list) + <span class="keyword">sizeof</span>(<span class="keyword">struct</span> pollfd) * len;</span><br><span class="line">		walk = walk-&gt;next = kmalloc(size, GFP_KERNEL);</span><br><span class="line">		<span class="keyword">if</span> (!walk) &#123;</span><br><span class="line">			err = -ENOMEM;</span><br><span class="line">			<span class="keyword">goto</span> out_fds;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    poll_initwait(&amp;table);</span><br><span class="line">	fdcount = do_poll(head, &amp;table, end_time);</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>第 6 ~ 7 行是关于当前进程&#x2F;线程的一些资源的使用限制，暂且不管。<br>第 9 ~ 31 行是把用户空间内的 <code>struct pollfd __user *ufds</code> ，以 struct poll_list 的形式，复制到内核空间。<br>第 33 ~ 34 行，结构体变量 table 的作用是存储与 fds 对应的 struct file 结构体；记录当前 poll 操作的状态等，看它的声明：  </p>
+<blockquote>
+<p>对声明的说明很长，忍一下。  </p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">poll_wqueues</span> &#123;</span></span><br><span class="line">	poll_table pt;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">poll_table_page</span> *<span class="title">table</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> *<span class="title">polling_task</span>;</span></span><br><span class="line">	<span class="type">int</span> triggered;</span><br><span class="line">	<span class="type">int</span> error;</span><br><span class="line">	<span class="type">int</span> inline_index;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">poll_table_entry</span> <span class="title">inline_entries</span>[<span class="title">N_INLINE_POLL_ENTRIES</span>];</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<ul>
+<li><p>pt：在 file-&gt;f_op-&gt;poll() 作为回调函数，这个回调函数一般是让 struct file 添加到等待队列，以下是 poll_table 的声明：</p>
+  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">poll_table_struct</span> &#123;</span></span><br><span class="line">	poll_queue_proc _qproc;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> _key;</span><br><span class="line">&#125; poll_table;</span><br><span class="line"></span><br><span class="line"><span class="keyword">typedef</span> <span class="title function_">void</span> <span class="params">(*poll_queue_proc)</span><span class="params">(<span class="keyword">struct</span> file *, <span class="type">wait_queue_head_t</span> *, <span class="keyword">struct</span> poll_table_struct *)</span>;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>_qproc：记录回调函数。</li>
+<li>_key：与 pollfd-&gt;events 相关。<blockquote>
+<p>后面会说明 _key 的关键作用。</p>
+</blockquote>
+</li>
+</ul>
+</li>
+<li><p>table：先见下面的声明：</p>
+  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">poll_table_page</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">poll_table_page</span> * <span class="title">next</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">poll_table_entry</span> * <span class="title">entry</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">poll_table_entry</span> <span class="title">entries</span>[0];</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>  结合 struct poll_wqueues 的字段 inline_entries 理解，可知与 struct poll_list 的存储方式是一致的。该字段的作用是链接记录 struct file 的存储空间。  </p>
+</li>
+<li><p>polling_task：记录当前正在执行 poll 操作的进程&#x2F;线程。  </p>
+</li>
+<li><p>triggered：该字段是一个 bool 值，初始化为 0 ，为 1 时表示在计时阻塞期间捕获 event 成功。  </p>
+</li>
+<li><p>error：记录当前 poll 操作的错误码</p>
+</li>
+<li><p>inline_index：记录字段 inline_entries 的下一个空闲的 struct poll_table_entry 项。  </p>
+</li>
+<li><p>inline_entries：与 do_sys_poll() 的局部数组 stack_pps 同理，以下是它的声明：</p>
+  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">poll_table_entry</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">file</span> *<span class="title">filp</span>;</span></span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> key;</span><br><span class="line">	<span class="type">wait_queue_t</span> wait;</span><br><span class="line">	<span class="type">wait_queue_head_t</span> *wait_address;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>filp：存储与 fd 对应的 struct file</li>
+<li>key：与 pollfd-&gt;event 相关，也与 poll_table-&gt;_key 有联系</li>
+<li>wait：加入到 *wait_address 的字段，在计时阻塞时用到。</li>
+<li>wait_address：当捕获到事件时，根据此字段唤醒进程&#x2F;线程（字段 wait 的 private 存储 struct poll_wqueues 的地址）。</li>
+</ul>
+</li>
+</ul>
+<p>终于把 struct poll_wqueues 的声明说完，下面是 poll_initwait 的定义：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">poll_initwait</span><span class="params">(<span class="keyword">struct</span> poll_wqueues *pwq)</span></span><br><span class="line">&#123;</span><br><span class="line">	init_poll_funcptr(&amp;pwq-&gt;pt, __pollwait);</span><br><span class="line">	pwq-&gt;polling_task = current;</span><br><span class="line">	pwq-&gt;triggered = <span class="number">0</span>;</span><br><span class="line">	pwq-&gt;error = <span class="number">0</span>;</span><br><span class="line">	pwq-&gt;table = <span class="literal">NULL</span>;</span><br><span class="line">	pwq-&gt;inline_index = <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于函数 __pollwait() ，先不详聊，现在只知道它是 file-&gt;f_op-&gt;poll() 的回调函数，以及作用是把 file 添加到它所属的模块相应的 wait queue 即可。<br>下面给出一部分 do_poll() 的定义：</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">do_poll</span><span class="params">(<span class="keyword">struct</span> poll_list *<span class="built_in">list</span>, <span class="keyword">struct</span> poll_wqueues *wait,</span></span><br><span class="line"><span class="params">		   <span class="keyword">struct</span> timespec64 *end_time)</span></span><br><span class="line">&#123;</span><br><span class="line">	poll_table* pt = &amp;wait-&gt;pt;</span><br><span class="line">	<span class="type">ktime_t</span> expire, *to = <span class="literal">NULL</span>;</span><br><span class="line">	<span class="type">int</span> timed_out = <span class="number">0</span>, count = <span class="number">0</span>;</span><br><span class="line">	u64 slack = <span class="number">0</span>;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> busy_flag = net_busy_loop_on() ? POLL_BUSY_LOOP : <span class="number">0</span>;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> busy_end = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* Optimise the no-wait case */</span></span><br><span class="line">	<span class="keyword">if</span> (end_time &amp;&amp; !end_time-&gt;tv_sec &amp;&amp; !end_time-&gt;tv_nsec) &#123;</span><br><span class="line">		pt-&gt;_qproc = <span class="literal">NULL</span>;</span><br><span class="line">		timed_out = <span class="number">1</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (end_time &amp;&amp; !timed_out)</span><br><span class="line">		slack = select_estimate_accuracy(end_time);</span><br><span class="line"></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>变量 busy_flag 可不管，这与套接字有关。<br>第 12 ~ 15 行，可知，当设置的计时为 0 时，则表示在此执行过程中捕获失败则不进行计时阻塞，同时回调函数为空，表示无需把相应的 struct file 添加到 wait queue 。<br>第 17 ~ 18 行是与 hrtimer 的计时精度有关，这不是重点。  </p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">do_poll</span><span class="params">(<span class="keyword">struct</span> poll_list *<span class="built_in">list</span>, <span class="keyword">struct</span> poll_wqueues *wait,</span></span><br><span class="line"><span class="params">		   <span class="keyword">struct</span> timespec64 *end_time)</span></span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (;;) &#123;</span><br><span class="line">		<span class="class"><span class="keyword">struct</span> <span class="title">poll_list</span> *<span class="title">walk</span>;</span></span><br><span class="line">		<span class="type">bool</span> can_busy_loop = <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">for</span> (walk = <span class="built_in">list</span>; walk != <span class="literal">NULL</span>; walk = walk-&gt;next) &#123;</span><br><span class="line">			<span class="class"><span class="keyword">struct</span> <span class="title">pollfd</span> * <span class="title">pfd</span>, * <span class="title">pfd_end</span>;</span></span><br><span class="line"></span><br><span class="line">			pfd = walk-&gt;entries;</span><br><span class="line">			pfd_end = pfd + walk-&gt;len;</span><br><span class="line">			<span class="keyword">for</span> (; pfd != pfd_end; pfd++) &#123;</span><br><span class="line">				<span class="comment">/*</span></span><br><span class="line"><span class="comment">				 * Fish for events. If we found one, record it</span></span><br><span class="line"><span class="comment">				 * and kill poll_table-&gt;_qproc, so we don&#x27;t</span></span><br><span class="line"><span class="comment">				 * needlessly register any other waiters after</span></span><br><span class="line"><span class="comment">				 * this. They&#x27;ll get immediately deregistered</span></span><br><span class="line"><span class="comment">				 * when we break out and return.</span></span><br><span class="line"><span class="comment">				 */</span></span><br><span class="line">				<span class="keyword">if</span> (do_pollfd(pfd, pt, &amp;can_busy_loop,</span><br><span class="line">					      busy_flag)) &#123;</span><br><span class="line">					count++;</span><br><span class="line">					pt-&gt;_qproc = <span class="literal">NULL</span>;</span><br><span class="line">					<span class="comment">/* found something, stop busy polling */</span></span><br><span class="line">					busy_flag = <span class="number">0</span>;</span><br><span class="line">					can_busy_loop = <span class="literal">false</span>;</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>第一个 for 循环，这是一个主循环，当有 event 捕获时或超时时则退出循环。<br>第 7 ~ 31 行，这个 2 层嵌套循环是与 struct poll_list 的结构有关。<br>循环内的变量 can_busy_loop 可不管，这也是与套接字相关的。<br>可见，每个 pollfd 都会得到处理，通过调用 do_pollfd() ，会根据 pollfd 在当前进程的 fdtable 找到相应的 struct file 。下面是 do_pollfd() 的定义：</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * Fish for pollable events on the pollfd-&gt;fd file descriptor. We&#x27;re only</span></span><br><span class="line"><span class="comment"> * interested in events matching the pollfd-&gt;events mask, and the result</span></span><br><span class="line"><span class="comment"> * matching that mask is both recorded in pollfd-&gt;revents and returned. The</span></span><br><span class="line"><span class="comment"> * pwait poll_table will be used by the fd-provided poll handler for waiting,</span></span><br><span class="line"><span class="comment"> * if pwait-&gt;_qproc is non-NULL.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">unsigned</span> <span class="type">int</span> <span class="title function_">do_pollfd</span><span class="params">(<span class="keyword">struct</span> pollfd *pollfd, poll_table *pwait,</span></span><br><span class="line"><span class="params">				     <span class="type">bool</span> *can_busy_poll,</span></span><br><span class="line"><span class="params">				     <span class="type">unsigned</span> <span class="type">int</span> busy_flag)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">int</span> mask;</span><br><span class="line">	<span class="type">int</span> fd;</span><br><span class="line"></span><br><span class="line">	mask = <span class="number">0</span>;</span><br><span class="line">	fd = pollfd-&gt;fd;</span><br><span class="line">	<span class="keyword">if</span> (fd &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">		<span class="class"><span class="keyword">struct</span> <span class="title">fd</span> <span class="title">f</span> =</span> fdget(fd);</span><br><span class="line">		mask = POLLNVAL;</span><br><span class="line">		<span class="keyword">if</span> (f.file) &#123;</span><br><span class="line">			mask = DEFAULT_POLLMASK;</span><br><span class="line">			<span class="keyword">if</span> (f.file-&gt;f_op-&gt;poll) &#123;</span><br><span class="line">				pwait-&gt;_key = pollfd-&gt;events|POLLERR|POLLHUP;</span><br><span class="line">				pwait-&gt;_key |= busy_flag;</span><br><span class="line">				mask = f.file-&gt;f_op-&gt;poll(f.file, pwait);</span><br><span class="line">				<span class="keyword">if</span> (mask &amp; busy_flag)</span><br><span class="line">					*can_busy_poll = <span class="literal">true</span>;</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="comment">/* Mask out unneeded events. */</span></span><br><span class="line">			mask &amp;= pollfd-&gt;events | POLLERR | POLLHUP;</span><br><span class="line">			fdput(f);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	pollfd-&gt;revents = mask;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> mask;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意看第 22 ~ 27 行，此时 pwait-&gt;_key 记录了 fd 想要被捕获的 events ，然后调用 f.file-&gt;f_op-&gt;poll() 。<br>假设用户需要监控一个字符设备文件，对应的是一个按钮，以下是它的 f_op-&gt;poll() ：</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">unsigned</span> <span class="type">int</span> <span class="title function_">key_drv_poll</span><span class="params">(<span class="keyword">struct</span> file * fp, <span class="keyword">struct</span> poll_table_struct * pt)</span></span><br><span class="line">&#123;</span><br><span class="line">    poll_wait(fp, &amp;gpio_key_wait, pt);</span><br><span class="line">    <span class="comment">/* 按钮被按下时，返回 POLLIN | POLLRDNORM */</span></span><br><span class="line">    <span class="keyword">return</span> is_cbuf_empty(&amp;keys_buf) ? <span class="number">0</span> : POLLIN | POLLRDNORM;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>由此可知，f_op-&gt;poll() 必须要调用 poll_wait() ，把 struct file 添加到相应的 wait queue ；其返回值必须是与 event 相关，如：POLLIN 、POLLOUT 等，而且该返回值会作为 pollfd-&gt;revents 的值，返回到用户空间。<br>这里贴出 poll_wait() 的定义：</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">poll_wait</span><span class="params">(<span class="keyword">struct</span> file * filp, <span class="type">wait_queue_head_t</span> * wait_address, poll_table *p)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">if</span> (p &amp;&amp; p-&gt;_qproc &amp;&amp; wait_address)</span><br><span class="line">		p-&gt;_qproc(filp, wait_address, p);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>回顾上面的讲解可知，假设我们刚是从用户层一路走过来的，现在 p-&gt;_qproc() 对应的是<br> __pollwait() ：</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* Add a new entry */</span></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> __pollwait(<span class="keyword">struct</span> file *filp, <span class="type">wait_queue_head_t</span> *wait_address,</span><br><span class="line">				poll_table *p)</span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">poll_wqueues</span> *<span class="title">pwq</span> =</span> container_of(p, <span class="keyword">struct</span> poll_wqueues, pt);</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">poll_table_entry</span> *<span class="title">entry</span> =</span> poll_get_entry(pwq);</span><br><span class="line">	<span class="keyword">if</span> (!entry)</span><br><span class="line">		<span class="keyword">return</span>;</span><br><span class="line">	entry-&gt;filp = get_file(filp);</span><br><span class="line">	entry-&gt;wait_address = wait_address;</span><br><span class="line">	entry-&gt;key = p-&gt;_key;</span><br><span class="line">	init_waitqueue_func_entry(&amp;entry-&gt;wait, pollwake);</span><br><span class="line">	entry-&gt;wait.private = pwq;</span><br><span class="line">	add_wait_queue(wait_address, &amp;entry-&gt;wait);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>看第 12 行，函数 pollwake() 是作为 entry-&gt;wait 的回调函数。在阻塞期间，当 struct file 所属的模块在捕获到与 event 相符的数据后，会唤醒进程，期间需要调用 pollwake() 来唤醒。<br>当把 struct file 添加到 wait_address 时，才能把它作为 struct poll_table_entry 记录到 poll_wqueues（同时注意第 13 行）。  </p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">struct</span> poll_table_entry *<span class="title function_">poll_get_entry</span><span class="params">(<span class="keyword">struct</span> poll_wqueues *p)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">poll_table_page</span> *<span class="title">table</span> =</span> p-&gt;table;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (p-&gt;inline_index &lt; N_INLINE_POLL_ENTRIES)</span><br><span class="line">		<span class="keyword">return</span> p-&gt;inline_entries + p-&gt;inline_index++;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!table || POLL_TABLE_FULL(table)) &#123;</span><br><span class="line">		<span class="class"><span class="keyword">struct</span> <span class="title">poll_table_page</span> *<span class="title">new_table</span>;</span></span><br><span class="line"></span><br><span class="line">		new_table = (<span class="keyword">struct</span> poll_table_page *) __get_free_page(GFP_KERNEL);</span><br><span class="line">		<span class="keyword">if</span> (!new_table) &#123;</span><br><span class="line">			p-&gt;error = -ENOMEM;</span><br><span class="line">			<span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line">		&#125;</span><br><span class="line">		new_table-&gt;entry = new_table-&gt;entries;</span><br><span class="line">		new_table-&gt;next = table;</span><br><span class="line">		p-&gt;table = new_table;</span><br><span class="line">		table = new_table;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> table-&gt;entry++;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从 do_pollfd 返回到 do_poll() 后，我们有两种不同的情况：</p>
+<ol>
+<li>捕获到 pollfd 想要的 events 了，count + 1 ，而且 pt-&gt;_qproc 被置为 NULL </li>
+<li>没有捕获到，准备计时阻塞等待。<br>来看 do_poll() 剩余部分：</li>
+</ol>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">do_poll</span><span class="params">(<span class="keyword">struct</span> poll_list *<span class="built_in">list</span>, <span class="keyword">struct</span> poll_wqueues *wait,</span></span><br><span class="line"><span class="params">		   <span class="keyword">struct</span> timespec64 *end_time)</span></span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (;;) &#123;</span><br><span class="line">        ...</span><br><span class="line"></span><br><span class="line">		<span class="comment">/*</span></span><br><span class="line"><span class="comment">		 * All waiters have already been registered, so don&#x27;t provide</span></span><br><span class="line"><span class="comment">		 * a poll_table-&gt;_qproc to them on the next loop iteration.</span></span><br><span class="line"><span class="comment">		 */</span></span><br><span class="line">		pt-&gt;_qproc = <span class="literal">NULL</span>;</span><br><span class="line">		<span class="keyword">if</span> (!count) &#123;</span><br><span class="line">			count = wait-&gt;error;</span><br><span class="line">			<span class="keyword">if</span> (signal_pending(current))</span><br><span class="line">				count = -EINTR;</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> (count || timed_out)</span><br><span class="line">			<span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">		<span class="comment">/* only if found POLL_BUSY_LOOP sockets &amp;&amp; not out of time */</span></span><br><span class="line">		<span class="keyword">if</span> (can_busy_loop &amp;&amp; !need_resched()) &#123;</span><br><span class="line">			<span class="keyword">if</span> (!busy_end) &#123;</span><br><span class="line">				busy_end = busy_loop_end_time();</span><br><span class="line">				<span class="keyword">continue</span>;</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="keyword">if</span> (!busy_loop_timeout(busy_end))</span><br><span class="line">				<span class="keyword">continue</span>;</span><br><span class="line">		&#125;</span><br><span class="line">		busy_flag = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">		<span class="comment">/*</span></span><br><span class="line"><span class="comment">		 * If this is the first loop and we have a timeout</span></span><br><span class="line"><span class="comment">		 * given, then we convert to ktime_t and set the to</span></span><br><span class="line"><span class="comment">		 * pointer to the expiry value.</span></span><br><span class="line"><span class="comment">		 */</span></span><br><span class="line">		<span class="keyword">if</span> (end_time &amp;&amp; !to) &#123;</span><br><span class="line">			expire = timespec64_to_ktime(*end_time);</span><br><span class="line">			to = &amp;expire;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (!poll_schedule_timeout(wait, TASK_INTERRUPTIBLE, to, slack))</span><br><span class="line">			timed_out = <span class="number">1</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> count;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>看第 13 行，可知不管有没有捕获成功，把 struct file 添加到相应的 wait queue 的操作已经结束。<br>第 14 ~ 18 行，表示没有捕获到任何的 event 。第 15 行，回看代码可知，目前仅有当没有获取到空闲内存作为新的 struct poll_table_entry 数组时，把字段 error 赋值为 -ENOMEM 。第 16 行，表示当内核或其它进程对当前进程发出信号时，需要中断 poll 操作，去执行 signal handle 函数，所以返回 -EINTR ，立即到从内核层返回到用户层前夕处理信号。<br>第 19 ~ 20 行，当捕获到 events 、执行错误或计时超时时，结束循环，返回到上一层函数。另外，回看上面的 do_poll() 可知，如果计时数为 0 ，则 timed_out 被置位，当没有捕获到 event 后也从这里退出。<br>第 22 ~ 31 行，略过。<br>第 33 ~ 44 行，这里是当计时毫秒数 &gt;0 或为 -1 时才来到这里的。回过头看代码可知，当计时为 -1 时，参数 end_time 为 NULL ，所以第 38 ~ 41 行对计时数 -1 无效。当计时数 &gt;0 时，它需要从 struct timespec64 转化为 ktime_t ，数据类型 ktime_t 是专用于计时的，它与系统的 jiffies 表示时间的方式一样。让我们进入 poll_schedule_timeout()  </p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">poll_schedule_timeout</span><span class="params">(<span class="keyword">struct</span> poll_wqueues *pwq, <span class="type">int</span> state,</span></span><br><span class="line"><span class="params">			  <span class="type">ktime_t</span> *expires, <span class="type">unsigned</span> <span class="type">long</span> slack)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> rc = -EINTR;</span><br><span class="line"></span><br><span class="line">	set_current_state(state);</span><br><span class="line">	<span class="keyword">if</span> (!pwq-&gt;triggered)</span><br><span class="line">		rc = schedule_hrtimeout_range(expires, slack, HRTIMER_MODE_ABS);</span><br><span class="line">	__set_current_state(TASK_RUNNING);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Prepare for the next iteration.</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * The following smp_store_mb() serves two purposes.  First, it&#x27;s</span></span><br><span class="line"><span class="comment">	 * the counterpart rmb of the wmb in pollwake() such that data</span></span><br><span class="line"><span class="comment">	 * written before wake up is always visible after wake up.</span></span><br><span class="line"><span class="comment">	 * Second, the full barrier guarantees that triggered clearing</span></span><br><span class="line"><span class="comment">	 * doesn&#x27;t pass event check of the next iteration.  Note that</span></span><br><span class="line"><span class="comment">	 * this problem doesn&#x27;t exist for the first iteration as</span></span><br><span class="line"><span class="comment">	 * add_wait_queue() has full barrier semantics.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	smp_store_mb(pwq-&gt;triggered, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> rc;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>第 6 ~ 9 行，设置当前进程的运行状态，准备开始计时阻塞。这里出现 <code>if (!pwq-&gt;triggered)</code> 的原因是进行计时阻塞前可能有 event 被捕获到了。假设 triggered 为 0（当我们从用户层出发就已经初始化为 0 了），调用函数 schedule_hrtimeout_range() ：</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> __sched <span class="title function_">schedule_hrtimeout_range</span><span class="params">(<span class="type">ktime_t</span> *expires, u64 delta,</span></span><br><span class="line"><span class="params">				     <span class="type">const</span> <span class="keyword">enum</span> hrtimer_mode mode)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">return</span> schedule_hrtimeout_range_clock(expires, delta, mode,</span><br><span class="line">					      CLOCK_MONOTONIC);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> __sched</span><br><span class="line"><span class="title function_">schedule_hrtimeout_range_clock</span><span class="params">(<span class="type">ktime_t</span> *expires, u64 delta,</span></span><br><span class="line"><span class="params">			       <span class="type">const</span> <span class="keyword">enum</span> hrtimer_mode mode, <span class="type">int</span> clock)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">hrtimer_sleeper</span> <span class="title">t</span>;</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Optimize when a zero timeout value is given. It does not</span></span><br><span class="line"><span class="comment">	 * matter whether this is an absolute or a relative time.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (expires &amp;&amp; !expires-&gt;tv64) &#123;</span><br><span class="line">		__set_current_state(TASK_RUNNING);</span><br><span class="line">		<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * A NULL parameter means &quot;infinite&quot;</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (!expires) &#123;</span><br><span class="line">		schedule();</span><br><span class="line">		<span class="keyword">return</span> -EINTR;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	hrtimer_init_on_stack(&amp;t.timer, clock, mode);</span><br><span class="line">	hrtimer_set_expires_range_ns(&amp;t.timer, *expires, delta);</span><br><span class="line"></span><br><span class="line">	hrtimer_init_sleeper(&amp;t, current);</span><br><span class="line"></span><br><span class="line">	hrtimer_start_expires(&amp;t.timer, mode);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (likely(t.task))</span><br><span class="line">		schedule();</span><br><span class="line"></span><br><span class="line">	hrtimer_cancel(&amp;t.timer);</span><br><span class="line">	destroy_hrtimer_on_stack(&amp;t.timer);</span><br><span class="line"></span><br><span class="line">	__set_current_state(TASK_RUNNING);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> !t.task ? <span class="number">0</span> : -EINTR;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>函数 schedule_hrtimeout_range_clock() 就不深入解析了，明白它是往 hrtimer 添加计时对象即可。<br>看 26 ~ 29 行，回头看解析和代码可知，如果计时数为 -1 时，表示一直阻塞直到捕获到 events 。因为上层代码是根据 -1 计时数，把 expires 表示为 NULL ，所以直接进程调度，而且当当前进程的状态设置为 TASK_INTERRUPTIBLE 后，就从就绪队列中移除了。<br>第 36 ~ 39 行，这里是当计时数 &gt;0 时有效，现在把这个计时数封装为 hrtimer 对象，加入到 hrtimer 中计时阻塞，而且调度当前进程。  </p>
+<p>现在，针对计时数为 &gt;0 或 -1 的情况：</p>
+<ul>
+<li>在阻塞期间被唤醒了，唤醒的原因有：被信号打断、捕获到 event 。</li>
+</ul>
+<ol>
+<li>被信号打断：已知进程在阻塞，而且状态设置为 TASK_INTERRUPTIBLE ，发起信号的进程&#x2F;线程会唤醒它。</li>
+<li>捕获到 event ：event 是否被捕获，取决于文件对应的模块或子系统，如上文说的字符设备文件，它对应的驱动模块设置了一个中断处理函数，当按钮被按下时触发执行。该函数会从它给 poll 提供的 wait queue 唤醒进程（期间会调用 wait-&gt;func() ，即 wakepoll() ）。<br> 这里贴出与上一个例子相关的例子： <figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">irqreturn_t</span> <span class="title function_">keydrv_irq_handle</span><span class="params">(<span class="type">int</span> irq, <span class="type">void</span> * dev_id)</span></span><br><span class="line">&#123;</span><br><span class="line">    u16 key_value;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">gpio_key</span> * <span class="title">key</span> =</span> dev_id;</span><br><span class="line"></span><br><span class="line">    key_value = ((key-&gt;gpio &lt;&lt; <span class="number">8</span>) | <span class="number">1</span>);</span><br><span class="line">    <span class="comment">/* 存储按键值 */</span></span><br><span class="line">    put_to_cbuf(&amp;keys_buf, key_value);</span><br><span class="line">    <span class="comment">/* 从 wait queue ，即 gpio_key_wait 唤醒进程 */</span></span><br><span class="line">    wake_up_interruptible(&amp;gpio_key_wait);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> IRQ_HANDLED;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ol>
+<p>可知，这两种情况的唤醒方式是不同的，对于被信号中断，是直接根据 pid 找到 tsurtc task 然后唤醒的；对于捕获到 event ，则需要 wait queue ，从该队列从唤醒，期间会调用 wait-&gt;fun() 唤醒。  </p>
+<p>从上文可知 wait-&gt;fun() 对应的是 pollwake() ：</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">pollwake</span><span class="params">(<span class="type">wait_queue_t</span> *wait, <span class="type">unsigned</span> mode, <span class="type">int</span> sync, <span class="type">void</span> *key)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">poll_table_entry</span> *<span class="title">entry</span>;</span></span><br><span class="line"></span><br><span class="line">	entry = container_of(wait, <span class="keyword">struct</span> poll_table_entry, wait);</span><br><span class="line">	<span class="keyword">if</span> (key &amp;&amp; !((<span class="type">unsigned</span> <span class="type">long</span>)key &amp; entry-&gt;key))</span><br><span class="line">		<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">	<span class="keyword">return</span> __pollwake(wait, mode, sync, key);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意第 6 行，如果 key 存在，则需要和 entry-&gt;key 匹配，通过上文可知 entry-&gt;key 包含了 pollfd-&gt;events ，所以匹配成功了调用 __pollwake() 唤醒。<br>不过，上一个例子中的 wake_up_interruptible() ，它提供的参数 key 为空，所以直接调用 __pollwake() 即可。</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> __pollwake(<span class="type">wait_queue_t</span> *wait, <span class="type">unsigned</span> mode, <span class="type">int</span> sync, <span class="type">void</span> *key)</span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">poll_wqueues</span> *<span class="title">pwq</span> =</span> wait-&gt;private;</span><br><span class="line">	DECLARE_WAITQUEUE(dummy_wait, pwq-&gt;polling_task);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Although this function is called under waitqueue lock, LOCK</span></span><br><span class="line"><span class="comment">	 * doesn&#x27;t imply write barrier and the users expect write</span></span><br><span class="line"><span class="comment">	 * barrier semantics on wakeup functions.  The following</span></span><br><span class="line"><span class="comment">	 * smp_wmb() is equivalent to smp_wmb() in try_to_wake_up()</span></span><br><span class="line"><span class="comment">	 * and is paired with smp_store_mb() in poll_schedule_timeout.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	smp_wmb();</span><br><span class="line">	pwq-&gt;triggered = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/*</span></span><br><span class="line"><span class="comment">	 * Perform the default wake up operation using a dummy</span></span><br><span class="line"><span class="comment">	 * waitqueue.</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">TODO:</span> This is hacky but there currently is no interface to</span></span><br><span class="line"><span class="comment">	 * pass in @sync.  @sync is scheduled to be removed and once</span></span><br><span class="line"><span class="comment">	 * that happens, wake_up_process() can be used directly.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">return</span> default_wake_function(&amp;dummy_wait, mode, sync, key);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里发现一个细节，注意 pwq-&gt;triggered ，这与 poll_schedule_timeout() 进行“联动”。已知 triggered 被置为 1 表示已捕获到 events ，而且需要保证数据一致性。这是因为在 SMP 系统，不能保证对 triggered 赋值的是同一个 CPU 内核，比如说上一个例子中的 keydrv_irq_handle() ，当发生中断时，可以在另一个空闲 CPU 内核处理中断处理程序。</p>
+<p>假设现在执行 poll 操作的进程被唤醒了，位置都在 schedule_hrtimeout_range_clock()  </p>
+<ul>
+<li>对于计时数为 -1 ：在 28 行，从该函数返回，返回值是 -ENINT 。</li>
+<li>对于计时数为 &gt;0 ：在 46 行，返回 0 。</li>
+</ul>
+<p>返回到 do_poll() ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">do_poll</span><span class="params">(<span class="keyword">struct</span> poll_list *<span class="built_in">list</span>, <span class="keyword">struct</span> poll_wqueues *wait,</span></span><br><span class="line"><span class="params">		   <span class="keyword">struct</span> timespec64 *end_time)</span></span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (;;) &#123;</span><br><span class="line">        ...</span><br><span class="line">        <span class="keyword">if</span> (!poll_schedule_timeout(wait, TASK_INTERRUPTIBLE, to, slack))</span><br><span class="line">			timed_out = <span class="number">1</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> count;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>，注意此时还未跳出主循环。不管是被信号唤醒的，还是被捕获到 event 而唤醒的，都会为 pollfds 再调用一次 do_pollfd() 确认是否捕获到 event ，注意 pt-&gt;_qproc 已是 NULL 。之后出现分歧：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">      <span class="keyword">if</span> (!count) &#123;   <span class="comment">// 未捕获到任何 event</span></span><br><span class="line">	count = wait-&gt;error;</span><br><span class="line">	<span class="keyword">if</span> (signal_pending(current))    <span class="comment">// 被信号唤醒的</span></span><br><span class="line">		count = -EINTR;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">if</span> (count || timed_out)</span><br><span class="line">	<span class="keyword">break</span>;</span><br></pre></td></tr></table></figure>
+<p>注意，对于计时数 &gt;0 ，计时阻塞超时时唤醒进程，也在 schedule_hrtimeout_range_clock() 返回 0 。也会再调用一次 do_pollfd() 进行确认。如果没有，则根据 <code>timed_out = 1</code> 返回到上一层函数。<br>回到 do_sys_poll() ，这里也没什么好说的了，都是些释放内存的操作。</p>
+<figure class="highlight c"><figcaption><span>&#123;.line-numbers&#125;</span></figcaption><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">do_sys_poll</span><span class="params">(<span class="keyword">struct</span> pollfd __user *ufds, <span class="type">unsigned</span> <span class="type">int</span> nfds,</span></span><br><span class="line"><span class="params">		<span class="keyword">struct</span> timespec64 *end_time)</span></span><br><span class="line">&#123;</span><br><span class="line">    ...</span><br><span class="line"></span><br><span class="line">	poll_freewait(&amp;table);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> (walk = head; walk; walk = walk-&gt;next) &#123;</span><br><span class="line">		<span class="class"><span class="keyword">struct</span> <span class="title">pollfd</span> *<span class="title">fds</span> =</span> walk-&gt;entries;</span><br><span class="line">		<span class="type">int</span> j;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">for</span> (j = <span class="number">0</span>; j &lt; walk-&gt;len; j++, ufds++)</span><br><span class="line">			<span class="keyword">if</span> (__put_user(fds[j].revents, &amp;ufds-&gt;revents))</span><br><span class="line">				<span class="keyword">goto</span> out_fds;</span><br><span class="line">  	&#125;</span><br><span class="line"></span><br><span class="line">	err = fdcount;</span><br><span class="line">out_fds:</span><br><span class="line">	walk = head-&gt;next;</span><br><span class="line">	<span class="keyword">while</span> (walk) &#123;</span><br><span class="line">		<span class="class"><span class="keyword">struct</span> <span class="title">poll_list</span> *<span class="title">pos</span> =</span> walk;</span><br><span class="line">		walk = walk-&gt;next;</span><br><span class="line">		kfree(pos);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> err;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后再回到 sys_poll() ，就到了上面说的第二阶段，如果 poll 操作被信号中断，则触发第二阶段，设置相关数据，待信号完成后再尝试重新执行 poll 操作。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Kernel/" rel="tag"># Kernel</a>
+              <a href="/tags/poll/" rel="tag"># poll</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2024/03/02/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/Linux-TTY%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F%E6%A1%86%E6%9E%B6/" rel="prev" title="Linux - TTY驱动程序框架">
+                  <i class="fa fa-angle-left"></i> Linux - TTY驱动程序框架
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2024/03/13/Skill/normal/Linux-%E8%A7%A3%E5%8E%8B%E7%BC%A9%E5%91%BD%E4%BB%A4/" rel="next" title="Linux - 解压缩命令">
+                  Linux - 解压缩命令 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

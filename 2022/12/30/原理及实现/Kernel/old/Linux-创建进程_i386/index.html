@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="进程是什么？能被 CPU 执行的一个执行域，它有自己的私人内存空间，即它有自己的代码段、数据段、堆栈等等。而且它还有一个能被操作系统调度切换的 PCB ，以及拥有自己内核栈。">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - 创建进程（内核版本 2.4.22，32位x86）">
+<meta property="og:url" content="http://example.com/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E5%88%9B%E5%BB%BA%E8%BF%9B%E7%A8%8B_i386/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="进程是什么？能被 CPU 执行的一个执行域，它有自己的私人内存空间，即它有自己的代码段、数据段、堆栈等等。而且它还有一个能被操作系统调度切换的 PCB ，以及拥有自己内核栈。">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E5%88%9B%E5%BB%BA%E8%BF%9B%E7%A8%8B/BuildTask-1.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E5%88%9B%E5%BB%BA%E8%BF%9B%E7%A8%8B/BuildTask-2.png">
+<meta property="article:published_time" content="2022-12-29T16:00:00.000Z">
+<meta property="article:modified_time" content="2022-12-29T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="X86">
+<meta property="article:tag" content="schedule">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E5%88%9B%E5%BB%BA%E8%BF%9B%E7%A8%8B/BuildTask-1.png">
+
+
+<link rel="canonical" href="http://example.com/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E5%88%9B%E5%BB%BA%E8%BF%9B%E7%A8%8B_i386/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E5%88%9B%E5%BB%BA%E8%BF%9B%E7%A8%8B_i386/","path":"2022/12/30/原理及实现/Kernel/old/Linux-创建进程_i386/","title":"Linux - 创建进程（内核版本 2.4.22，32位x86）"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - 创建进程（内核版本 2.4.22，32位x86） | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E6%98%AF%E4%BB%80%E4%B9%88%EF%BC%9F"><span class="nav-number">1.</span> <span class="nav-text">进程是什么？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E7%94%B1%E4%BB%80%E4%B9%88%E7%BB%84%E6%88%90%EF%BC%9F"><span class="nav-number">2.</span> <span class="nav-text">进程由什么组成？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E7%94%B1%E4%BB%80%E4%B9%88%E7%BB%84%E6%88%90"><span class="nav-number">3.</span> <span class="nav-text">线程由什么组成</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E3%80%81%E8%BF%9B%E7%A8%8B%E5%92%8C%E4%BB%BB%E5%8A%A1%E8%BF%99%E4%BA%9B%E5%90%8D%E8%AF%8D%E6%9C%89%E4%BB%80%E4%B9%88%E5%8C%BA%E5%88%AB%EF%BC%9F"><span class="nav-number">4.</span> <span class="nav-text">线程、进程和任务这些名词有什么区别？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%A8%8B%E5%BA%8F%E6%8E%A7%E5%88%B6%E5%9D%97-PCB-process-control-block"><span class="nav-number">5.</span> <span class="nav-text">程序控制块 PCB (process control block)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Linux-%E4%BD%BF%E7%94%A8-fork-%E5%88%9B%E5%BB%BA%EF%BC%88%E5%A4%8D%E5%88%B6%EF%BC%89%E8%BF%9B%E7%A8%8B-%E7%BA%BF%E7%A8%8B%EF%BC%8C%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%8D%E5%8F%A6%E7%94%A8%E4%B8%80%E4%B8%AA%E6%96%B0%E7%9A%84%E5%87%BD%E6%95%B0%E6%9D%A5%E5%88%9B%E5%BB%BA%E6%96%B0%E7%9A%84%E8%BF%9B%E7%A8%8B-%E7%BA%BF%E7%A8%8B%EF%BC%9F"><span class="nav-number">6.</span> <span class="nav-text">Linux 使用 fork 创建（复制）进程&#x2F;线程，为什么不另用一个新的函数来创建新的进程&#x2F;线程？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#fork-%E5%92%8C-clone"><span class="nav-number">7.</span> <span class="nav-text">fork() 和 clone()</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E5%87%BD%E6%95%B0-do-fork"><span class="nav-number">8.</span> <span class="nav-text">核心函数 do_fork()</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E5%86%85%E6%A0%B8%E7%BA%BF%E7%A8%8B"><span class="nav-number">9.</span> <span class="nav-text">创建内核线程</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">68</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E5%88%9B%E5%BB%BA%E8%BF%9B%E7%A8%8B_i386/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - 创建进程（内核版本 2.4.22，32位x86） | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - 创建进程（内核版本 2.4.22，32位x86）
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2022-12-30 00:00:00" itemprop="dateCreated datePublished" datetime="2022-12-30T00:00:00+08:00">2022-12-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3.9k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>14 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="进程是什么？"><a href="#进程是什么？" class="headerlink" title="进程是什么？"></a>进程是什么？</h2><p>能被 CPU 执行的一个执行域，它有自己的私人内存空间，即它有自己的代码段、数据段、堆栈等等。而且它还有一个能被操作系统调度切换的 PCB ，以及拥有自己内核栈。</p>
+<span id="more"></span>
+<h2 id="进程由什么组成？"><a href="#进程由什么组成？" class="headerlink" title="进程由什么组成？"></a>进程由什么组成？</h2><p>进程由四个部分组成</p>
+<ol>
+<li>拥有能被 CPU 执行的执行域，该执行域可私用，也可共享。  </li>
+<li>拥有能被操作系统识别的调度任务的单位 PCB ，该 PCB 还存储该任务的状态。</li>
+<li>拥有自己的内核栈（8KB），用于在系统调用时、以及任务切换时使用。</li>
+<li>拥有自己的内存空间，即页目录表的 0～3GB 的空间是用户进程使用的。</li>
+</ol>
+<h2 id="线程由什么组成"><a href="#线程由什么组成" class="headerlink" title="线程由什么组成"></a>线程由什么组成</h2><p>满足上面的前三条的是线程，而且线程分为内核线程和用户线程。</p>
+<ul>
+<li>内核线程是指只在内核空间运行的任务，其执行域以及数据域都在内核空间。  </li>
+<li>用户线程是指在用户空间运行的任务（也会调用系统调用来到内核空间），一般在用户空间拥有属于它自己的用户栈。</li>
+</ul>
+<h2 id="线程、进程和任务这些名词有什么区别？"><a href="#线程、进程和任务这些名词有什么区别？" class="headerlink" title="线程、进程和任务这些名词有什么区别？"></a>线程、进程和任务这些名词有什么区别？</h2><p>经过以上说明，已知线程和进程之间的区别是一个是没有用户空间，另外一个是拥有自己的用户空间。当他们之间都有一个性质，就是都有执行域。在 Linux ，我认为，线程和进程都被通称为任务，把他们两一视同仁，因为都是在内核内可接受的调度单位。我想，为了统一名称，不能混淆调度单位是线程还是进程，都把它们通称为任务，因为它们都拥有需要继续执行的执行域。所以对于“进程调度”这一名词，我倾向于“任务调度”这一词。</p>
+<h2 id="程序控制块-PCB-process-control-block"><a href="#程序控制块-PCB-process-control-block" class="headerlink" title="程序控制块 PCB (process control block)"></a>程序控制块 PCB (process control block)</h2><p>PCB 存储在内核栈的底部，如图所示：</p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-创建进程/BuildTask-1.png"></div>
+
+<p>以下是 PCB 的结构体：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> &#123;</span></span><br><span class="line">    <span class="comment">/* -1 unrunnable, 0 runnbale, &gt;0 stopped */</span></span><br><span class="line">    <span class="keyword">volatile</span> <span class="type">long</span>           state;    </span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>           flags;</span><br><span class="line">    <span class="type">int</span>                     sigpending;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * thread address space:</span></span><br><span class="line"><span class="comment">     *  0 - 0xBFFFFFFF for user-thread</span></span><br><span class="line"><span class="comment">     *  0 - 0xFFFFFFFF for kernel-thread</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">mm_segment_t</span>            addr_limit;</span><br><span class="line">    <span class="keyword">volatile</span> <span class="type">long</span>           need_resched;</span><br><span class="line">    <span class="type">int</span>                     lock_depth;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 填充，目的是对那些频繁使用的字段集进行 CPU L1 </span></span><br><span class="line"><span class="comment">     * 缓存行上对齐。</span></span><br><span class="line"><span class="comment">     * 注意：这个字段只是暂时的，待实现用户进程后替换为</span></span><br><span class="line"><span class="comment">     * 字段 sigpending 、exec_domain 以及 ptrace  </span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="type">int</span>                     padding[<span class="number">2</span>];</span><br><span class="line">    </span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * offset 32 begins here on 32-bit platforms. we </span></span><br><span class="line"><span class="comment">     * keep all fields in a single cacheline that are </span></span><br><span class="line"><span class="comment">     * needed for the goodness() loop in schedule()</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line"></span><br><span class="line">    <span class="type">long</span>                    counter;</span><br><span class="line">    <span class="type">long</span>                    nice;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>           policy;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">mm_struct</span>        *<span class="title">mm</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">mm_struct</span>        *<span class="title">active_mm</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>        <span class="title">run_list</span>;</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>           rt_priority;</span><br><span class="line">    </span><br><span class="line">    <span class="type">pid_t</span>                   pid;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">thread_struct</span>    <span class="title">thread</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span>      *<span class="title">next_task</span>, *<span class="title">prev_task</span>;</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>           sleep_time;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">list_head</span>        <span class="title">local_pages</span>;</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span>            allocation_order, nr_local_pages;</span><br><span class="line"></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span>           start_time;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span>      *<span class="title">pidhash_next</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span>      **<span class="title">pidhash_pprev</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span>      *<span class="title">p_opptr</span>, *<span class="title">p_pptr</span>, *<span class="title">p_cptr</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span>      *<span class="title">p_ysptr</span>, *<span class="title">p_osptr</span>;</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/include/eleos/sched.h">sched.h</a></p>
+</blockquote>
+<p>从字段 state 开始，<br>字段 state ：记录当前任务的运行状态，运行状态的集合如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> TASK_RUNNING            0</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> TASK_INTERRUPTIBLE      1</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> TASK_UNINTERRUPTIBLE    2</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> TASK_ZOMBIE             4</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> TASK_STOPPED            8</span></span><br></pre></td></tr></table></figure>
+<ul>
+<li>TASK_RUNNING：它的意思并不是表示正在运行中，而是表示该任务可以允许加入到任务调度队列，等待被调度切换去执行。</li>
+<li>TASK_INTERRUPTIBLE：表示任务处于睡眠状态，但是能被信号唤醒，即中断睡眠。</li>
+<li>TASK_UNINTERRUPTIBLE：表示任务处于睡眠状态，但是不能被信号唤醒。</li>
+<li>TASK_ZOMBIE：表示当前任务已“死”，即已调用 exit() ，但是 PCB 还存在，这个得让它所属的父进程处理。</li>
+<li>TASK_STOPPED：该状态用于调试用的。</li>
+</ul>
+<p>字段 flags ：记录当前任务的管理状态，比如该任务的内存、I&#x2F;O以及信号等使用情况。</p>
+<blockquote>
+<p>注意，该字段并不存储运行状态  </p>
+</blockquote>
+<p>字段 sigpending ：当其他任务对当前任务发出信号后，该任务对应的 PCB 的字段 sigpending 置 1 。最典型的例子是，该进程的 state 为 TASK_INTERRUPTIBLE 时，其他任务发出信号对该进程唤醒，该进程的 PCB 的 sigpending 被置 1 。</p>
+<p>字段 addr_limit ：表示当前任务的可用内存空间的范围。</p>
+<p>字段 need_resched ：当任务被认定为需要被调度时，该字段置 1 。</p>
+<blockquote>
+<p>该字段将在 <a href="12_%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6.md">任务调度</a> 详细说明。</p>
+</blockquote>
+<p>字段 lock_depth ：现在还没用到，暂且忽略。  </p>
+<p>字段 counter、nice、policy、run_list、rt_priority、thread ：将在 <a href="12_%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6.md">任务调度</a> 详细说明。</p>
+<p>字段 mm、active_mm ：仅在 <a href="12_%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6.md">任务调度</a> 说明一点，待实现用户进程后详细说明。</p>
+<p>字段 pid ：每个任务都有它们自己的 ID 。</p>
+<p>字段 next_task、prev_task ：该字段的作用是把所有的 PCB 链接在同一个链表 task_list 当中。</p>
+<p>字段 local_pages、allocation_order、nr_local_pages：字段 local_pages 用于链接 struct page ，当系统处于内存紧缺状态，任务也需要内存，则它以同步的方式去获取内存（字段 allocation_order 记录任务所需的内存页面对应的 order ），即先执行回收不活跃页面，把空闲页对应的 struct page 链接到该字段（字段 nr_local_pages 记录 struct page 在 local_pages 的个数），而不是伙伴位图分配器的空闲链表，然后在这个字段尝试获取符合要求的页面。</p>
+<blockquote>
+<p>详细请看 <a href="7_%E4%BC%99%E4%BC%B4%E4%BD%8D%E5%9B%BE%E5%88%86%E9%85%8D%E5%99%A8.md">伙伴位图分配器</a> 和 <a href="../../../src/mm/page_alloc.c">page_alloc.c</a>  </p>
+</blockquote>
+<p>字段 start_time ：当创建任务之后，该字段记录创建的时间。</p>
+<p>字段 pidhash_next 和 pidhash_pprev ：当我们需要根据 pid 查找任务的 PCB 时，发现根据 pid 在 task_list 一个一个的查找是不行的。所以使用 HASH 表，对 PID 散列作为 HASH 值，以空间换取时间来解决。</p>
+<p>HASH 表：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* PID hashing */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> PIDHASH_SZ  (4096 &gt;&gt; 2)</span></span><br><span class="line"><span class="keyword">extern</span> <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> *<span class="title">pidhash</span>[<span class="title">PIDHASH_SZ</span>];</span></span><br></pre></td></tr></table></figure>
+<p>对应的 HASH 函数：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> pid_hashfn(x)   \</span></span><br><span class="line"><span class="meta">    (((((unsigned long)(x)) &gt;&gt; 8) ^ ((unsigned long)(x))) &amp; (PIDHASH_SZ - 1)) </span></span><br></pre></td></tr></table></figure>
+<p>对应的增&#x2F;删&#x2F;查函数：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">hash_pid</span><span class="params">(<span class="keyword">struct</span> task_struct * p)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> **<span class="title">htable</span> =</span> &amp;pidhash[pid_hashfn(p-&gt;pid)];</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> ((p-&gt;pidhash_next = *htable))</span><br><span class="line">        (*htable)-&gt;pidhash_pprev = &amp;(p-&gt;next_task);</span><br><span class="line">    </span><br><span class="line">    p-&gt;pidhash_pprev = htable;</span><br><span class="line">    *htable = p;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">unhash_pid</span><span class="params">(<span class="keyword">struct</span> task_struct * p)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">if</span> (p-&gt;pidhash_next)</span><br><span class="line">        p-&gt;pidhash_next-&gt;pidhash_pprev = p-&gt;pidhash_pprev;</span><br><span class="line">    *(p-&gt;pidhash_pprev) = p-&gt;pidhash_next;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="keyword">struct</span> task_struct *</span><br><span class="line"><span class="title function_">find_task_by_pid</span><span class="params">(<span class="type">int</span> pid)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> *<span class="title">p</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> **<span class="title">htable</span> =</span> &amp;pidhash[pid_hashfn(pid)];</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (p = *htable; p &amp;&amp; p-&gt;pid != pid;</span><br><span class="line">         p = p-&gt;pidhash_next);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> p;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/include/eleos/sched.h">sched.h</a></p>
+</blockquote>
+<p>字段 p_opptr、p_pptr、p_cptr、p_ysptr、p_osptr ：每个任务都不是独立于系统当中的，任务与任务之间有联系，就像是“家庭关系图”一样，一个进程可以有它的父进程、子进程、兄弟进程。字段 p_opptr 和 p_pptr 是连接父进程；字段 p_cptr 连接子进程；字段 p_ysptr 和 p_osptr 连接兄弟进程。见以下关系图：</p>
+<div align = center><img src="/images/原理及实现/Kernel/Linux-创建进程/BuildTask-2.png"></div>
+
+<h2 id="Linux-使用-fork-创建（复制）进程-线程，为什么不另用一个新的函数来创建新的进程-线程？"><a href="#Linux-使用-fork-创建（复制）进程-线程，为什么不另用一个新的函数来创建新的进程-线程？" class="headerlink" title="Linux 使用 fork 创建（复制）进程&#x2F;线程，为什么不另用一个新的函数来创建新的进程&#x2F;线程？"></a>Linux 使用 fork 创建（复制）进程&#x2F;线程，为什么不另用一个新的函数来创建新的进程&#x2F;线程？</h2><blockquote>
+<p>要点：</p>
+<ul>
+<li>创建线程和进程的共性以及区别</li>
+<li>根据 fork() 的基本操作步骤，根据上一条说明来讲解 fork() 和它们的共性，并且如何存差异（位标签选择）</li>
+<li>使用 fork() 创建&#x2F;克隆的优点是什么</li>
+</ul>
+</blockquote>
+<p>我们先了解一下创建线程&#x2F;进程的步骤，根据上一点的<a href="#%E8%BF%9B%E7%A8%8B%E7%94%B1%E4%BB%80%E4%B9%88%E7%BB%84%E6%88%90%EF%BC%9F">进程由什么组成</a>得知，创建进程的大致步骤为：  </p>
+<ol>
+<li>在内核空间获取到2个连续的内存物理页面作为它的内核栈</li>
+<li>在内核栈的底部空出大约 1KB 的内存空间，存储 PCB ，对应的结构体为 <code>struct task_struct</code> 。然后对该 PCB 初始化。</li>
+<li>在内核空间获取若干个物理内存页面（可连续也可不连续）分别作为一个页目录表以及若干个页表，概括起来就是创建自己的用户空间。</li>
+<li>读取可执行文件，把代码段、数据段等载入到内存当中，根据可执行文件头的信息，把开始执行该进程的代码虚拟内存地址载入到它的内核栈当中，待任务调度切换后执行（创建进程是系统调用，所以要从内核层返回到用户层）。</li>
+</ol>
+<p>而线程的创建步骤则是仅有第一条和第二条，待任务调度切换后，执行创建该线程的任务所指定的函数。</p>
+<p>可以发现，创建线程和进程首要步骤就是第一条和第二条，那么我们可以得出这样的伪代码：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">create_PCB</span><span class="params">(与 PCB 相关的参数)</span></span><br><span class="line">&#123;</span><br><span class="line">    从伙伴位图分配器获取两个连续的物理页</span><br><span class="line">    若 获取失败 则：</span><br><span class="line">        返回 <span class="number">-1</span></span><br><span class="line"></span><br><span class="line">    把两个连续的物理页的首页的底部作为 PCB </span><br><span class="line">    对 PCB 的字段进行初始化</span><br><span class="line">    </span><br><span class="line">    在新任务的 内核栈 的顶部，对寄存器、SS、CS、返回地址、用户栈地址等等，按规律压栈</span><br><span class="line">    </span><br><span class="line">    把新任务的 PCB 加入到调度队列。</span><br><span class="line"></span><br><span class="line">    返回 pid</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 创建内核线程，假设该函数现在在内核层调用 */</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">create_kthread</span><span class="params">(函数指针, 函数所需的参数)</span></span><br><span class="line">&#123;</span><br><span class="line">    先把参数 函数指针，函数所需的参数 复制到寄存器，因为</span><br><span class="line">    栈的内容不可能全部复制到新线程的栈内，仅会复制在栈内保</span><br><span class="line">    存的上下文复制，而上下文是寄存器集。</span><br><span class="line"></span><br><span class="line">    把当前栈地址用另一个介质 A 保存</span><br><span class="line">    调用 create_PCB</span><br><span class="line">    查看当前栈地址是否等于 介质A 的值</span><br><span class="line">    是，则</span><br><span class="line">        表示这是创建线程的任务，不是线程，返回</span><br><span class="line">    否则</span><br><span class="line">        表示这是刚刚新建的线程，把参数压栈</span><br><span class="line">        调用函数指针执行的函数</span><br><span class="line">        上面的函数调用完成，调用 <span class="built_in">exit</span>() </span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 创建用户线程，假设该函数现在在用户层调用 */</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">create_uthread</span><span class="params">(函数指针, 函数所需的参数, 用户栈地址)</span></span><br><span class="line">&#123;</span><br><span class="line">    先把参数 函数指针，函数所需的参数 复制到寄存器（理由已在 create_kthread() 说明）</span><br><span class="line"></span><br><span class="line">    系统调用 create_PCB</span><br><span class="line">    查看 create_PCB 的返回是否为新线程的PID</span><br><span class="line">    是，则</span><br><span class="line">        表示这是创建线程的任务，不是线程，返回</span><br><span class="line">    否则</span><br><span class="line">        表示这是刚刚新建的用户线程，把参数压栈（在用户栈）</span><br><span class="line">        调用函数指针执行的函数</span><br><span class="line">        上面的函数调用完成，调用 <span class="built_in">exit</span>() </span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 创建用户进程，该函数现在在内核层调用 */</span></span><br><span class="line"><span class="type">int</span> <span class="title function_">create_proc</span><span class="params">(文件名)</span></span><br><span class="line">&#123;</span><br><span class="line">    调用 create_PCB（新建一个页目录表和若干个页表）</span><br><span class="line">    查看 create_PCB 的返回是否为新线程的 PID </span><br><span class="line">    是，则</span><br><span class="line">        表示这是创建进程的任务，不是线程，返回</span><br><span class="line">    否则</span><br><span class="line">        表示这是刚刚新建的用户进程</span><br><span class="line">        调用 execve() 打开可执行文件</span><br><span class="line">        （期间根据可执行文件头的信息，把进程的起始地址载入到它自己的内核栈当中，然后从内核层回到用户层开始执行）</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<p>所以，根据创建线程&#x2F;进程，得出这样的结论：<br>线程和进程是必须都是先创建内核栈和 PCB ，然后加入到调度队列。等调度切换到刚刚创建的任务后，再调用函数（线程）&#x2F;打开可执行文件执行（进程）。</p>
+<p>上面的伪代码是比较简单的，其实还有很多额外的要求。<br>比如，已知用户线程是“寄生”于进程的用户空间（内核线程则是内核空间），那么进程可以用的，它也可以用。比如 在进程正在打开的文件 ，某些线程需要把进程已打开文件的状态复制过来，自己单干，不用和进程“同一个饭碗”（一分两了，像 fork()）。所以有必要在函数 create_uthread() 和 create_kthread() 新添加一个形参：存储标志位的变量 。某一位置位，就表示进程的某一资源另外复制给新线程。</p>
+<p>话都说到这里了，好像这个越来越像函数 fork() 。我们知道，fork() 的功能就是复制出一个子进程。那么 fork() 的执行步骤是什么？</p>
+<ol>
+<li>在内核空间获取到2个连续的内存物理页面作为它的内核栈</li>
+<li>在内核栈的底部空出大约 1KB 的内存空间，存储 PCB ，对应的结构体为 <code>struct task_struct</code> 。然后对该 PCB 初始化。</li>
+<li>在内核空间获取若干个物理内存页面（可连续也可不连续）分别作为一个页目录表以及若干个页表，概括起来就是创建子进程的用户空间。</li>
+</ol>
+<blockquote>
+<p>另外，fork() 复制一个子进程是不需要复制父进程的代码段、数据段等数据复制到子进程的用户空间，这样很浪费时间。为了能够很好的利用虚拟内存这一机制，直接把父进程的指向用户空间的页表的页表项（除了指向栈的物理地址），复制到子进程的页表当中，且都设置为仅可读。当子进程写操作时，发出内存异常，则新获取一个页，把发生异常的页的数据复制到新页，新页的物理地址写在子进程的页表内发生异常的页表项，并更新为可读可写。从异常返回后，再重新进行写操作。这就是 read-copy-write 机制。</p>
+</blockquote>
+<p>现在我们可知，创建线程&#x2F;进程的有些步骤是和函数 fork() 类似的，那么我们是否可以“求大同存小异”。“小异”取决于“标签位”，像给我在上上段那样 “create_uthread() 和 create_kthread() 新添加一个形参来存储标签位”，根据自己的需求创建&#x2F;克隆任务。</p>
+<blockquote>
+<p>创建用户进程是先用 fork() 出一个子进程，调度到子进程后，调用 execve() 。</p>
+</blockquote>
+<p>用 fork() 创建&#x2F;克隆任务的话，优点有这些：代码高复用性（这也从缓存中体现）、利于扩展、代码相对简洁易读和代码低重复率。</p>
+<h2 id="fork-和-clone"><a href="#fork-和-clone" class="headerlink" title="fork() 和 clone()"></a>fork() 和 clone()</h2><p>fork() 和 clone() 对应的系统调用分别是 sys_fork() 以及 sys_clone() 。其中 sys_fork() 的功能是完美无瑕地把父进程复制出子进程；sys_clone() 的功能是可以选择性的复制父进程的数据，即你设置哪个标志位，标志位对应的数据就不从父进程复制过来了，而是用指针指向它。我们可以通过 sys_clone() 来创建线程。<br>另外，严格地说，sys_fork() 和 sys_clone() 只能算是接口函数，因为工作的核心部分是在核心函数 do_fork() 。 </p>
+<p>先来看看 sys_fork() 的本体：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">asmlinkage <span class="type">int</span> <span class="title function_">sys_fork</span><span class="params">(<span class="keyword">struct</span> pt_regs regs)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> do_fork(<span class="number">0</span>, regs.uesp, &amp;regs, <span class="number">0</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>sys_clone()：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">asmlinkage <span class="type">int</span> <span class="title function_">sys_clone</span><span class="params">(<span class="keyword">struct</span> pt_regs regs)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> clone_flags;</span><br><span class="line">    <span class="type">unsigned</span> <span class="type">long</span> newsp;</span><br><span class="line">    <span class="type">int</span> state;</span><br><span class="line"></span><br><span class="line">    clone_flags = regs.ebx;</span><br><span class="line">    newsp = regs.ecx;</span><br><span class="line">    <span class="keyword">if</span> (!newsp)</span><br><span class="line">        newsp = regs.uesp;</span><br><span class="line">    state = do_fork(clone_flags, newsp, &amp;regs, <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">return</span> state;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>The two functions are from <a href="../../../src/arch/i386/kernel/process.c">process.c</a></p>
+</blockquote>
+<p>直接看 sys_clone() 的本体有点难理解，我们再来看看 clone() 的声明：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">clone</span><span class="params">(<span class="type">int</span> (*fn)(<span class="type">void</span> *arg), <span class="type">void</span> *child_stack, <span class="type">int</span> flags, <span class="type">void</span> *arg)</span>;</span><br></pre></td></tr></table></figure>
+<p>根据该函数的声明，我们可知 regs.ebx 存储的是 flags ，regs.ecx 存储的是 child_stack 。<br>而 flags 的标志位又是什么？这里列出几个标志位（目前仅支持这些）</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* set if VM shared between processes */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> CLONE_VM        0x00000100</span></span><br><span class="line"><span class="comment">/* set if pid shared */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> CLONE_PID       0x00001000</span></span><br><span class="line"><span class="comment">/* set if we want to have the save parent as the cloner */</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> CLONE_PARENT    0x00008000</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="核心函数-do-fork"><a href="#核心函数-do-fork" class="headerlink" title="核心函数 do_fork()"></a>核心函数 do_fork()</h2><p>代码内有详细注释 <a href="../../../src/kernel/fork.c">fork.c</a> 。</p>
+<h2 id="创建内核线程"><a href="#创建内核线程" class="headerlink" title="创建内核线程"></a>创建内核线程</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">kernel_thread</span><span class="params">(<span class="type">int</span> (*fn)(<span class="type">void</span> *), <span class="type">void</span> * arg, </span></span><br><span class="line"><span class="params">                    <span class="type">unsigned</span> <span class="type">long</span> flags)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">return</span> arch_kernel_thread(fn, arg, flags);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/kernel/fork.c">fork.c</a></p>
+</blockquote>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">arch_kernel_thread</span><span class="params">(<span class="type">int</span> (*fn)(<span class="type">void</span> *), <span class="type">void</span> * arg, </span></span><br><span class="line"><span class="params">                        <span class="type">unsigned</span> <span class="type">long</span> flags)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> retval, d0;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">asm</span> <span class="title function_">volatile</span> <span class="params">(</span></span><br><span class="line"><span class="params">        <span class="string">&quot;movl   %%esp,%%esi \n\t&quot;</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;int $0x80 \n\t&quot;</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;cmpl   %%esp,%%esi \n\t&quot;</span>   <span class="comment">/* child or parent? */</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;je 1f \n\t&quot;</span></span></span><br><span class="line"><span class="params">        <span class="comment">/**</span></span></span><br><span class="line"><span class="comment"><span class="params">         * 这里把 fn 的参数用 eax 存储以及压栈存储，因为每个 fn 传递</span></span></span><br><span class="line"><span class="comment"><span class="params">         * 参数的方式可能都不一致，所以两种方式都执行一遍</span></span></span><br><span class="line"><span class="comment"><span class="params">         */</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;movl   %4,%%eax \n\t&quot;</span>  </span></span><br><span class="line"><span class="params">        <span class="string">&quot;pushl  %%eax \n\t&quot;</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;call *%5 \n\t&quot;</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;movl   %3,%0 \n\t&quot;</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;int $0x80 \n\t&quot;</span></span></span><br><span class="line"><span class="params">        <span class="string">&quot;1:&quot;</span></span></span><br><span class="line"><span class="params">        : <span class="string">&quot;=&amp;a&quot;</span> (retval), <span class="string">&quot;=&amp;S&quot;</span> (d0)</span></span><br><span class="line"><span class="params">        : <span class="string">&quot;0&quot;</span> (__NR_clone), <span class="string">&quot;i&quot;</span> (__NR_exit), </span></span><br><span class="line"><span class="params">          <span class="string">&quot;r&quot;</span> (arg), <span class="string">&quot;r&quot;</span> (fn), <span class="string">&quot;b&quot;</span> (flags | CLONE_VM)</span></span><br><span class="line"><span class="params">        : <span class="string">&quot;memory&quot;</span></span></span><br><span class="line"><span class="params">    )</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> retval;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>from <a href="../../../src/arch/i386/kernel/process.c">process.c</a></p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/X86/" rel="tag"># X86</a>
+              <a href="/tags/schedule/" rel="tag"># schedule</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%BB%BB%E5%8A%A1%E8%B0%83%E5%BA%A6_i386/" rel="prev" title="Linux - 任务调度（内核版本 2.4.22，32位x86）">
+                  <i class="fa fa-angle-left"></i> Linux - 任务调度（内核版本 2.4.22，32位x86）
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%BB%BB%E5%8A%A1%E8%AE%A9%E5%87%BA%E5%92%8C%E7%9D%A1%E7%9C%A0_i386/" rel="next" title="Linux - 任务让出和睡眠（内核版本 2.4.22，32位x86）">
+                  Linux - 任务让出和睡眠（内核版本 2.4.22，32位x86） <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">327k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">19:47</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>
