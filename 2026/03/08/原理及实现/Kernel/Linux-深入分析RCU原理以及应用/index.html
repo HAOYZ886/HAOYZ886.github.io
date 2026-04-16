@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="参考建议按顺序学习：  RCU 的基本原理：https:&#x2F;&#x2F;lwn.net&#x2F;Articles&#x2F;262464&#x2F; 分层 RCU 的原理：https:&#x2F;&#x2F;lwn.net&#x2F;Articles&#x2F;305782&#x2F; RCU 的用法：https:&#x2F;&#x2F;lwn.net&#x2F;Articles&#x2F;263130&#x2F; RCU 的用法难点：https:&#x2F;&#x2F;lwn.net&#x2F;Articles&#x2F;652156&#x2F; RCU 的使用场景：https:&#x2F;">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - 深入分析RCU原理以及应用">
+<meta property="og:url" content="http://example.com/2026/03/08/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90RCU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="参考建议按顺序学习：  RCU 的基本原理：https:&#x2F;&#x2F;lwn.net&#x2F;Articles&#x2F;262464&#x2F; 分层 RCU 的原理：https:&#x2F;&#x2F;lwn.net&#x2F;Articles&#x2F;305782&#x2F; RCU 的用法：https:&#x2F;&#x2F;lwn.net&#x2F;Articles&#x2F;263130&#x2F; RCU 的用法难点：https:&#x2F;&#x2F;lwn.net&#x2F;Articles&#x2F;652156&#x2F; RCU 的使用场景：https:&#x2F;">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90RCU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8/RCU0-async.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90RCU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8/RCU1-async.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90RCU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8/RCU2-async.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90RCU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8/RCU2-async-altered.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90RCU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8/RCU3-async.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90RCU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8/RCU4-async-new.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90RCU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8/RCU-flow-request_start.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90RCU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8/RCU-flow-start.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90RCU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8/RCU-flow-coming.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90RCU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8/RCU-flow-rec.drawio.png">
+<meta property="article:published_time" content="2026-03-07T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-04-13T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Kernel">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="RCU">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90RCU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8/RCU0-async.drawio.png">
+
+
+<link rel="canonical" href="http://example.com/2026/03/08/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90RCU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2026/03/08/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90RCU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8/","path":"2026/03/08/原理及实现/Kernel/Linux-深入分析RCU原理以及应用/","title":"Linux - 深入分析RCU原理以及应用"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - 深入分析RCU原理以及应用 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">1.</span> <span class="nav-text">参考</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RCU%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5"><span class="nav-number">2.</span> <span class="nav-text">RCU的基本概念</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RCU%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%8E%9F%E7%90%86"><span class="nav-number">3.</span> <span class="nav-text">RCU的基本原理</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%8E%E4%B8%80%E4%B8%AA%E4%BE%8B%E5%AD%90%E8%AF%B4%E8%B5%B7"><span class="nav-number">3.1.</span> <span class="nav-text">从一个例子说起</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%AE%80%E5%8D%95%E7%9A%84%E5%AE%9E%E7%8E%B0%EF%BC%9A%E6%95%B4%E4%B8%AA%E7%B3%BB%E7%BB%9F%E4%BB%85%E6%9C%89%E4%B8%80%E4%B8%AACPU%E5%A4%84%E7%90%86%E4%B8%80%E4%B8%AA%E5%9B%9E%E6%94%B6%E8%AF%B7%E6%B1%82"><span class="nav-number">3.2.</span> <span class="nav-text">简单的实现：整个系统仅有一个CPU处理一个回收请求</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%9C%80%E6%B1%82%E5%8D%87%E7%BA%A7%EF%BC%9A%E5%90%8C%E4%B8%80CPU%E6%94%AF%E6%8C%81%E5%A4%84%E7%90%86%E5%A4%9A%E4%B8%AA%E5%9B%9E%E6%94%B6%E8%AF%B7%E6%B1%82"><span class="nav-number">3.3.</span> <span class="nav-text">需求升级：同一CPU支持处理多个回收请求</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%9C%80%E6%B1%82%E5%8D%87%E7%BA%A7%EF%BC%9A%E5%A4%9A%E4%B8%AACPU%E5%8F%91%E9%80%81%E5%B9%B6%E5%A4%84%E7%90%86%E5%A4%9A%E4%B8%AA%E5%9B%9E%E6%94%B6%E8%AF%B7%E6%B1%82"><span class="nav-number">3.4.</span> <span class="nav-text">需求升级：多个CPU发送并处理多个回收请求</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RCU%E7%9A%84%E5%9F%BA%E6%9C%AC%E7%94%A8%E6%B3%95"><span class="nav-number">4.</span> <span class="nav-text">RCU的基本用法</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E2%80%9C%E5%8F%91%E5%B8%83-%E8%AE%A2%E9%98%85%E2%80%9D%E6%9C%BA%E5%88%B6"><span class="nav-number">4.1.</span> <span class="nav-text">“发布-订阅”机制</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E5%B1%82RCU%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%8E%9F%E7%90%86"><span class="nav-number">5.</span> <span class="nav-text">分层RCU的基本原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%A9%E5%B1%95%EF%BC%9A%E5%8F%AF%E6%8A%A2%E5%8D%A0RCU%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%8E%9F%E7%90%86%E5%92%8C%E5%AE%9E%E7%8E%B0"><span class="nav-number">6.</span> <span class="nav-text">扩展：可抢占RCU的基本原理和实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%A9%E5%B1%95%EF%BC%9ASRCU%E7%9A%84%E5%9F%BA%E6%9C%AC%E5%8E%9F%E7%90%86%E5%92%8C%E5%AE%9E%E7%8E%B0"><span class="nav-number">7.</span> <span class="nav-text">扩展：SRCU的基本原理和实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%A9%E5%B1%95%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E6%8A%8Arcu-ctrlblk%E5%92%8Crcu-ctrlblk-bh%E5%90%88%E5%B9%B6"><span class="nav-number">8.</span> <span class="nav-text">扩展：为什么把rcu_ctrlblk和rcu_ctrlblk_bh合并</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">67</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">70</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2026/03/08/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90RCU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - 深入分析RCU原理以及应用 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - 深入分析RCU原理以及应用
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2026-03-08 00:00:00" itemprop="dateCreated datePublished" datetime="2026-03-08T00:00:00+08:00">2026-03-08</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2026-04-14 00:00:00" itemprop="dateModified" datetime="2026-04-14T00:00:00+08:00">2026-04-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>7.3k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>27 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>建议按顺序学习：</p>
+<ul>
+<li>RCU 的基本原理：<a target="_blank" rel="noopener" href="https://lwn.net/Articles/262464/">https://lwn.net/Articles/262464/</a></li>
+<li>分层 RCU 的原理：<a target="_blank" rel="noopener" href="https://lwn.net/Articles/305782/">https://lwn.net/Articles/305782/</a></li>
+<li>RCU 的用法：<a target="_blank" rel="noopener" href="https://lwn.net/Articles/263130/">https://lwn.net/Articles/263130/</a></li>
+<li>RCU 的用法难点：<a target="_blank" rel="noopener" href="https://lwn.net/Articles/652156/">https://lwn.net/Articles/652156/</a></li>
+<li>RCU 的使用场景：<a target="_blank" rel="noopener" href="https://lwn.net/Articles/652677/">https://lwn.net/Articles/652677/</a></li>
+<li>RCU 与内存屏障的联系：<a target="_blank" rel="noopener" href="https://lwn.net/Articles/573497/">https://lwn.net/Articles/573497/</a></li>
+<li>RCU 在 Linux 内核的应用以及配置：<a target="_blank" rel="noopener" href="https://lwn.net/Articles/653326/">https://lwn.net/Articles/653326/</a></li>
+</ul>
+<span id="more"></span>
+<h2 id="RCU的基本概念"><a href="#RCU的基本概念" class="headerlink" title="RCU的基本概念"></a>RCU的基本概念</h2><p>RCU 的英文全称是 Read-Copy Update ，它是用在读多写少的场景下的无锁机制。它支持读和写并行操作，但是不允许多个写操作同时对同一个资源进行操作，需要额外的同步机制，比如自旋锁。它与读写锁相比，最主要的区别就是读操作并不需要与写操作同步，这样就能大大提升了并发并行的性能，同时临界区的扩展性增强，而且无死锁风险。<br>那么 RCU 的读写操作并行是如何保证的？从 RCU 英文全称去解析，Reader 读取共享资源，Updater 获取一个新的内存空间，把该共享资源的数据复制到新的内存空间，并进行进一步的写操作，再作为该共享资源的新版本（Update）。一般来说，RCU 仅允许有多个 Readers 和一个 Updater 同时去操作同一个共享资源。当有一到多个 Readers 正在进行读操作时，Updater 正在更新共享资源，当 Updater 更新完成后，这批 Readers 还在进行读操作，这时 Updater 是不能对该旧版资源回收，而是等待它们读操作完成才能回收。而新来的 Reader 则是可以直接读新版本的共享资源即可。总得来说，Updater 更新完成新版本的共享资源后，还要对上一个版本的共享资源回收。</p>
+<p>根据以上的概念，这里引出了一个问题，Updater 是怎么知道没有任何 Readers 访问旧版本资源？</p>
+<h2 id="RCU的基本原理"><a href="#RCU的基本原理" class="headerlink" title="RCU的基本原理"></a>RCU的基本原理</h2><h3 id="从一个例子说起"><a href="#从一个例子说起" class="headerlink" title="从一个例子说起"></a>从一个例子说起</h3><p>先从 Linux 的旧版本了解，Linux 2.6.11 是 RCU 的第一个版本，可抢占 RCU 的发布是在 Linux 2.6.25 ，还把在 Linux 2.6.11 发布的 RCU 称为经典 RCU ，便于区分。这里先讲解经典 RCU 的原理以及实现，选用 Linux 2.6.24 版本的原因是经典 RCU 的实现已经相对成熟，而且未区分前能更方便阅读代码。<br>在 Linux 内核，使用 rcu_read_lock() 和 rcu_read_unlock() 来划分出一个读临界区，见以下例子：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">foo</span> &#123;</span></span><br><span class="line">	<span class="type">int</span> a, b;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">foo</span> *<span class="title">gp</span>;</span></span><br><span class="line">DEFINE_SPINLOCK(gp_lock);	<span class="comment">/* Just for Updater */</span></span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">reader_fn</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">foo</span> *<span class="title">p</span>;</span></span><br><span class="line"></span><br><span class="line">	rcu_read_lock();	<span class="comment">/* 读临界区的起始边界 */</span></span><br><span class="line">	p = rcu_dereference(gp);<span class="comment">/* Read */</span></span><br><span class="line">	<span class="keyword">if</span> (p)</span><br><span class="line">		do_something_with(p-&gt;a, p-&gt;b);</span><br><span class="line">	rcu_read_unlock();	<span class="comment">/* 读临界区的结束边界 */</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>假设有多个 CPU 正在执行 reader_fn() ，那么 Updater 是如何知道读临界区结束？<br>先看 Updater 具体的代码实例：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">updater_fn</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">foo</span> *<span class="title">p</span>, *<span class="title">old</span>;</span></span><br><span class="line"></span><br><span class="line">	spin_lock(&amp;gp_lock);</span><br><span class="line">	<span class="comment">/* 不能睡眠，不能让当前 Updater 持有自旋锁太久 */</span></span><br><span class="line">	p = kmalloc(<span class="keyword">sizeof</span>(<span class="keyword">struct</span> foo), GFP_ATOMIC);</span><br><span class="line">	<span class="keyword">if</span> (!p) &#123;</span><br><span class="line">		spin_unlock(&amp;gp_lock);</span><br><span class="line">		<span class="keyword">return</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	old = rcu_access_pointer(gp);	<span class="comment">/* Copy */</span></span><br><span class="line">	<span class="keyword">if</span> (old) &#123;</span><br><span class="line">		p-&gt;a = old-&gt;a + <span class="number">1</span>;</span><br><span class="line">		p-&gt;b = old-&gt;b + <span class="number">2</span>;</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		p-&gt;a = <span class="number">1</span>;</span><br><span class="line">		p-&gt;b = <span class="number">2</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	rcu_assign_pointer(gp, p);	<span class="comment">/* Update */</span></span><br><span class="line">	spin_unlock(&amp;gp_lock);</span><br><span class="line"></span><br><span class="line">	synchronize_rcu();	<span class="comment">/* 等待读旧版本共享资源的 Readers 完成 */</span></span><br><span class="line">	kfree(old);		<span class="comment">/* 回收旧版本共享资源 */</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>自旋锁 <code>gp_lock</code> 的互斥对象是 Updater ，函数 synchronize_rcu() 是等待读旧版本共享资源的 Readers 完成。很显而易见，关键点就在于 synchronize_rcu() ，但这个函数先暂时认为是一个黑盒，后续会解析这个函数。</p>
+<p>先回顾线程的原理（不管线程还是进程，都是调度对象，这里统称用线程来表示），线程运行的环境分为内核层和用户空间。而处于用户空间的线程是：</p>
+<ul>
+<li>可以通过系统调用主动进入内核层，但仍处于进程上下文；</li>
+<li>也可以被中断&#x2F;异常被动进入内核层，但属于中断上下文。</li>
+</ul>
+<p>另外，已知 Linux 内核被分为可抢占内核和不可抢占内核。可抢占内核的原理是：当在内核层的线程被动进入中断，且准备从中断返回前，判断能否被抢占。满足可被抢占需要两个条件：</p>
+<ol>
+<li>preempt_count 等于 0 ；</li>
+<li>当前线程被标记为 NEED_RESCHED 。</li>
+</ol>
+<p>现在逐步对 RCU 的 API 做解析，再逐步刨析 RCU 的原理。<br>先了解 rcu_read_lock() 和 rcu_read_unlock() 的实现，对于可抢占内核，它们的实现是：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> rcu_read_lock()		do &#123; preempt_disable(); &#125; while(0)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> rcu_read_unlock()	do &#123; preempt_enable(); &#125; while(0)</span></span><br></pre></td></tr></table></figure>
+<p>由此可知，rcu_read_lock() 和 rcu_read_unlock() 的实现仅仅是关闭抢占和开启抢占。<br>对于不可抢占内核，则相当于是空实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> rcu_read_lock()		do &#123; &#125; while(0)</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> rcu_read_unlock()	do &#123; &#125; while(0)</span></span><br></pre></td></tr></table></figure>
+<p>这更对 synchronize_rcu() 的实现感到好奇了，这究竟是怎么让 Updater 知道 Reader 已经完成读操作？<br>这里我们需要回顾一下锁的机制，来推理 RCU 的实现机制。首先，无论是什么锁，都需要一个空间来记录锁的状态，比如“已被持有”或“未被持有”。那 RCU 呢？回看以上例子，RCU 的 API ，尤其是生成读临界区的 API ，没有发现显式的内存空间，来记录这个线程或执行该线程的 CPU 的 RCU 状态。那就只有当 CPU <strong>不执行</strong>该执行流，才能表示当前读操作的结束，这就是从空间换取为时间。对于非可抢占内核，不管是内核线程，还是通过系统调用进入内核层的应用进程，在内核层都不会被动调度，只有主动调度；对于可抢占内核，在内核层，只要被标记为 NEED_RESCHED ，且抢占计数为 0 ，则从中断上下文返回前被调度。所以也从中发现 rcu_read_lock() 和 rcu_read_unlock() 在不同内核的实现差异。在可抢占内核，在 RCU 读临界区必须要把抢占关闭，不然提前被调度，会被系统误以为读操作已完成，把旧资源清除，从而出现野指针，后果不堪设想。<br>在新版本的资源的发布之后，在旧资源回收之前的时期被称之为“宽限期”（Grace Period）。宽限期的结束依赖 Reader 对旧资源的读临界区释放，每当一个 Reader 读操作完成，就表示进入“静默状态”（Quiescent State）。通过以上 rcu_read_lock() 和 rcu_read_unlock() 的实现可知，这里没有明显的表示“静默状态”。但是可以使用“当前线程被调度”作为一个明显的信号来表示，事情是否简单了起来？<br>另外，对于那些执行用户进程的 CPU 和处于 IDLE 状态的 CPU ，它们很明显没有进入 RCU 的读临界区，所以应当把它们默认标记为静默状态。<br>通过以上讲述得知，RCU 是非常注重时间的，在资源回收上，仅关注运行<strong>时</strong>的执行流，而 CPU 是执行执行流的对象，所以用 Pre-CPU 变量和位图（一个 CPU 对应一个 Bit ）来隐式表示即时执行流的“静默状态”，这是经典 RCU 的主要实现。所以，当所有的 CPU 都进入“静默状态”后，说明已经没有任何 Reader 对该旧资源访问，表示宽限期已经结束，可以清除并释放该资源。</p>
+<blockquote>
+<p>这里产生一个疑问，上述的理论是围绕着整个系统仅有一个 RCU 的资源回收来简述，如果有多个资源需要回收呢？一个 CPU 有多个不同的资源需要回收呢？多个 CPU 各自有一个资源需要回收呢？</p>
+</blockquote>
+<p>我们先基于以上理论来思考 RCU 的实现，假设一个系统有 4 个 CPU ，现在的 RCU 实现要求很简单：每次仅有一个旧资源回收，且回收完成前不会再接收旧资源回收请求。则仅有一个 CPU 在进行更新和旧资源回收操作，当当前宽限期结束后，才能有下一个旧资源回收请求。<br>先思考一下，需要一个全局变量 GP 来记录当前系统是否存在宽限期，这里简单一点，数据类型为 Bool 即可，为 True 时，表示存在宽限期。那么当一个 CPU 发出宽限期后（GP&#x3D;True），其它 CPU 是如何知道宽限期已经出现？<br>目前的做法是用“主动轮询”机制。使用调度定时器（假设触发频率为：100Hz），让每个 CPU 在它的中断上下文期间，主动查询全局变量 GP 是否有宽限期了。另外还需要一个全局的位图，名为 qs_cpu_bitmap ，用于记录各个 CPU 的静默状态。生成新的宽限期时，该位图的 Bit 都被置位；当位图的 Bit 都被清除时，就表示所有 CPU 都进入静默状态，当前系统的宽限期已结束，可以回收资源。<br>那么 CPU 又是该如何上报它当前已经是静默状态？经过以上讲述得知，可以把“当前线程被调度”信号作为一个数据类型为 Bool 的 Pre-CPU 变量，名为 passed_quiesc 。当信号触发后，该变量为 True ，当出现新宽限期时，在此之前该变量必须被设为 False 。当处于调度定时器的中断上下文的 CPU 发现它自己的 passed_quiesc 为 True 后，即可把位图 qs_cpu_bitmap 对应的 Bit 清除即可。<br>我们代入流程图来解析以上说明。</p>
+<blockquote>
+<p>以下流程图和代码均以熟悉原理为主，与 Linux 的实现有出入。</p>
+</blockquote>
+<h3 id="简单的实现：整个系统仅有一个CPU处理一个回收请求"><a href="#简单的实现：整个系统仅有一个CPU处理一个回收请求" class="headerlink" title="简单的实现：整个系统仅有一个CPU处理一个回收请求"></a>简单的实现：整个系统仅有一个CPU处理一个回收请求</h3><p>这里我为了构图方便，把“回收旧资源”操作设为异步操作，把该操作作为一个回调函数 <code>-&gt;rec_cb()</code> ，放在中断上下文执行，这样发起该操作的线程就不会被睡眠阻塞。<br>根据以上说明，声明以下结构体：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rcu_ctrlblk</span> &#123;</span></span><br><span class="line">	<span class="type">bool</span>		gp;</span><br><span class="line">	<span class="type">cpumask_t</span>	qs_cpu_bitmap;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* protect @qs_cpu_bitmap and @gp */</span></span><br><span class="line">	<span class="type">spinlock_t</span>	lock;</span><br><span class="line"></span><br><span class="line">	<span class="type">void</span>		(*rec_cb)(<span class="type">void</span> *);</span><br><span class="line">	<span class="type">void</span>		*data;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rcu_data</span> &#123;</span></span><br><span class="line">	<span class="type">bool</span>		passed_quiesc;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>其中 <code>struct rcu_ctrlblk</code> 是覆盖整个系统的 RCU 描述符，<code>struct rcu_data</code> 则是 Pre-CPU 描述符。<br>以下是它们的定义：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rcu_ctrlblk</span> <span class="title">rcu_ctrlblk</span> =</span> &#123;</span><br><span class="line">	.gp = <span class="literal">false</span>,</span><br><span class="line">	.qs_cpu_bitmap = CPU_MASK_NONE,</span><br><span class="line">	.lock = __SPIN_LOCK_UNLOCKED(&amp;rcu_ctrlblk.lock),</span><br><span class="line">	.rec_cb = <span class="literal">NULL</span>,</span><br><span class="line">	.data = <span class="literal">NULL</span>,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">DEFINE_PER_CPU(<span class="keyword">struct</span> rcu_data, rcu_data) = &#123; <span class="number">0L</span> &#125;;</span><br></pre></td></tr></table></figure>
+
+<p>以下第一张图是系统仅允许有一个旧资源回收的场景示例。半透明的黄色区域也属于宽限期，但属于 prepare 阶段，这个由实际实现而异。在此阶段一直到下次调度定时器中断触发时，把变量 GP 设为 True ，把 qs_cpu_bitmap 的所有 Bit 置位，把各 CPU 的  passed_quiesc 设为 False 。其中绿色字体 “sched” 表示对应的 CPU 进入静默状态，即对应的 passed_quiesc 为 True 。</p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-深入分析RCU原理以及应用/RCU0-async.drawio.png"></div>  
+
+<blockquote>
+<p>RCU0-async.drawio.png</p>
+</blockquote>
+<p>根据以上流程图，写出 call_rcu 的代码实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">call_rcu</span><span class="params">(<span class="type">void</span> (*rec_cb)(<span class="type">void</span>), <span class="type">void</span> *data)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> cpu;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> flags;</span><br><span class="line"></span><br><span class="line">	spin_lock_irqsave(&amp;rcu_ctrlblk.lock, flags);</span><br><span class="line">	<span class="keyword">if</span> (READ_ONCE(rcu_ctrlblk.gp)) &#123;</span><br><span class="line">		spin_unlock_irqrestore(&amp;rcu_ctrlblk.lock, flags);</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	rcu_ctrlblk.rec_cb = rec_cb;</span><br><span class="line">	rcu_ctrlblk.data = data;</span><br><span class="line"></span><br><span class="line">	rcu_ctrlblk.gp = <span class="literal">true</span>;</span><br><span class="line">	cpus_andnot(rcu_ctrlblk.qs_cpu_bitmap, cpu_online_map, nohz_cpu_mask);</span><br><span class="line">	spin_unlock(&amp;rcu_ctrlblk.lock);</span><br><span class="line"></span><br><span class="line">	for_each_online_cpu(cpu) &#123;</span><br><span class="line">		<span class="comment">/* 对在 rcu_process_callbacks() 的 rdp-&gt;passed_quiesc 操作保序 */</span></span><br><span class="line">		smp_mb();	</span><br><span class="line">		WRITE_ONCE(&amp;rcu_data[cpu].passed_quiesc, <span class="literal">false</span>);</span><br><span class="line">	&#125;</span><br><span class="line">	local_irq_restore(flags);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在调度期间，需要执行以下函数，发出“当前线程被调度”信号：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span> <span class="title function_">rcu_qsctr_inc</span><span class="params">(<span class="type">int</span> cpu)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_data</span> *<span class="title">rdp</span> =</span> &amp;per_cpu(rcu_data, cpu);</span><br><span class="line">	rdp-&gt;passed_quiesc = <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在各 CPU 的调度定时器的中断处理程序中，需要额外调用以下函数：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">rcu_process_callbacks</span><span class="params">(<span class="type">int</span> cpu, <span class="type">int</span> user)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_data</span> *<span class="title">rdp</span>;</span></span><br><span class="line">	<span class="type">bool</span> is_cpus_empty;</span><br><span class="line"></span><br><span class="line">	spin_lock(&amp;rcu_ctrlblk.lock);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 宽限期不存在则退出 */</span></span><br><span class="line">	<span class="keyword">if</span> (!READ_ONCE(rcu_ctrlblk.gp)) </span><br><span class="line">		<span class="keyword">goto</span> quit;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 如果是从用户层进入中断，或 CPU 在 IDLE 期间进入中断，则进入静默状态 */</span></span><br><span class="line">	<span class="keyword">if</span> (user || idle_cpu(cpu))</span><br><span class="line">		rcu_qsctr_inc(cpu);</span><br><span class="line"></span><br><span class="line">	rdp = &amp;__get_cpu_var(rcu_data);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 当前 CPU 已进入静默状态，且已登记，则退出 */</span></span><br><span class="line">	<span class="keyword">if</span> (!cpu_isset(cpu, rcu_ctrlblk.qs_cpu_bitmap))</span><br><span class="line">		<span class="keyword">goto</span> quit;</span><br><span class="line">	</span><br><span class="line">	<span class="comment">/* 当前 CPU 未进入静默状态，则退出 */</span></span><br><span class="line">	<span class="keyword">if</span> (!rdp-&gt;passed_quiesc)</span><br><span class="line">		<span class="keyword">goto</span> quit;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 当前 CPU 已进入静默状态，则登记 */</span></span><br><span class="line">	cpu_clear(cpu, rcu_ctrlblk.qs_cpu_bitmap);</span><br><span class="line">	is_cpus_empty = cpus_empty(rcu_ctrlblk.qs_cpu_bitmap);</span><br><span class="line">	spin_unlock(&amp;rcu_ctrlblk.lock);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 所有 CPU 进入静默状态，则宽限期结束，回收旧资源 */</span></span><br><span class="line">	<span class="keyword">if</span> (is_cpus_empty) &#123;</span><br><span class="line">		smp_mb();</span><br><span class="line">		rcu_ctrlblk.gp = <span class="literal">false</span>;</span><br><span class="line">		rcu_ctrlblk.rec_cb(rcu_ctrlblk.data);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">quit:</span><br><span class="line">	spin_unlock(&amp;rcu_ctrlblk.lock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="需求升级：同一CPU支持处理多个回收请求"><a href="#需求升级：同一CPU支持处理多个回收请求" class="headerlink" title="需求升级：同一CPU支持处理多个回收请求"></a>需求升级：同一CPU支持处理多个回收请求</h3><p>接下来进行进一步的升级，假设当前调度定时器中断结束，一直到下一次中断发出期间，同一个 CPU 出现了两次及以上的旧资源回收请求，需要怎么做？<br>可以使用一个全局链表 rcu_list ，把这些旧资源回收请求集中起来，等宽限期结束后再统一处理。<br>根据此新增结构体：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span> &#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span> *<span class="title">next</span>;</span></span><br><span class="line">	<span class="type">void</span> (*func)(<span class="keyword">struct</span> rcu_head *head);</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>一个 <code>struct rcu_head</code> 代表一个旧资源回收的请求。<br>对 <code>struct rcu_ctrlblk</code> 的修改如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rcu_ctrlblk</span> &#123;</span></span><br><span class="line">	<span class="type">bool</span>		gp;</span><br><span class="line">	<span class="type">cpumask_t</span>	qs_cpu_bitmap;</span><br><span class="line">	<span class="type">spinlock_t</span>	lock;	<span class="comment">/* protect @qs_cpu_bitmap */</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span>	*<span class="title">rcu_head</span>;</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>查看以下例图：</p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-深入分析RCU原理以及应用/RCU1-async.drawio.png"></div>  
+
+<blockquote>
+<p>RCU1-async.drawio.png</p>
+</blockquote>
+<p>其实该例图和上一个类似，但不同的是两个旧资源回收请求共用同一个宽限期。</p>
+<blockquote>
+<p>问题 1 ，在具体实现中，宽限期是在调用 call_rcu() 后开始？还是在调用 call_rcu() 后的执行第一个调度定时器的中断处理程序开始？<br>问题 2 ，因为回调函数 <code>-&gt;rec_cb()</code> 在中断上下文处理，不管是硬中断还是软中断，如果旧资源回收请求越来越多，从而直接导致中断上下文过长，线程得不到执行权，这时该怎么办？</p>
+</blockquote>
+<p>带着以上问题，再进行一次需求升级，要求在同一个 CPU ，可随时发出旧资源回收的请求，如果系统已经存在宽限期，也能正常发送该请求，这又该如何实现？<br>从理论上讲，每一个旧资源回收请求都它自己的一个宽限期。但根据以上讲解可知，这是实现是很复杂的。我们应先遵循“先能用再到好用”原则，从简设计，把多个宽限期合并为一个时间跨度较大的宽限期。因为这里有一个不可避免的情况，CPU 正在执行的线程，它可以不仅作为共享资源 A 的读者，它也可以作为共享资源 B&#x2F;C&#x2F;D 等等的读者。<br>所以目前简单的做法是当已存在一个宽限期时，又来了一到多个旧资源回收请求，则把 qs_cpu_bitmap 的 Bit 重新置位，重新开始。见以下流程图：</p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-深入分析RCU原理以及应用/RCU2-async.drawio.png"></div>  
+
+<blockquote>
+<p>RCU2-async.drawio.png</p>
+</blockquote>
+<blockquote>
+<p>问题 3 ，如果宽限期已存在的情况下，总是有源源不断的旧资源回收请求，导致 qs_cpu_bitmap 频繁被重新置位，导致宽限期迟迟无法结束，再导致先前的旧资源迟迟得不到回收，出现 OOM ，该怎么办？</p>
+</blockquote>
+<p>在这里有必要回答问题 1 ，其实两种都可以，在这任意两种中选一个去实现宽限期的起始阶段。它们的实现方法是一致的（又或者说这样区分是没有必要的）：</p>
+<ol>
+<li>把变量 gp 的数据类型从 bool 改为 int ，记录是哪个 CPU 发出的。还需要数据类型为 int 的变量 done ，也是记录 CPU ，来记录宽限期的完成。</li>
+<li>把链表 rcu_head 分为三部分：next_list、cur_list 和 done_list 。它们的作用分别是：<ul>
+<li>next_list：记录准备开始宽限期的旧资源回收请求</li>
+<li>cur_list：记录正在进行宽限期的旧资源回收请求</li>
+<li>done_list：记录宽限期已完成的旧资源回收请求</li>
+<li>结合流程：当调用 call_rcu() 时，把请求放到链表 next_list ；在执行调度定时器的中断处理程序时，发现链表 next_list 不为空，则把它的成员移动到 cur_list ，进行新的宽限期；当所有 CPU 都进入静默状态，表示宽限期结束，则把所有链表 cur_list 的成员移动到 done_list 。</li>
+</ul>
+</li>
+<li>强制要求哪个 CPU 发出的请求，哪个 CPU 来处理（包括回收链表的管理）。假设 CPU0 发送请求，如果 CPU1 是最后一个进入静默状态，且由它执行相关回调操作，而 CPU0 在进入调度定时器中断前发送一个新的请求，则 CPU1 极大概率会提前执行 CPU0 刚刚发出的请求所对应的回调函数。</li>
+</ol>
+<p>选择在调用 call_rcu() 后的执行第一个调度定时器的中断处理程序，来表示宽限期的真正开始，结合以上理论修改代码，因为这样能更直观地观察到 RCU 的改动。我们先修改相关结构体：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rcu_ctrlblk</span> &#123;</span></span><br><span class="line">	<span class="type">int</span>		rcu_pending;</span><br><span class="line">	<span class="type">int</span>		rcu_done;</span><br><span class="line">	<span class="type">cpumask_t</span>	qs_cpu_bitmap;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* protect @qs_cpu_bitmap, @rcu_pending */</span></span><br><span class="line">	<span class="type">spinlock_t</span>	lock;</span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span>	*<span class="title">next_list</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span>	**<span class="title">next_tail</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span>	*<span class="title">cur_list</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span>	**<span class="title">cur_tail</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span>	*<span class="title">done_list</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span>	**<span class="title">done_tail</span>;</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>其中把 gp 替换为 rcu_pending ，它代表是哪个 CPU 发出的旧资源回收请求。新增成员变量 rcu_done ，记录 CPU ，来记录宽限期的完成。<br>则 <code>struct rcu_ctrlblk</code> 的初始化如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rcu_ctrlblk</span> <span class="title">rcu_ctrlblk</span> =</span> &#123;</span><br><span class="line">	.rcu_pending = <span class="number">-1</span>,</span><br><span class="line">	.rcu_done = <span class="number">-1</span>,</span><br><span class="line">	.qs_cpu_bitmap = CPU_MASK_NONE,</span><br><span class="line">	.lock = __SPIN_LOCK_UNLOCKED(&amp;rcu_ctrlblk.lock),</span><br><span class="line">	.next_list = <span class="literal">NULL</span>,</span><br><span class="line">	.next_tail = &amp;rcu_ctrlblk.next_list,</span><br><span class="line">	.cur_list = <span class="literal">NULL</span>,</span><br><span class="line">	.cur_tail = &amp;rcu_ctrlblk.cur_list,</span><br><span class="line">	.done_list = <span class="literal">NULL</span>,</span><br><span class="line">	.done_tail = &amp;rcu_ctrlblk.done_list,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>根据该结构体的改动，对 call_rcu() 的改动如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">call_rcu</span><span class="params">(<span class="keyword">struct</span> rcu_head *head,</span></span><br><span class="line"><span class="params">	     <span class="type">void</span> (*func)(<span class="keyword">struct</span> rcu_head *rcu))</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> precpu, cpu = smp_processor_id();</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> flags;</span><br><span class="line"></span><br><span class="line">	spin_lock_irqsave(&amp;rcu_ctrlblk.lock, flags);</span><br><span class="line">	<span class="comment">/* 目前仅支持同一个 CPU 发送 RCU 请求 */</span></span><br><span class="line">	<span class="keyword">if</span> (rcu_ctrlblk.rcu_pending != <span class="number">-1</span> &amp;&amp; rcu_ctrlblk.rcu_pending != cpu) &#123;</span><br><span class="line">		spin_unlock_irqrestore(&amp;rcu_ctrlblk.lock, flags);</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	for_each_online_cpu(precpu) &#123;</span><br><span class="line">		<span class="comment">/* 对在 rcu_quiescent_state() 的 rdp-&gt;passed_quiesc 操作，</span></span><br><span class="line"><span class="comment">		   以及 rcu_qsctr_inc()保序 */</span></span><br><span class="line">		smp_mb();</span><br><span class="line">		WRITE_ONCE(&amp;rcu_data[precpu].passed_quiesc, <span class="literal">false</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	rcu_ctrlblk.rcu_pending = smp_processor_id();</span><br><span class="line">	spin_unlock_irqrestore(&amp;rcu_ctrlblk.lock, flags);</span><br><span class="line"></span><br><span class="line">	head-&gt;func = func;</span><br><span class="line">	head-&gt;next = <span class="literal">NULL</span>;</span><br><span class="line">	*rcu_ctrlblk.next_tail = head;</span><br><span class="line">	rcu_ctrlblk.next_tail = &amp;head-&gt;next;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>另外，额外增加一个全局变量 blimit ，限制处理回调函数的数量，避免 CPU 长期处于中断上下文，以此缓解问题 2 。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> blimit = <span class="number">32</span>;	<span class="comment">/* 只是例子，具体数量视情况而定 */</span></span><br></pre></td></tr></table></figure>
+
+<p>把 rcu_process_callbacks() 拆为上下两部分，缓解问题 2 ：</p>
+<ul>
+<li>第一部分为硬中断上下文，检测是否新建或存在宽限期，代码实现在 rcu_check_callbacks() ；</li>
+<li>第二部分为软中断上下文，执行静默状态和执行回收旧资源操作，代码实现在 rcu_process_callbacks() ，且每个 CPU 都有它们自己的软中断。</li>
+</ul>
+<p>为了实现这个功能，需要在内核初始化期间执行函数 rcu_init() ，以下是它的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="title function_">DEFINE_PER_CPU</span><span class="params">(<span class="keyword">struct</span> tasklet_struct, rcu_tasklet)</span> = &#123;<span class="literal">NULL</span>&#125;;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> __init <span class="title function_">rcu_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	for_each_online_cpu(cpu)</span><br><span class="line">		tasklet_init(&amp;per_cpu(rcu_tasklet, cpu), rcu_process_callbacks, <span class="number">0UL</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以下是 rcu_check_callbacks() 的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">bool</span> <span class="title function_">rcu_pending</span><span class="params">(<span class="type">void</span>)</span>;</span><br><span class="line"><span class="type">void</span> <span class="title function_">rcu_check_callbacks</span><span class="params">(<span class="type">int</span> cpu, <span class="type">int</span> user)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">if</span> (!rcu_pending(cpu))</span><br><span class="line">		<span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 如果是从用户层进入中断，或 CPU 在 IDLE 期间进入中断，则进入静默状态 */</span></span><br><span class="line">	<span class="keyword">if</span> (user || idle_cpu(cpu)) </span><br><span class="line">		rcu_qsctr_inc(cpu);</span><br><span class="line"></span><br><span class="line">	tasklet_schedule(&amp;per_cpu(rcu_tasklet, cpu));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">bool</span> <span class="title function_">rcu_pending</span><span class="params">(<span class="type">int</span> cpu)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">if</span> (rcu_ctrlblk.cur_list)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (rcu_ctrlblk.next_list &amp;&amp; rcu_ctrlblk.rcu_pending == cpu)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">	</span><br><span class="line">	<span class="keyword">if</span> (rcu_ctrlblk.done_list &amp;&amp; rcu_ctrlblk.rcu_pending == cpu)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以下是 rcu_process_callbacks() 的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">rcu_process_callbacks</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> unused)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> cpu = smp_processor_id();</span><br><span class="line"></span><br><span class="line">	rcu_start_batch(cpu);</span><br><span class="line"></span><br><span class="line">	rcu_quiescent_state(cpu);</span><br><span class="line"></span><br><span class="line">	rcu_do_batch();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>对于发送请求的 CPU ，则是需要调用 rcu_start_batch() ，表示宽限期真正开始。对于其它 CPU ，则仅调用 rcu_quiescent_state() ，关注它们自己是否进入了静默状态。而 rcu_do_batch() ，则表示旧资源回收的执行。</p>
+<p>以下是 rcu_start_batch() 的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">bool</span> <span class="title function_">rcu_start_batch</span><span class="params">(<span class="type">int</span> cpu)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> flags;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * 把之前的 cur_list 表项移动到 done_list ，才能把 next_list </span></span><br><span class="line"><span class="comment">	 * 新表项移动到 cur_list </span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (cpu == rcu_ctrlblk.rcu_done) &#123;</span><br><span class="line">		rcu_ctrlblk.rcu_done = <span class="number">-1</span>;</span><br><span class="line">	</span><br><span class="line">		*rcu_ctrlblk.done_tail = rcu_ctrlblk.cur_list;</span><br><span class="line">		rcu_ctrlblk.done_tail = rcu_ctrlblk.cur_tail;</span><br><span class="line">		rcu_ctrlblk.cur_list = <span class="literal">NULL</span>;</span><br><span class="line">		rcu_ctrlblk.cur_tail = &amp;rcu_ctrlblk.cur_list;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!rcu_ctrlblk.next_list)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">	local_irq_save(flags);</span><br><span class="line">	*rcu_ctrlblk.cur_tail = rcu_ctrlblk.next_list;</span><br><span class="line">	rcu_ctrlblk.cur_tail = rcu_ctrlblk.next_tail;</span><br><span class="line">	rcu_ctrlblk.next_list = <span class="literal">NULL</span>;</span><br><span class="line">	rcu_ctrlblk.next_tail = &amp;rcu_ctrlblk.next_list;</span><br><span class="line">	local_irq_restore(flags);</span><br><span class="line"></span><br><span class="line">	spin_lock(&amp;rcu_ctrlblk.lock);</span><br><span class="line">	cpus_andnot(rcu_ctrlblk.qs_cpu_bitmap, cpu_online_map, nohz_cpu_mask);</span><br><span class="line">	spin_unlock(&amp;rcu_ctrlblk.lock);</span><br><span class="line"></span><br><span class="line">	rcu_ctrlblk.rcu_done = <span class="number">-1</span>;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以下是 rcu_quiescent_state() 的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">rcu_quiescent_state</span><span class="params">(<span class="type">int</span> cpu)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_data</span> *<span class="title">rdp</span>;</span></span><br><span class="line"></span><br><span class="line">	rdp = &amp;__get_cpu_var(rcu_data);</span><br><span class="line"></span><br><span class="line">	spin_lock(&amp;rcu_ctrlblk.lock);</span><br><span class="line">	<span class="comment">/* 当前 CPU 已进入静默状态，且已登记，则退出 */</span></span><br><span class="line">	<span class="keyword">if</span> (!cpu_isset(cpu, rcu_ctrlblk.qs_cpu_bitmap))</span><br><span class="line">		<span class="keyword">goto</span> quit;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 当前 CPU 未进入静默状态，则退出 */</span></span><br><span class="line">	<span class="keyword">if</span> (!rdp-&gt;passed_quiesc)</span><br><span class="line">		<span class="keyword">goto</span> quit;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 当前 CPU 已进入静默状态，则登记 */</span></span><br><span class="line">	cpu_clear(cpu, rcu_ctrlblk.qs_cpu_bitmap);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 所有 CPU 已进入静默状态，宽限期结束 */</span></span><br><span class="line">	<span class="keyword">if</span> (cpus_empty(rcu_ctrlblk.qs_cpu_bitmap)) &#123;</span><br><span class="line">		rcu_ctrlblk.rcu_done = rcu_ctrlblk.rcu_pending;</span><br><span class="line">		rcu_ctrlblk.rcu_pending = <span class="number">-1</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">quit:</span><br><span class="line">	spin_unlock(&amp;rcu_ctrlblk.lock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以下是 rcu_do_batch() 的实现，满足第三个实现要求：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">rcu_do_batch</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span> *<span class="title">next</span>, *<span class="title">list</span>;</span></span><br><span class="line">	<span class="type">int</span> done = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!rcu_ctrlblk.done_list)</span><br><span class="line">		<span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">	<span class="built_in">list</span> = rcu_ctrlblk.done_list;</span><br><span class="line">	<span class="keyword">while</span> (<span class="built_in">list</span>) &#123;</span><br><span class="line">		next = <span class="built_in">list</span>-&gt;next;</span><br><span class="line">		prefetch(next);</span><br><span class="line">		<span class="built_in">list</span>-&gt;func(<span class="built_in">list</span>);</span><br><span class="line">		<span class="built_in">list</span> = next;</span><br><span class="line">		<span class="keyword">if</span> (++done &gt;= blimit)</span><br><span class="line">			<span class="keyword">break</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	rcu_ctrlblk.done_list = <span class="built_in">list</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!rcu_ctrlblk.done_list)</span><br><span class="line">		rcu_ctrlblk.done_tail = &amp;rcu_ctrlblk.done_list;</span><br><span class="line">	<span class="keyword">else</span>	<span class="comment">/* 主动申请再次处理 */</span></span><br><span class="line">		tasklet_schedule(&amp;per_cpu(rcu_tasklet, cpu));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>另外，为了缓解问题 2 ，限制了每次进入中断上下文执行的回收数量，剩余的则继续保留在链表 done_list ，遵循 FIFO 方式回收。</p>
+<p>以上的代码实现无法解决问题 3 ，现在换个思路：如果宽限期已经存在，在同一 CPU 出现新的回收请求也不处理，让它继续暂存在 next_list 。当宽限期结束后，再处理这些在 next_list 的请求。见以下流程图，基于上述流程图修改：</p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-深入分析RCU原理以及应用/RCU2-async-altered.drawio.png"></div>  
+
+<blockquote>
+<p>RCU2-async-altered.drawio.png</p>
+</blockquote>
+<p>根据此流程图可知，当一个宽限期完成后，如果还有请求未处理，就必须把各 rcu_data 的 passed_quiesc 清除，“马不停蹄”地再进行一次宽限期，而这个清除操作只能在中断上下文期间执行。<br>接下来把 passed_quiesc 的操作完全解耦，各 CPU 仅“管好”它自己的 passed_quiesc 即可。在 <code>struct rcu_data</code> 新增一个类型为 Bool 的字段 qs_pending ，为 True 表示仍有宽限期需要进入静默状态：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rcu_data</span> &#123;</span></span><br><span class="line">	<span class="type">bool</span>		passed_quiesc;</span><br><span class="line">	<span class="type">bool</span>		qs_pending;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>根据此思路，修改 call_rcu() 的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> <span class="title function_">call_rcu</span><span class="params">(<span class="keyword">struct</span> rcu_head *head,</span></span><br><span class="line"><span class="params">	     <span class="type">void</span> (*func)(<span class="keyword">struct</span> rcu_head *rcu))</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> precpu, cpu = smp_processor_id();</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> flags;</span><br><span class="line"></span><br><span class="line">	spin_lock_irqsave(&amp;rcu_ctrlblk.lock, flags);</span><br><span class="line">	<span class="comment">/* 目前仅支持同一个 CPU 发送 RCU 请求 */</span></span><br><span class="line">	<span class="keyword">if</span> (rcu_ctrlblk.rcu_pending != <span class="number">-1</span> &amp;&amp; rcu_ctrlblk.rcu_pending != cpu) &#123;</span><br><span class="line">		spin_unlock_irqrestore(&amp;rcu_ctrlblk.lock, flags);</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	rcu_ctrlblk.rcu_pending = cpu;</span><br><span class="line">	spin_unlock(&amp;rcu_ctrlblk.lock);</span><br><span class="line"></span><br><span class="line">	head-&gt;func = func;</span><br><span class="line">	head-&gt;next = <span class="literal">NULL</span>;</span><br><span class="line">	*rcu_ctrlblk.next_tail = head;</span><br><span class="line">	rcu_ctrlblk.next_tail = &amp;head-&gt;next;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * 如果 cur_list 不为空，则表示宽限期进行中，当当前宽限期结束后会检测</span></span><br><span class="line"><span class="comment">	 * next_tail 是否为空，不是则会进行下一个宽限期，此前会把 qs_pending </span></span><br><span class="line"><span class="comment">	 * 设为 True</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (rcu_ctrlblk.cur_list) &#123;</span><br><span class="line">		local_irq_restore(flags);</span><br><span class="line">		<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	for_each_online_cpu(precpu) &#123;</span><br><span class="line">		smp_mb();</span><br><span class="line">		WRITE_ONCE(&amp;rcu_data[precpu].qs_pending, <span class="literal">true</span>);</span><br><span class="line">	&#125;</span><br><span class="line">	local_irq_restore(flags);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在 rcu_pending() 新增一段对 qs_pending 的判断，以此确定是否需要检查静默状态：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">bool</span> <span class="title function_">rcu_pending</span><span class="params">(<span class="type">int</span> cpu)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">if</span> (rcu_ctrlblk.cur_list || __get_cpu_var(rcu_data).qs_pending)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (rcu_ctrlblk.next_list &amp;&amp; rcu_ctrlblk.rcu_pending == cpu)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">	</span><br><span class="line">	<span class="keyword">if</span> (rcu_ctrlblk.done_list &amp;&amp; rcu_ctrlblk.rcu_pending == cpu)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当一个宽限期结束后，即它的所有 CPU 静默状态已到达，后续就应该无缝衔接，把静默状态再次清除，不应该等到下一次调度定时器中断再执行此操作。所以说，接下来要把 rcu_process_callbacks() 大变样。此时最先需要改造的是<br> rcu_start_batch() ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">bool</span> <span class="title function_">rcu_start_batch</span><span class="params">(<span class="type">int</span> cpu)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> flags;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * 把之前的 cur_list 表项移动到 done_list ，才能把 next_list </span></span><br><span class="line"><span class="comment">	 * 新表项移动到 cur_list </span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (cpu == rcu_ctrlblk.rcu_done) &#123;</span><br><span class="line">		rcu_ctrlblk.rcu_done = <span class="number">-1</span>;</span><br><span class="line">	</span><br><span class="line">		*rcu_ctrlblk.done_tail = rcu_ctrlblk.cur_list;</span><br><span class="line">		rcu_ctrlblk.done_tail = rcu_ctrlblk.cur_tail;</span><br><span class="line">		rcu_ctrlblk.cur_list = <span class="literal">NULL</span>;</span><br><span class="line">		rcu_ctrlblk.cur_tail = &amp;rcu_ctrlblk.cur_list;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * 如果 cur_list 不为空，则表示存在宽限期，则退出；</span></span><br><span class="line"><span class="comment">	 * 如果 cur_list 为空，且 next_list 不为空，则需要一个新宽限期</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (rcu_ctrlblk.cur_list || !rcu_ctrlblk.next_list)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">	local_irq_save(flags);</span><br><span class="line">	*rcu_ctrlblk.cur_tail = rcu_ctrlblk.next_list;</span><br><span class="line">	rcu_ctrlblk.cur_tail = rcu_ctrlblk.next_tail;</span><br><span class="line">	rcu_ctrlblk.next_list = <span class="literal">NULL</span>;</span><br><span class="line">	rcu_ctrlblk.next_tail = &amp;rcu_ctrlblk.next_list;</span><br><span class="line">	local_irq_restore(flags);</span><br><span class="line"></span><br><span class="line">	spin_lock(&amp;rcu_ctrlblk.lock);</span><br><span class="line">	cpus_andnot(rcu_ctrlblk.qs_cpu_bitmap, cpu_online_map, nohz_cpu_mask);</span><br><span class="line">	spin_unlock(&amp;rcu_ctrlblk.lock);</span><br><span class="line"></span><br><span class="line">	rcu_ctrlblk.rcu_done = <span class="number">-1</span>;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>接下来是 rcu_quiescent_state() ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">rcu_quiescent_state</span><span class="params">(<span class="type">int</span> cpu)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_data</span> *<span class="title">rdp</span>;</span></span><br><span class="line"></span><br><span class="line">	rdp = &amp;__get_cpu_var(rcu_data);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 如果 qs_pending 为 True ，则表示需要新的宽限期 */</span></span><br><span class="line">	<span class="keyword">if</span> (rdp-&gt;qs_pending) &#123;</span><br><span class="line">		rdp-&gt;passed_quiesc = <span class="literal">false</span>;</span><br><span class="line">		rdp-&gt;qs_pending = <span class="literal">false</span>;</span><br><span class="line">		<span class="keyword">return</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	spin_lock(&amp;rcu_ctrlblk.lock);</span><br><span class="line">	<span class="comment">/* 当前 CPU 已进入静默状态，且已登记，则退出 */</span></span><br><span class="line">	<span class="keyword">if</span> (!cpu_isset(cpu, rcu_ctrlblk.qs_cpu_bitmap))</span><br><span class="line">		<span class="keyword">goto</span> quit;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 当前 CPU 未进入静默状态，则退出 */</span></span><br><span class="line">	<span class="keyword">if</span> (!rdp-&gt;passed_quiesc)</span><br><span class="line">		<span class="keyword">goto</span> quit;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 当前 CPU 已进入静默状态，则登记 */</span></span><br><span class="line">	cpu_clear(cpu, rcu_ctrlblk.qs_cpu_bitmap);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 所有 CPU 已进入静默状态，宽限期结束 */</span></span><br><span class="line">	<span class="keyword">if</span> (cpus_empty(rcu_ctrlblk.qs_cpu_bitmap)) &#123;</span><br><span class="line">		rcu_ctrlblk.rcu_done = rcu_ctrlblk.rcu_pending;</span><br><span class="line">		<span class="keyword">if</span> (rcu_ctrlblk.next_list)</span><br><span class="line">			WRITE_ONCE(&amp;rcu_data[precpu].qs_pending, <span class="literal">true</span>);</span><br><span class="line">		<span class="keyword">else</span></span><br><span class="line">			rcu_ctrlblk.rcu_pending = <span class="number">-1</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">quit:</span><br><span class="line">	spin_unlock(&amp;rcu_ctrlblk.lock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="需求升级：多个CPU发送并处理多个回收请求"><a href="#需求升级：多个CPU发送并处理多个回收请求" class="headerlink" title="需求升级：多个CPU发送并处理多个回收请求"></a>需求升级：多个CPU发送并处理多个回收请求</h3><p>接下来继续升级需求，支持两个及以上的 CPU 发送旧资源回收请求。<br>以下流程图是两个 CPU 在下一次定时器中断发送前，发出旧资源回收请求：</p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-深入分析RCU原理以及应用/RCU3-async.drawio.png"></div>  
+
+<blockquote>
+<p>RCU3-async.drawio.png</p>
+</blockquote>
+<p>以下流程图是两个 CPU 分别在不同的时间，即多个调度定时器中断发送之间的间隙，发出旧资源回收请求：</p>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-深入分析RCU原理以及应用/RCU4-async-new.drawio.png"></div>  
+
+<blockquote>
+<p>RCU4-async-new.drawio.png</p>
+</blockquote>
+<p>接下来要对 <code>struct rcu_ctrlblk</code> 和 <code>struct rcu_data</code> 进行大改造。从需求上解耦，允许多个 CPU 发送请求，则把请求链表拆分为每个 CPU 独有的链表，让各个 CPU 在自己的调度定时器中断的上下文执行自己的请求。<br>以下是 <code>struct rcu_ctrlblk</code> 的改动：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rcu_ctrlblk</span> &#123;</span></span><br><span class="line">	<span class="type">int</span>		rcu_pending;</span><br><span class="line">	<span class="type">int</span>		rcu_done;</span><br><span class="line">	<span class="type">cpumask_t</span>	qs_cpu_bitmap;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* protect @qs_cpu_bitmap */</span></span><br><span class="line">	<span class="type">spinlock_t</span>	lock;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>字段 <code>rcu_pending</code> 不再是记录是哪个 CPU 发出的请求，改为目前已发送请求的数量；字段 <code>rcu_done</code> 不再是记录是哪个 CPU 处理请求，改为目前请求已处理完成的数量。自旋锁 <code>lock</code> 仅保护字段 <code>qs_cpu_bitmap</code> 。</p>
+<p>以下是 <code>struct rcu_data</code> 的改动：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rcu_data</span> &#123;</span></span><br><span class="line">	<span class="type">int</span>		pending;</span><br><span class="line">	<span class="type">int</span>		done;</span><br><span class="line">	<span class="type">bool</span>		passed_quiesc;</span><br><span class="line">	<span class="type">bool</span>		qs_pending;</span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span>	*<span class="title">next_list</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span>	**<span class="title">next_tail</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span>	*<span class="title">cur_list</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span>	**<span class="title">cur_tail</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span>	*<span class="title">done_list</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span>	**<span class="title">done_tail</span>;</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>字段 <code>pending</code> 和 <code>done</code> 分别和 <code>struct rcu_ctrlblk</code> 的 <code>rcu_pending</code> 和 <code>rcu_done</code> 的作用一致。各个 CPU 需要在调度定时器器中断上下文期间，主动轮询 RCU 的状态，来更新这两个字段，并处理相关的回收请求。</p>
+<p>以下是 <code>struct rcu_ctrlblk</code> 的定义和初始化：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rcu_ctrlblk</span> <span class="title">rcu_ctrlblk</span> =</span> &#123;</span><br><span class="line">	.rcu_pending = <span class="number">0</span>,</span><br><span class="line">	.rcu_done = <span class="number">0</span>,</span><br><span class="line">	.qs_cpu_bitmap = CPU_MASK_NONE,</span><br><span class="line">	.lock = __SPIN_LOCK_UNLOCKED(&amp;rcu_ctrlblk.lock),</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>以下是 <code>struct rcu_data</code> 的定义和初始化：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">DEFINE_PER_CPU(<span class="keyword">struct</span> rcu_data, rcu_data) = &#123; <span class="number">0L</span> &#125;;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> __init <span class="title function_">rcu_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_data</span> *<span class="title">rdp</span>;</span></span><br><span class="line"></span><br><span class="line">	for_each_online_cpu(cpu) &#123;</span><br><span class="line">		rdp = &amp;per_cpu(rcu_data, cpu);</span><br><span class="line"></span><br><span class="line">		rdp-&gt;next_tail = &amp;rdp-&gt;next_list,</span><br><span class="line">		rdp-&gt;cur_tail = &amp;rdp-&gt;cur_list,</span><br><span class="line">		rdp-&gt;done_tail = &amp;rdp-&gt;done_list,</span><br><span class="line">		</span><br><span class="line">		rdp-&gt;pending = <span class="number">0</span>;</span><br><span class="line">		rdp-&gt;done = <span class="number">0</span>;</span><br><span class="line">		rdp-&gt;passed_quiesc = <span class="literal">false</span>;</span><br><span class="line">		rdp-&gt;qs_pending = <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">		tasklet_init(&amp;per_cpu(rcu_tasklet, cpu), rcu_process_callbacks, <span class="number">0UL</span>);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>基于以上结构，这里得出以下流程：</p>
+<ol>
+<li>开始阶段<ol>
+<li>当某个 CPU 发出回收请求时：</li>
+</ol>
+</li>
+</ol>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-深入分析RCU原理以及应用/RCU-flow-request_start.drawio.png"></div>  
+
+<ol>
+<li>当其它 CPU 主动查询存在一个新的宽限期时：</li>
+</ol>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-深入分析RCU原理以及应用/RCU-flow-start.drawio.png"></div>  
+
+<ol>
+<li>宽限期进行中，等待所有 CPU 的静默状态：</li>
+</ol>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-深入分析RCU原理以及应用/RCU-flow-coming.drawio.png"></div>  
+
+<ol>
+<li>当所有 CPU 的静默状态已到达，宽限期结束，处理回收请求：</li>
+</ol>
+<div align=center><img src="/images/原理及实现/Kernel/Linux-深入分析RCU原理以及应用/RCU-flow-rec.drawio.png"></div>  
+
+<p>另外，以下的代码实现是允许某一个 CPU 发起一个新宽限期后，如果其它 CPU 也有新的回收请求，则共用同一个宽限期，而且会重置宽限期的所有 CPU 的静默状态（类似于图 RCU2-async.drawio.png ）。</p>
+<p>根据该结构体的改动，对 call_rcu() 的改动如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">call_rcu</span><span class="params">(<span class="keyword">struct</span> rcu_head *head,</span></span><br><span class="line"><span class="params">	      <span class="type">void</span> (*func)(<span class="keyword">struct</span> rcu_head *rcu))</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> flags;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_data</span> *<span class="title">rdp</span> =</span> &amp;__get_cpu_var(rcu_data);</span><br><span class="line"></span><br><span class="line">	head-&gt;func = func;</span><br><span class="line">	head-&gt;next = <span class="literal">NULL</span>;</span><br><span class="line"></span><br><span class="line">	local_irq_save(flags);</span><br><span class="line">	*rdp-&gt;next_tail = head;</span><br><span class="line">	rdp-&gt;next_tail = &amp;head-&gt;next;</span><br><span class="line">	local_irq_restore(flags);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以下是 rcu_check_callbacks() 的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">bool</span> <span class="title function_">rcu_pending</span><span class="params">(<span class="type">void</span>)</span>;</span><br><span class="line"><span class="type">void</span> <span class="title function_">rcu_check_callbacks</span><span class="params">(<span class="type">int</span> cpu, <span class="type">int</span> user)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">if</span> (!rcu_pending(cpu))</span><br><span class="line">		<span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 如果是从用户层进入中断，或 CPU 在 IDLE 期间进入中断，则进入静默状态 */</span></span><br><span class="line">	<span class="keyword">if</span> (user || idle_cpu(cpu)) </span><br><span class="line">		rcu_qsctr_inc(cpu);</span><br><span class="line"></span><br><span class="line">	tasklet_schedule(&amp;per_cpu(rcu_tasklet, cpu));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">bool</span> <span class="title function_">rcu_pending</span><span class="params">(<span class="type">int</span> cpu)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_data</span> *<span class="title">rdp</span> =</span> per_cpu(rcu_data, cpu);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 当对当前 CPU 没有宽限期，但有回收请求时，则为它新建一个新宽限期 */</span></span><br><span class="line">	<span class="keyword">if</span> (!rdp-&gt;cur_list &amp;&amp; rdp-&gt;next_list)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 当宽限期完成，但最后一个静默状态不是当前 CPU 达到，则再进入一次，处理回收请求 */</span></span><br><span class="line">	<span class="keyword">if</span> (rdp-&gt;cur_list &amp;&amp; rdp-&gt;pending &lt;= rcu_ctrlblk.rcu_done)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 如果仍有宽限期已完成的回收请求，则继续处理 */</span></span><br><span class="line">	<span class="keyword">if</span> (rdp-&gt;done_list)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 当某个 CPU 新建一个新宽限期时，其它 CPU 主动查询此状态以此确认是否存在宽限期 */</span></span><br><span class="line">	<span class="keyword">if</span> (rdp-&gt;pending != rcu_ctrlblk.rcu_pending)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">	<span class="comment">/* 宽限期正在进行中，各 CPU 主动检查自己的静默状态 */</span></span><br><span class="line">	<span class="keyword">if</span> (rdp-&gt;qs_pending)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以下是根据结构体的改造，对 rcu_process_callbacks() 的实现：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">rcu_process_callbacks</span><span class="params">(<span class="type">unsigned</span> <span class="type">long</span> unused)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_data</span> *<span class="title">rdp</span> =</span> &amp;__get_cpu_var(rcu_data);</span><br><span class="line"></span><br><span class="line">	rcu_start_batch(rdp);</span><br><span class="line"></span><br><span class="line">	rcu_quiescent_state(rdp);</span><br><span class="line"></span><br><span class="line">	rcu_do_batch(rdp);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> __rcu_start_batch(<span class="type">void</span>)</span><br><span class="line">&#123;</span><br><span class="line">	smp_wmb();</span><br><span class="line">	rcu_ctrlblk.rcu_pending++;</span><br><span class="line">	cpus_andnot(rcu_ctrlblk.qs_cpu_bitmap, cpu_online_map, nohz_cpu_mask);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">rcu_start_batch</span><span class="params">(<span class="keyword">struct</span> rcu_data *rdp)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> flags;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * 把之前的 cur_list 表项移动到 done_list ，才能把 next_list </span></span><br><span class="line"><span class="comment">	 * 新表项移动到 cur_list </span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (rdp-&gt;done == rcu_ctrlblk.rcu_done &amp;&amp; rdp-&gt;cur_list) &#123;</span><br><span class="line">		*rdp-&gt;done_tail = rdp-&gt;cur_list;</span><br><span class="line">		rdp-&gt;done_tail = rdp-&gt;cur_tail;</span><br><span class="line">		rdp-&gt;cur_list = <span class="literal">NULL</span>;</span><br><span class="line">		rdp-&gt;cur_tail = &amp;rdp-&gt;cur_list;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * 如果 cur_list 不为空，则表示存在宽限期，则退出；</span></span><br><span class="line"><span class="comment">	 * 如果 cur_list 为空，且 next_list 不为空，则需要一个新宽限期</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">if</span> (rdp-&gt;cur_list || !rdp-&gt;next_list)</span><br><span class="line">		<span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">	local_irq_save(flags);</span><br><span class="line">	*rdp-&gt;cur_tail = rdp-&gt;next_list;</span><br><span class="line">	rdp-&gt;cur_tail = rdp-&gt;next_tail;</span><br><span class="line">	rdp-&gt;next_list = <span class="literal">NULL</span>;</span><br><span class="line">	rdp-&gt;next_tail = &amp;rdp-&gt;next_list;</span><br><span class="line">	local_irq_restore(flags);</span><br><span class="line"></span><br><span class="line">	spin_lock(&amp;rcu_ctrlblk.lock);</span><br><span class="line">	<span class="keyword">if</span> (rcu_ctrlblk.rcu_done == rcu_ctrlblk.rcu_pending)</span><br><span class="line">		__rcu_start_batch();</span><br><span class="line">	spin_unlock(&amp;rcu_ctrlblk.lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">rcu_quiescent_state</span><span class="params">(<span class="keyword">struct</span> rcu_data *rdp)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">if</span> (rdp-&gt;pending != rcu_ctrlblk.rcu_pending) &#123;</span><br><span class="line">		rdp-&gt;passed_quiesc = <span class="literal">false</span>;</span><br><span class="line">		rdp-&gt;qs_pending = <span class="literal">true</span>;</span><br><span class="line">		rdp-&gt;pending = rcu_ctrlblk.rcu_pending;</span><br><span class="line">		<span class="keyword">return</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!rdp-&gt;qs_pending)</span><br><span class="line">		<span class="keyword">goto</span> quit;</span><br><span class="line"></span><br><span class="line">	spin_lock(&amp;rcu_ctrlblk.lock);</span><br><span class="line">	<span class="comment">/* 当前 CPU 已进入静默状态，且已登记，则退出 */</span></span><br><span class="line">	<span class="keyword">if</span> (!cpu_isset(cpu, rcu_ctrlblk.qs_cpu_bitmap))</span><br><span class="line">		<span class="keyword">goto</span> quit;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 当前 CPU 未进入静默状态，则退出 */</span></span><br><span class="line">	<span class="keyword">if</span> (!rdp-&gt;passed_quiesc)</span><br><span class="line">		<span class="keyword">goto</span> quit;</span><br><span class="line"></span><br><span class="line">	rdp-&gt;qs_pending = <span class="literal">false</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 当前 CPU 已进入静默状态，则登记 */</span></span><br><span class="line">	cpu_clear(cpu, rcu_ctrlblk.qs_cpu_bitmap);</span><br><span class="line">	rdp-&gt;done = rdp-&gt;pending;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 所有 CPU 已进入静默状态，宽限期结束 */</span></span><br><span class="line">	<span class="keyword">if</span> (cpus_empty(rcu_ctrlblk.qs_cpu_bitmap)) &#123;</span><br><span class="line">		rcu_ctrlblk.rcu_done = rcu_ctrlblk.rcu_pending;</span><br><span class="line">		<span class="keyword">if</span> (rdp-&gt;next_list)</span><br><span class="line">			__rcu_start_batch();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">quit:</span><br><span class="line">	spin_unlock(&amp;rcu_ctrlblk.lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">rcu_do_batch</span><span class="params">(<span class="keyword">struct</span> rcu_data *rdp)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">rcu_head</span> *<span class="title">next</span>, *<span class="title">list</span>;</span></span><br><span class="line">	<span class="type">int</span> done = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!rdp-&gt;done_list)</span><br><span class="line">		<span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">	<span class="built_in">list</span> = rdp-&gt;done_list;</span><br><span class="line">	<span class="keyword">while</span> (<span class="built_in">list</span>) &#123;</span><br><span class="line">		next = <span class="built_in">list</span>-&gt;next;</span><br><span class="line">		prefetch(next);</span><br><span class="line">		<span class="built_in">list</span>-&gt;func(<span class="built_in">list</span>);</span><br><span class="line">		<span class="built_in">list</span> = next;</span><br><span class="line">		<span class="keyword">if</span> (++done &gt;= blimit)</span><br><span class="line">			<span class="keyword">break</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	rdp-&gt;done_list = <span class="built_in">list</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!rdp-&gt;done_list)</span><br><span class="line">		rdp-&gt;done_tail = &amp;rdp-&gt;done_list;</span><br><span class="line">	<span class="keyword">else</span>	<span class="comment">/* 主动申请再次处理 */</span></span><br><span class="line">		tasklet_schedule(&amp;per_cpu(rcu_tasklet, cpu));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="RCU的基本用法"><a href="#RCU的基本用法" class="headerlink" title="RCU的基本用法"></a>RCU的基本用法</h2><h3 id="“发布-订阅”机制"><a href="#“发布-订阅”机制" class="headerlink" title="“发布-订阅”机制"></a>“发布-订阅”机制</h3><h2 id="分层RCU的基本原理"><a href="#分层RCU的基本原理" class="headerlink" title="分层RCU的基本原理"></a>分层RCU的基本原理</h2><h2 id="扩展：可抢占RCU的基本原理和实现"><a href="#扩展：可抢占RCU的基本原理和实现" class="headerlink" title="扩展：可抢占RCU的基本原理和实现"></a>扩展：可抢占RCU的基本原理和实现</h2><h2 id="扩展：SRCU的基本原理和实现"><a href="#扩展：SRCU的基本原理和实现" class="headerlink" title="扩展：SRCU的基本原理和实现"></a>扩展：SRCU的基本原理和实现</h2><h2 id="扩展：为什么把rcu-ctrlblk和rcu-ctrlblk-bh合并"><a href="#扩展：为什么把rcu-ctrlblk和rcu-ctrlblk-bh合并" class="headerlink" title="扩展：为什么把rcu_ctrlblk和rcu_ctrlblk_bh合并"></a>扩展：为什么把rcu_ctrlblk和rcu_ctrlblk_bh合并</h2>
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/RCU/" rel="tag"># RCU</a>
+              <a href="/tags/Kernel/" rel="tag"># Kernel</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/02/26/BUG/RCU_PREEMPT%E9%A5%A5%E9%A5%BF%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5/" rel="prev" title="RCU_PREEMPT 饥饿问题排查">
+                  <i class="fa fa-angle-left"></i> RCU_PREEMPT 饥饿问题排查
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/03/16/Skill/debug/Linux%E5%86%85%E6%A0%B8lockdep/" rel="next" title="Linux - Lockdep调试">
+                  Linux - Lockdep调试 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">339k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">20:32</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

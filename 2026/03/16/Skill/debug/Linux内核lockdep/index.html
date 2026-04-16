@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言死锁检测 Lockdep 是 Linux 的 DEBUG 功能之一。死锁一般分为 ABBA 死锁和递归死锁。 开启死锁检测后，当出现或疑似出现死锁时，会发出对应的 DEBUG 信息，开发者可以以此信息分析并找到造成死锁的代码。 内核配置内核需要开启以下配置： 123CONFIG_PROVE_LOCKING&#x3D;yCONFIG_DEBUG_LOCKDEP&#x3D;yCONFIG_LOCK_STAT&#x3D;y">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - Lockdep调试">
+<meta property="og:url" content="http://example.com/2026/03/16/Skill/debug/Linux%E5%86%85%E6%A0%B8lockdep/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="前言死锁检测 Lockdep 是 Linux 的 DEBUG 功能之一。死锁一般分为 ABBA 死锁和递归死锁。 开启死锁检测后，当出现或疑似出现死锁时，会发出对应的 DEBUG 信息，开发者可以以此信息分析并找到造成死锁的代码。 内核配置内核需要开启以下配置： 123CONFIG_PROVE_LOCKING&#x3D;yCONFIG_DEBUG_LOCKDEP&#x3D;yCONFIG_LOCK_STAT&#x3D;y">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2026-03-15T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-03-16T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="Lockdep">
+<meta property="article:tag" content="debug">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2026/03/16/Skill/debug/Linux%E5%86%85%E6%A0%B8lockdep/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2026/03/16/Skill/debug/Linux%E5%86%85%E6%A0%B8lockdep/","path":"2026/03/16/Skill/debug/Linux内核lockdep/","title":"Linux - Lockdep调试"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - Lockdep调试 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%86%85%E6%A0%B8%E9%85%8D%E7%BD%AE"><span class="nav-number">2.</span> <span class="nav-text">内核配置</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%A7%A3%E6%9E%90%E6%AD%BB%E9%94%81%E6%8A%A5%E5%91%8A"><span class="nav-number">3.</span> <span class="nav-text">解析死锁报告</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B1%BB%E9%80%92%E5%BD%92%E6%AD%BB%E9%94%81%E6%A1%88%E4%BE%8B"><span class="nav-number">3.1.</span> <span class="nav-text">类递归死锁案例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%A7%A3%E6%9E%90%E6%8A%A5%E5%91%8A"><span class="nav-number">3.2.</span> <span class="nav-text">解析报告</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B4%E4%BD%93%E4%BF%A1%E6%81%AF%E5%92%8C%E9%94%81%E7%8A%B6%E6%80%81"><span class="nav-number">3.2.1.</span> <span class="nav-text">整体信息和锁状态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8A%A5%E5%91%8A%E6%AD%BB%E9%94%81%E6%83%85%E6%99%AF"><span class="nav-number">3.2.2.</span> <span class="nav-text">报告死锁情景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8A%A5%E5%91%8A%E6%AD%BB%E9%94%81%E6%89%80%E5%9C%A8%E7%9A%84%E8%B0%83%E7%94%A8%E6%A0%88"><span class="nav-number">3.2.3.</span> <span class="nav-text">报告死锁所在的调用栈</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8E%A5%E8%BF%91%E5%AE%9E%E9%99%85%E9%A1%B9%E7%9B%AE%E7%9A%84%E6%A1%88%E4%BE%8B"><span class="nav-number">3.3.</span> <span class="nav-text">接近实际项目的案例</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%94%81%E7%9A%84%E7%8A%B6%E6%80%81%E6%B1%87%E6%80%BB"><span class="nav-number">4.</span> <span class="nav-text">锁的状态汇总</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%94%81%E7%9A%84%E4%BD%BF%E7%94%A8%E7%8A%B6%E6%80%81%E6%9F%A5%E8%AF%A2"><span class="nav-number">5.</span> <span class="nav-text">锁的使用状态查询</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%94%81%E7%9A%84%E4%BE%9D%E8%B5%96%E5%85%B3%E7%B3%BB%E9%93%BE"><span class="nav-number">6.</span> <span class="nav-text">锁的依赖关系链</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%94%81%E7%9A%84%E7%BB%9F%E8%AE%A1%E4%BF%A1%E6%81%AF"><span class="nav-number">7.</span> <span class="nav-text">锁的统计信息</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%BF%BD%E8%B8%AA%E9%94%81%E7%9A%84%E7%8A%B6%E6%80%81"><span class="nav-number">8.</span> <span class="nav-text">追踪锁的状态</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">67</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">70</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2026/03/16/Skill/debug/Linux%E5%86%85%E6%A0%B8lockdep/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - Lockdep调试 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - Lockdep调试
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2026-03-16 00:00:00" itemprop="dateCreated datePublished" datetime="2026-03-16T00:00:00+08:00">2026-03-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2026-03-17 00:00:00" itemprop="dateModified" datetime="2026-03-17T00:00:00+08:00">2026-03-17</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Skill/" itemprop="url" rel="index"><span itemprop="name">Skill</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>4.1k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>15 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>死锁检测 Lockdep 是 Linux 的 DEBUG 功能之一。死锁一般分为 ABBA 死锁和递归死锁。</p>
+<p>开启死锁检测后，当出现或疑似出现死锁时，会发出对应的 DEBUG 信息，开发者可以以此信息分析并找到造成死锁的代码。</p>
+<h1 id="内核配置"><a href="#内核配置" class="headerlink" title="内核配置"></a>内核配置</h1><p>内核需要开启以下配置：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">CONFIG_PROVE_LOCKING=y</span><br><span class="line">CONFIG_DEBUG_LOCKDEP=y</span><br><span class="line">CONFIG_LOCK_STAT=y</span><br></pre></td></tr></table></figure>
+<span id="more"></span>
+<ul>
+<li><code>CONFIG_PROVE_LOCKING</code>：运行时进行锁验证，检查锁的正确使用情况，以防止潜在的死锁和竞争条件。</li>
+<li><code>CONFIG_DEBUG_LOCKDEP</code>：运行时进行锁验证，且具备更细致的自检机制。</li>
+<li><code>CONFIG_LOCK_STAT</code>：收集有关锁的统计信息，包括锁的使用次数、等待次数等。这些统计信息对于锁的性能分析非常有用。</li>
+</ul>
+<p>配置完成后需要重新编译内核，而且内核镜像会增加几 MB ，需要额外注意存储镜像的分区是否足够容纳，以及内核在内存分布（是否会影响预留内存等）。而且内核的执行效率也会有影响，不太适合在生产阶段使用。</p>
+<h1 id="解析死锁报告"><a href="#解析死锁报告" class="headerlink" title="解析死锁报告"></a>解析死锁报告</h1><h2 id="类递归死锁案例"><a href="#类递归死锁案例" class="headerlink" title="类递归死锁案例"></a>类递归死锁案例</h2><p>以下是一个内核模块，模拟递归死锁：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/module.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/init.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/kernel.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="title function_">DEFINE_SPINLOCK</span><span class="params">(hack_spinlock)</span>;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">hack_spin</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    pr_info(<span class="string">&quot;hack_lockdep\n&quot;</span>);</span><br><span class="line">    spin_lock(&amp;hack_spinlock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">hack_spin_again</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    pr_info(<span class="string">&quot;hack_lockdep again\n&quot;</span>);</span><br><span class="line">    spin_lock(&amp;hack_spinlock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> __init <span class="title function_">lockdep_test_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    pr_info(<span class="string">&quot;lockdep module init\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">    hack_spin();</span><br><span class="line">    hack_spin_again();	<span class="comment">/* 死锁 */</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> __exit <span class="title function_">lockdep_test_exit</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    pr_info(<span class="string">&quot;lockdep module exit\n&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">module_init(lockdep_test_init);</span><br><span class="line">module_exit(lockdep_test_exit);</span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL&quot;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>把以上代码编译为内核模块并运行，以下是运行结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line">[   68.848271] lockdep_simple: loading out-of-tree module taints kernel.</span><br><span class="line">[   68.856601] lockdep module init</span><br><span class="line">[   68.860787] hack_lockdep</span><br><span class="line">[   68.863976] hack_lockdep again</span><br><span class="line">[   68.867809]</span><br><span class="line">[   68.869474] ============================================</span><br><span class="line">[   68.875418] WARNING: possible recursive locking detected</span><br><span class="line">[   68.881363] 5.10.198 #17 Tainted: G           O</span><br><span class="line">[   68.886917] --------------------------------------------</span><br><span class="line">[   68.892859] insmod/418 is trying to acquire lock:</span><br><span class="line">[   68.898121] ffffffc008fd2030 (hack_spinlock)&#123;+.+.&#125;-&#123;3:3&#125;, at: hack_spin_again+0x2c/0x38 [lockdep_simple]</span><br><span class="line">[   68.908759]</span><br><span class="line">[   68.908759] but task is already holding lock:</span><br><span class="line">[   68.915286] ffffffc008fd2030 (hack_spinlock)&#123;+.+.&#125;-&#123;3:3&#125;, at: hack_spin+0x2c/0x38 [lockdep_simple]</span><br><span class="line">[   68.925333]</span><br><span class="line">[   68.925333] other info that might help us debug this:</span><br><span class="line">[   68.932635]  Possible unsafe locking scenario:</span><br><span class="line">[   68.932635]</span><br><span class="line">[   68.939258]        CPU0</span><br><span class="line">[   68.941991]        ----</span><br><span class="line">[   68.944724]   lock(hack_spinlock);</span><br><span class="line">[   68.948534]   lock(hack_spinlock);</span><br><span class="line">[   68.952344]</span><br><span class="line">[   68.952344]  *** DEADLOCK ***</span><br><span class="line">[   68.952344]</span><br><span class="line">[   68.958965]  May be due to missing lock nesting notation</span><br><span class="line">[   68.958965]</span><br><span class="line">[   68.966562] 1 lock held by insmod/418:</span><br><span class="line">[   68.970752]  #0: ffffffc008fd2030 (hack_spinlock)&#123;+.+.&#125;-&#123;3:3&#125;, at: hack_spin+0x2c/0x38 [lockdep_simple]</span><br><span class="line">[   68.981287]</span><br><span class="line">[   68.981287] stack backtrace:</span><br><span class="line">[   68.986161] CPU: 1 PID: 418 Comm: insmod Tainted: G           O      5.10.198 #17</span><br><span class="line">[   68.994535] Hardware name: sun55iw6 (DT)</span><br><span class="line">[   68.998921] Call trace:</span><br><span class="line">[   69.001661]  dump_backtrace+0x0/0x200</span><br><span class="line">[   69.005757]  show_stack+0x20/0x30</span><br><span class="line">[   69.009467]  dump_stack+0x104/0x14c</span><br><span class="line">[   69.013372]  __lock_acquire+0x1140/0x1a8c</span><br><span class="line">[   69.017858]  lock_acquire+0x230/0x370</span><br><span class="line">[   69.021955]  _raw_spin_lock+0x6c/0x120</span><br><span class="line">[   69.026148]  hack_spin_again+0x2c/0x38 [lockdep_simple]</span><br><span class="line">[   69.031997]  lockdep_test_init+0x28/0x1000 [lockdep_simple]</span><br><span class="line">[   69.038234]  do_one_initcall+0x8c/0x380</span><br><span class="line">[   69.042528]  do_init_module+0x58/0x270</span><br><span class="line">[   69.046723]  load_module+0x2494/0x2ae0</span><br><span class="line">[   69.050917]  __do_sys_finit_module+0xbc/0x130</span><br><span class="line">[   69.055792]  __arm64_sys_finit_module+0x28/0x34</span><br><span class="line">[   69.060862]  el0_svc_common.constprop.0+0x84/0x200</span><br><span class="line">[   69.066225]  do_el0_svc+0x2c/0xa4</span><br><span class="line">[   69.069934]  el0_svc+0x20/0x30</span><br><span class="line">[   69.073349]  el0_sync_handler+0xb0/0xb4</span><br><span class="line">[   69.077639]  el0_sync+0x180/0x1c0</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h2 id="解析报告"><a href="#解析报告" class="headerlink" title="解析报告"></a>解析报告</h2><h3 id="整体信息和锁状态"><a href="#整体信息和锁状态" class="headerlink" title="整体信息和锁状态"></a>整体信息和锁状态</h3><p>这个输出信息可以分为三个部分，以下是第一部分：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">[   68.869474] ============================================</span><br><span class="line">[   68.875418] WARNING: possible recursive locking detected</span><br><span class="line">[   68.881363] 5.10.198 #17 Tainted: G           O</span><br><span class="line">[   68.886917] --------------------------------------------</span><br><span class="line">[   68.892859] insmod/418 is trying to acquire lock:</span><br><span class="line">[   68.898121] ffffffc008fd2030 (hack_spinlock)&#123;+.+.&#125;-&#123;3:3&#125;, at: hack_spin_again+0x2c/0x38 [lockdep_simple]</span><br><span class="line">[   68.908759]</span><br><span class="line">[   68.908759] but task is already holding lock:</span><br><span class="line">[   68.915286] ffffffc008fd2030 (hack_spinlock)&#123;+.+.&#125;-&#123;3:3&#125;, at: hack_spin+0x2c/0x38 [lockdep_simple]</span><br></pre></td></tr></table></figure>
+
+<p>这段信息报告：在函数 hack_spin_again() 在获取锁 <code>hack_spinlock</code> 时疑似出现递归死锁，还指明了该锁已在函数 hack_spin() 获取。但这段信息并没有说明是在同一个 CPU 出现的，需要看下一段信息才能知晓。</p>
+<p>信息“{+.+.}”代表了锁<code>hack_spinlock</code>经历过的，或正在经历的状态。先看状态的类型：</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>描述</th>
+<th>安全性</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>‘.’</td>
+<td>在中断关闭，在非中断上下文获取锁</td>
+<td>安全性最高，没有中断打扰</td>
+</tr>
+<tr>
+<td>‘-‘</td>
+<td>在中断关闭，在中断上下文获取锁</td>
+<td>安全性欠佳，要确认非中断上下文获取锁前是否已关闭中断</td>
+</tr>
+<tr>
+<td>‘+’</td>
+<td>在中断开启，在非中断上下文获取锁</td>
+<td>安全性欠佳，要确认中断上下文是否需要获取该锁</td>
+</tr>
+<tr>
+<td>‘?’</td>
+<td>在中断开启，在中断上下文获取锁</td>
+<td>安全性最差，当出现中断嵌套时出现死锁的概率最大</td>
+</tr>
+</tbody></table>
+<p>知晓状态类型后，信息“{+.+.}”中有四个状态，这又是怎么回事？以下截自 Documentation&#x2F;locking&#x2F;lockdep-design.rst 的原话：</p>
+<blockquote>
+<p>When locking rules are violated, these usage bits are presented in the locking error messages, inside curlies, with a total of 2 * n STATEs bits.</p>
+</blockquote>
+<p>其中 n 一般为 2 ，即 <code>hardirq</code> 和 <code>softirq</code> 。即信息“{+.+.}”的前 2 个状态是代表 <code>hardirq</code> ，后 2 个状态是代表 <code>softirq</code> 。</p>
+<p>那为什么一个 <code>irq</code> 需要两个状态位？这是因为还考虑到了读写锁，第一个和第三个状态位代表写锁，第二个和第四个状态位代表读锁。而对于自旋锁和互斥锁，则只关心第一个和第三个状态位即可，分别对应 <code>hardirq</code> 和 <code>softirq</code> ：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">(hack_spinlock)&#123;+.+.&#125;-&#123;3:3&#125;, at: hack_spin_again+0x2c/0x38 [lockdep_simple]</span><br><span class="line">                | |</span><br><span class="line">                | |</span><br><span class="line">                | \--&gt; 在 softirq 开启，在非软中断上下文获取锁</span><br><span class="line">                | </span><br><span class="line">                \----&gt; 在 hardirq 开启，在非中断上下文获取锁</span><br></pre></td></tr></table></figure>
+
+<p>如果对于读写锁，以下例子是基于上述的内核模块修改实践得出。</p>
+<p><strong>读写锁实例一：</strong></p>
+<p>先获取读锁，再关闭中断获取写锁：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="title function_">DEFINE_RWLOCK</span><span class="params">(hack_rwlock)</span>;</span><br><span class="line"><span class="type">void</span> <span class="title function_">hack_spin</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    pr_info(<span class="string">&quot;hack_lockdep\n&quot;</span>);</span><br><span class="line">    read_lock(&amp;hack_rwlock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">hack_spin_again</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    pr_info(<span class="string">&quot;hack_lockdep again\n&quot;</span>);</span><br><span class="line">    write_lock_irq(&amp;hack_rwlock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">[   41.270816] insmod/413 is trying to acquire lock:</span><br><span class="line">[   41.276082] ffffffc008fd2030 (hack_rwlock)&#123;.+.+&#125;-&#123;3:3&#125;, at: hack_spin_again+0x2c/0x38 [lockdep_simple]</span><br><span class="line">[   41.286523]</span><br><span class="line">[   41.286523] but task is already holding lock:</span><br><span class="line">[   41.293049] ffffffc008fd2030 (hack_rwlock)&#123;.+.+&#125;-&#123;3:3&#125;, at: hack_spin+0x2c/0x38 [lockdep_simple]</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">(hack_rwlock)&#123;.+.+&#125;-&#123;3:3&#125;, at: hack_spin_again+0x2c/0x38 [lockdep_simple]</span><br><span class="line">              ||||</span><br><span class="line">              ||| \-&gt; 读锁：在 softirq 开启，在非软中断上下文获取锁</span><br><span class="line">              || \--&gt; 写锁：在 softirq 关闭，在非软中断上下文获取锁</span><br><span class="line">              | \---&gt; 读锁：在 hardirq 开启，在非中断上下文获取锁</span><br><span class="line">               \----&gt; 写锁：在 hardirq 关闭，在非中断上下文获取锁</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p><strong>读写锁实例二：</strong></p>
+<p>先获取写锁，再关闭中断获取读锁：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="title function_">DEFINE_RWLOCK</span><span class="params">(hack_rwlock)</span>;</span><br><span class="line"><span class="type">void</span> <span class="title function_">hack_spin</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    pr_info(<span class="string">&quot;hack_lockdep\n&quot;</span>);</span><br><span class="line">    write_lock(&amp;hack_rwlock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">hack_spin_again</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    pr_info(<span class="string">&quot;hack_lockdep again\n&quot;</span>);</span><br><span class="line">    read_lock_irq(&amp;hack_rwlock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[   33.343458] insmod/412 is trying to acquire lock:</span><br><span class="line">[   33.348722] ffffffc008fd2030 (hack_rwlock)&#123;+.+.&#125;-&#123;3:3&#125;, at: hack_spin_again+0x2c/0x38 [lockdep_simple]</span><br><span class="line">[   33.359163]</span><br><span class="line">[   33.359163] but task is already holding lock:</span><br><span class="line">[   33.365689] ffffffc008fd2030 (hack_rwlock)&#123;+.+.&#125;-&#123;3:3&#125;, at: hack_spin+0x2c/0x38 [lockdep_simple]</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">(hack_rwlock)&#123;+.+.&#125;-&#123;3:3&#125;, at: hack_spin_again+0x2c/0x38 [lockdep_simple]</span><br><span class="line">              ||||</span><br><span class="line">              ||| \-&gt; 读锁：在 softirq 关闭，在非软中断上下文获取锁</span><br><span class="line">              || \--&gt; 写锁：在 softirq 开启，在非软中断上下文获取锁</span><br><span class="line">              | \---&gt; 读锁：在 hardirq 关闭，在非中断上下文获取锁</span><br><span class="line">               \----&gt; 写锁：在 hardirq 开启，在非中断上下文获取锁</span><br></pre></td></tr></table></figure>
+
+<p><strong>读写锁实例三：</strong></p>
+<p>先获取写锁，再关闭中断获取读锁：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="title function_">DEFINE_RWLOCK</span><span class="params">(hack_rwlock)</span>;</span><br><span class="line"><span class="type">void</span> <span class="title function_">hack_spin</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    pr_info(<span class="string">&quot;hack_lockdep\n&quot;</span>);</span><br><span class="line">    read_lock(&amp;hack_rwlock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">hack_spin_again</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    pr_info(<span class="string">&quot;hack_lockdep again\n&quot;</span>);</span><br><span class="line">    write_lock_bh(&amp;hack_rwlock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[   38.830942] insmod/413 is trying to acquire lock:</span><br><span class="line">[   38.836206] ffffffc008fd2030 (hack_rwlock)&#123;++.+&#125;-&#123;3:3&#125;, at: hack_spin_again+0x2c/0x38 [lockdep_simple]</span><br><span class="line">[   38.846649]</span><br><span class="line">[   38.846649] but task is already holding lock:</span><br><span class="line">[   38.853175] ffffffc008fd2030 (hack_rwlock)&#123;++.+&#125;-&#123;3:3&#125;, at: hack_spin+0x2c/0x38 [lockdep_simple]</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">(hack_rwlock)&#123;++.+&#125;-&#123;3:3&#125;, at: hack_spin_again+0x2c/0x38 [lockdep_simple]</span><br><span class="line">              ||||</span><br><span class="line">              ||| \-&gt; 读锁：在 softirq 开启，在非软中断上下文获取锁</span><br><span class="line">              || \--&gt; 写锁：在 softirq 关闭，在非软中断上下文获取锁</span><br><span class="line">              | \---&gt; 读锁：在 hardirq 开启，在非中断上下文获取锁</span><br><span class="line">               \----&gt; 写锁：在 hardirq 开启，在非中断上下文获取锁</span><br></pre></td></tr></table></figure>
+
+<p><strong>读写锁实例四：</strong></p>
+<p>先获取写锁，再关闭中断获取读锁：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="title function_">DEFINE_RWLOCK</span><span class="params">(hack_rwlock)</span>;</span><br><span class="line"><span class="type">void</span> <span class="title function_">hack_spin</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    pr_info(<span class="string">&quot;hack_lockdep\n&quot;</span>);</span><br><span class="line">    write_lock(&amp;hack_rwlock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> <span class="title function_">hack_spin_again</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    pr_info(<span class="string">&quot;hack_lockdep again\n&quot;</span>);</span><br><span class="line">    read_lock_bh(&amp;hack_rwlock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[   38.390851] insmod/411 is trying to acquire lock:</span><br><span class="line">[   38.396114] ffffffc008fd2030 (hack_rwlock)&#123;+++.&#125;-&#123;3:3&#125;, at: hack_spin_again+0x2c/0x38 [lockdep_simple]</span><br><span class="line">[   38.406558]</span><br><span class="line">[   38.406558] but task is already holding lock:</span><br><span class="line">[   38.413084] ffffffc008fd2030 (hack_rwlock)&#123;+++.&#125;-&#123;3:3&#125;, at: hack_spin+0x2c/0x38 [lockdep_simple]</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">(hack_rwlock)&#123;+++.&#125;-&#123;3:3&#125;, at: hack_spin_again+0x2c/0x38 [lockdep_simple]</span><br><span class="line">              ||||</span><br><span class="line">              ||| \-&gt; 读锁：在 softirq 关闭，在非软中断上下文获取锁</span><br><span class="line">              || \--&gt; 写锁：在 softirq 开启，在非软中断上下文获取锁</span><br><span class="line">              | \---&gt; 读锁：在 hardirq 开启，在非中断上下文获取锁</span><br><span class="line">               \----&gt; 写锁：在 hardirq 开启，在非中断上下文获取锁</span><br></pre></td></tr></table></figure>
+
+<h3 id="报告死锁情景"><a href="#报告死锁情景" class="headerlink" title="报告死锁情景"></a>报告死锁情景</h3><p>以下输出信息是下一段报告，说明死锁的场景。根据信息可知，是在 CPU0 出现递归死锁，还说明了该锁此前已经在哪里被获取到了：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">[   <span class="number">68.925333</span>] other info that might help us debug this:</span><br><span class="line">[   <span class="number">68.932635</span>]  Possible unsafe locking scenario:</span><br><span class="line">[   <span class="number">68.932635</span>]</span><br><span class="line">[   <span class="number">68.939258</span>]        CPU0</span><br><span class="line">[   <span class="number">68.941991</span>]        ----</span><br><span class="line">[   <span class="number">68.944724</span>]   lock(hack_spinlock);</span><br><span class="line">[   <span class="number">68.948534</span>]   lock(hack_spinlock);</span><br><span class="line">[   <span class="number">68.952344</span>]</span><br><span class="line">[   <span class="number">68.952344</span>]  *** DEADLOCK ***</span><br><span class="line">[   <span class="number">68.952344</span>]</span><br><span class="line">[   <span class="number">68.958965</span>]  May be due to missing lock nesting notation</span><br><span class="line">[   <span class="number">68.958965</span>]</span><br><span class="line">[   <span class="number">68.966562</span>] <span class="number">1</span> lock held by insmod/<span class="number">418</span>:</span><br><span class="line">[   <span class="number">68.970752</span>]  #<span class="number">0</span>: ffffffc008fd2030 (hack_spinlock)&#123;+.+.&#125;-&#123;<span class="number">3</span>:<span class="number">3</span>&#125;, at: hack_spin+<span class="number">0x2c</span>/<span class="number">0x38</span> [lockdep_simple]</span><br></pre></td></tr></table></figure>
+
+<h3 id="报告死锁所在的调用栈"><a href="#报告死锁所在的调用栈" class="headerlink" title="报告死锁所在的调用栈"></a>报告死锁所在的调用栈</h3><p>以下输出信息是最后一段报告，记录了出现死锁的调用栈。很清晰地知道，是在函数 hack_spin_again() 出现的死锁：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">[   <span class="number">68.981287</span>] <span class="built_in">stack</span> backtrace:</span><br><span class="line">[   <span class="number">68.986161</span>] CPU: <span class="number">1</span> PID: <span class="number">418</span> Comm: insmod Tainted: G           O      <span class="number">5.10</span>.<span class="number">198</span> #<span class="number">17</span></span><br><span class="line">[   <span class="number">68.994535</span>] Hardware name: sun55iw6 (DT)</span><br><span class="line">[   <span class="number">68.998921</span>] Call trace:</span><br><span class="line">[   <span class="number">69.001661</span>]  dump_backtrace+<span class="number">0x0</span>/<span class="number">0x200</span></span><br><span class="line">[   <span class="number">69.005757</span>]  show_stack+<span class="number">0x20</span>/<span class="number">0x30</span></span><br><span class="line">[   <span class="number">69.009467</span>]  dump_stack+<span class="number">0x104</span>/<span class="number">0x14c</span></span><br><span class="line">[   <span class="number">69.013372</span>]  __lock_acquire+<span class="number">0x1140</span>/<span class="number">0x1a8c</span></span><br><span class="line">[   <span class="number">69.017858</span>]  lock_acquire+<span class="number">0x230</span>/<span class="number">0x370</span></span><br><span class="line">[   <span class="number">69.021955</span>]  _raw_spin_lock+<span class="number">0x6c</span>/<span class="number">0x120</span></span><br><span class="line">[   <span class="number">69.026148</span>]  hack_spin_again+<span class="number">0x2c</span>/<span class="number">0x38</span> [lockdep_simple]</span><br><span class="line">[   <span class="number">69.031997</span>]  lockdep_test_init+<span class="number">0x28</span>/<span class="number">0x1000</span> [lockdep_simple]</span><br><span class="line">[   <span class="number">69.038234</span>]  do_one_initcall+<span class="number">0x8c</span>/<span class="number">0x380</span></span><br><span class="line">[   <span class="number">69.042528</span>]  do_init_module+<span class="number">0x58</span>/<span class="number">0x270</span></span><br><span class="line">[   <span class="number">69.046723</span>]  load_module+<span class="number">0x2494</span>/<span class="number">0x2ae0</span></span><br><span class="line">[   <span class="number">69.050917</span>]  __do_sys_finit_module+<span class="number">0xbc</span>/<span class="number">0x130</span></span><br><span class="line">[   <span class="number">69.055792</span>]  __arm64_sys_finit_module+<span class="number">0x28</span>/<span class="number">0x34</span></span><br><span class="line">[   <span class="number">69.060862</span>]  el0_svc_common.constprop.<span class="number">0</span>+<span class="number">0x84</span>/<span class="number">0x200</span></span><br><span class="line">[   <span class="number">69.066225</span>]  do_el0_svc+<span class="number">0x2c</span>/<span class="number">0xa4</span></span><br><span class="line">[   <span class="number">69.069934</span>]  el0_svc+<span class="number">0x20</span>/<span class="number">0x30</span></span><br><span class="line">[   <span class="number">69.073349</span>]  el0_sync_handler+<span class="number">0xb0</span>/<span class="number">0xb4</span></span><br><span class="line">[   <span class="number">69.077639</span>]  el0_sync+<span class="number">0x180</span>/<span class="number">0x1c0</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="接近实际项目的案例"><a href="#接近实际项目的案例" class="headerlink" title="接近实际项目的案例"></a>接近实际项目的案例</h2><p>以下内核模块代码是接近实际项目的场景，不相关的项目代码用 <code>mdelay()</code>代替模拟场景。</p>
+<p>该代码的运行逻辑如下：</p>
+<ul>
+<li>新建了一个线程执行函数 lockdep_thread() ，处理相关逻辑，并把获取锁 <code>mutex_a</code> 把任务 delay_task 取消执行；</li>
+<li>并设置定时器，定时执行函数 lockdep_timefunc() ，该函数把 delay_task 放到工作队列，并延迟 100ms 后执行。</li>
+<li>任务 delay_task 对应的 lockdep_test_work() ，获取锁 <code>mutex_a</code> 并执行相关逻辑。</li>
+</ul>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/init.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/module.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/kernel.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/kthread.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/freezer.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/delay.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/timer.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="title function_">DEFINE_MUTEX</span><span class="params">(mutex_a)</span>;</span><br><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">delayed_work</span> <span class="title">delay_task</span>;</span></span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">lockdep_timefunc</span><span class="params">(<span class="keyword">struct</span> timer_list *)</span>;</span><br><span class="line"><span class="type">static</span> <span class="title function_">DEFINE_TIMER</span><span class="params">(lockdep_timer, lockdep_timefunc)</span>;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">lockdep_timefunc</span><span class="params">(<span class="keyword">struct</span> timer_list *unused)</span></span><br><span class="line">&#123;</span><br><span class="line">    schedule_delayed_work(&amp;delay_task, <span class="number">10</span>);</span><br><span class="line">    mod_timer(&amp;lockdep_timer, jiffies + msecs_to_jiffies(<span class="number">100</span>));</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">lockdep_test_work</span><span class="params">(<span class="keyword">struct</span> work_struct *work)</span></span><br><span class="line">&#123;</span><br><span class="line">    mutex_lock(&amp;mutex_a);</span><br><span class="line">    mdelay(<span class="number">300</span>);<span class="comment">//处理一些事情，这里用mdelay替代</span></span><br><span class="line">    mutex_unlock(&amp;mutex_a);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">lockdep_thread</span><span class="params">(<span class="type">void</span> *nothing)</span></span><br><span class="line">&#123;</span><br><span class="line">    set_freezable();<span class="comment">//清除当前线程标志flags中的PF_NOFREEZE位，表示当前线程能进入挂起或休眠状态。</span></span><br><span class="line">    set_user_nice(current, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span>(!kthread_should_stop())&#123;</span><br><span class="line">        mdelay(<span class="number">500</span>);<span class="comment">//处理一些事情，这里用mdelay替代</span></span><br><span class="line"></span><br><span class="line">        <span class="comment">//遇到某些特殊情况，需要取消delay_task</span></span><br><span class="line">        mutex_lock(&amp;mutex_a);</span><br><span class="line">        cancel_delayed_work_sync(&amp;delay_task);</span><br><span class="line">        mutex_unlock(&amp;mutex_a);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> __init <span class="title function_">lockdep_test_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> *<span class="title">lock_thread</span>;</span></span><br><span class="line"></span><br><span class="line">    pr_info(<span class="string">&quot;lockdep module init\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*创建一个线程来处理某些事情*/</span></span><br><span class="line">    lock_thread = kthread_run(lockdep_thread, <span class="literal">NULL</span>, <span class="string">&quot;lockdep_test&quot;</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*创建一个延迟的工作队列*/</span></span><br><span class="line">    INIT_DELAYED_WORK(&amp;delay_task, lockdep_test_work);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/*创建一个定时器来模拟某些异步事件，如中断等*/</span></span><br><span class="line">    lockdep_timer.expires = jiffies + msecs_to_jiffies(<span class="number">500</span>);</span><br><span class="line">    add_timer(&amp;lockdep_timer);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> __exit <span class="title function_">lockdep_test_exit</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">    pr_info(<span class="string">&quot;lockdep module exit\n&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">module_init(lockdep_test_init);</span><br><span class="line">module_exit(lockdep_test_exit);</span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL&quot;</span>);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>以下是对应的报错信息，继续使用分段解析：</p>
+<p>根据以下第一段信息可知，报告疑似出现环形死锁，而且是在中断开启，且非中断上下文获取锁。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">[  136.128939] ======================================================</span><br><span class="line">[  136.135857] WARNING: possible circular locking dependency detected</span><br><span class="line">[  136.142774] 5.10.198 #17 Tainted: G           O</span><br><span class="line">[  136.148331] ------------------------------------------------------</span><br><span class="line">[  136.155245] kworker/2:3/121 is trying to acquire lock:</span><br><span class="line">[  136.160996] ffffffc008fd2090 (mutex_a)&#123;+.+.&#125;-&#123;4:4&#125;, at: lockdep_test_work+0x3c/0x70 [lockdep_simple]</span><br><span class="line">[  136.171243]</span><br><span class="line">[  136.171243] but task is already holding lock:</span><br><span class="line">[  136.177770] ffffffc0137ebda8 ((work_completion)(&amp;(&amp;delay_task)-&gt;work))&#123;+.+.&#125;-&#123;0:0&#125;, at: process_one_work+0x1f4/0x660</span><br><span class="line">[  136.189573]</span><br><span class="line">[  136.189573] which lock already depends on the new lock.</span><br></pre></td></tr></table></figure>
+
+<p>以下是第二段信息，第一个调用栈对应的是持有锁的执行流，另一个调用栈对应的是出现死锁的执行流：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">[  136.198725] the existing dependency chain (in reverse order) is:</span><br><span class="line">[  136.207100]</span><br><span class="line">[  136.207100] -&gt; #1 ((work_completion)(&amp;(&amp;delay_task)-&gt;work))&#123;+.+.&#125;-&#123;0:0&#125;:</span><br><span class="line">[  136.216269]        __flush_work+0x7c/0x524</span><br><span class="line">[  136.220852]        __cancel_work_timer+0x144/0x1b4</span><br><span class="line">[  136.226213]        cancel_delayed_work_sync+0x1c/0x30</span><br><span class="line">[  136.231867]        lockdep_thread+0x7c/0xb0 [lockdep_simple]</span><br><span class="line">[  136.238203]        kthread+0x14c/0x160</span><br><span class="line">[  136.242399]        ret_from_fork+0x10/0x3c</span><br><span class="line">[  136.246979]</span><br><span class="line">[  136.246979] -&gt; #0 (mutex_a)&#123;+.+.&#125;-&#123;4:4&#125;:</span><br><span class="line">[  136.253038]        __lock_acquire+0x125c/0x1a8c</span><br><span class="line">[  136.258106]        lock_acquire+0x230/0x370</span><br><span class="line">[  136.262787]        __mutex_lock+0x88/0x4c4</span><br><span class="line">[  136.267369]        mutex_lock_nested+0x40/0x6c</span><br><span class="line">[  136.272342]        lockdep_test_work+0x3c/0x70 [lockdep_simple]</span><br><span class="line">[  136.278969]        process_one_work+0x29c/0x660</span><br><span class="line">[  136.284038]        worker_thread+0x7c/0x490</span><br><span class="line">[  136.288716]        kthread+0x14c/0x160</span><br><span class="line">[  136.292908]        ret_from_fork+0x10/0x3c</span><br></pre></td></tr></table></figure>
+
+<p>以下是第三段信息，报告了以 CPU 为视角的死锁场景。由此可知这是一个 AB-BA 死锁场景：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">[  136.297487] other info that might help us debug this:</span><br><span class="line">[  136.297487]</span><br><span class="line">[  136.306443]  Possible unsafe locking scenario:</span><br><span class="line">[  136.306443]</span><br><span class="line">[  136.313066]        CPU0                    CPU1</span><br><span class="line">[  136.318133]        ----                    ----</span><br><span class="line">[  136.323199]   lock((work_completion)(&amp;(&amp;delay_task)-&gt;work));</span><br><span class="line">[  136.329541]                                lock(mutex_a);</span><br><span class="line">[  136.335587]                                lock((work_completion)(&amp;(&amp;delay_task)-&gt;work));</span><br><span class="line">[  136.344744]   lock(mutex_a);</span><br><span class="line">[  136.347971]</span><br><span class="line">[  136.354595] 2 locks held by kworker/2:3/121:</span><br><span class="line">[  136.359369]  #0: ffffff8003808748 ((wq_completion)events)&#123;+.+.&#125;-&#123;0:0&#125;, at: process_one_work+0x1f4/0x660</span><br><span class="line">[  136.369904]  #1: ffffffc0137ebda8 ((work_completion)(&amp;(&amp;delay_task)-&gt;work))&#123;+.+.&#125;-&#123;0:0&#125;, at: process_one_work+0x1f4/0x660</span><br></pre></td></tr></table></figure>
+
+<p>以下是最后一段信息，报告了出现死锁的完整调用栈：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">[  136.382189] stack backtrace:</span><br><span class="line">[  136.387063] CPU: 2 PID: 121 Comm: kworker/2:3 Tainted: G           O      5.10.198 #17</span><br><span class="line">[  136.395923] Hardware name: sun55iw6 (DT)</span><br><span class="line">[  136.400315] Workqueue: events lockdep_test_work [lockdep_simple]</span><br><span class="line">[  136.407040] Call trace:</span><br><span class="line">[  136.409775]  dump_backtrace+0x0/0x200</span><br><span class="line">[  136.413872]  show_stack+0x20/0x30</span><br><span class="line">[  136.417582]  dump_stack+0x104/0x14c</span><br><span class="line">[  136.421483]  print_circular_bug+0x1f8/0x200</span><br><span class="line">[  136.426165]  check_noncircular+0x164/0x180</span><br><span class="line">[  136.430750]  __lock_acquire+0x125c/0x1a8c</span><br><span class="line">[  136.435234]  lock_acquire+0x230/0x370</span><br><span class="line">[  136.439329]  __mutex_lock+0x88/0x4c4</span><br><span class="line">[  136.443327]  mutex_lock_nested+0x40/0x6c</span><br><span class="line">[  136.447716]  lockdep_test_work+0x3c/0x70 [lockdep_simple]</span><br><span class="line">[  136.453758]  process_one_work+0x29c/0x660</span><br><span class="line">[  136.458244]  worker_thread+0x7c/0x490</span><br><span class="line">[  136.462340]  kthread+0x14c/0x160</span><br><span class="line">[  136.465950]  ret_from_fork+0x10/0x3c</span><br></pre></td></tr></table></figure>
+
+<h1 id="锁的状态汇总"><a href="#锁的状态汇总" class="headerlink" title="锁的状态汇总"></a>锁的状态汇总</h1><p>相关参考：<a target="_blank" rel="noopener" href="https://docs.kernel.org/locking/lockstat.html">https://docs.kernel.org/locking/lockstat.html</a></p>
+<p>使用以下命令查看：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> /proc/lock_stat</span><br></pre></td></tr></table></figure>
+
+<h1 id="锁的使用状态查询"><a href="#锁的使用状态查询" class="headerlink" title="锁的使用状态查询"></a>锁的使用状态查询</h1><p>使用以下命令查看状态：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> /proc/lockdep</span><br></pre></td></tr></table></figure>
+
+<p>以下是一个输出片段：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">0000000027522a39 OPS:       6 FD:   30 BD:    3 +.+.: devpts_mutex</span><br><span class="line"> -&gt; [00000000d8c3eb23] &amp;xa-&gt;xa_lock#7</span><br><span class="line"> -&gt; [0000000040ba51b9] &amp;dentry-&gt;d_lock</span><br><span class="line"> -&gt; [00000000d7f6c9aa] &amp;sb-&gt;s_type-&gt;i_lock_key#17</span><br><span class="line"> -&gt; [00000000eb0ea3e5] &amp;s-&gt;s_inode_list_lock</span><br><span class="line"> -&gt; [00000000d9711522] &amp;xa-&gt;xa_lock#3</span><br><span class="line"> -&gt; [00000000b741fdec] cdev_lock</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>0000000027522a39</code>：是锁<code>devpts_mutex</code>的唯一标识符。</li>
+<li><code>OPS</code>：表示锁<code>devpts_mutex</code>已被获取的次数</li>
+<li><code>FD</code>：<font style="color:rgb(15, 17, 21);">指</font>的是该锁的<strong>依赖深度（Forward Dependency）</strong>，即在这个锁之后被获取的锁的数量<font style="color:rgb(15, 17, 21);">。</font><code>FD=30</code> 表示在内核运行过程中，曾经有代码路径在持有<code>devpts_mutex</code>后，还额外获取另外30个锁。</li>
+<li><code>BD</code>：指的是该锁的<strong>回溯深度（Backward Dependency）</strong>，即在获取这个锁之前，已经有多少个锁被持有。<code>BD=3</code> 表示在内核运行过程中，曾经有代码路径在持有另外3个锁的情况下，尝试获取 <code>devpts_mutex</code></li>
+</ul>
+<p>箭头 <code>-&gt;</code> 开头的每一行，都代表了内核代码中实际发生过的、且被 lockdep 记录下来的锁获取顺序 。这形成了一个链：当持有 <code>devpts_mutex</code> 时，代码又依次（或在其他代码路径中）获取了下面这些锁。</p>
+<h1 id="锁的依赖关系链"><a href="#锁的依赖关系链" class="headerlink" title="锁的依赖关系链"></a>锁的依赖关系链</h1><p>使用以下命令查看依赖：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat /proc/lockdep_chain</span><br></pre></td></tr></table></figure>
+
+<p>以下是输出片段：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">irq_context: 0</span><br><span class="line">[000000008f1413b3] &amp;dev-&gt;mutex</span><br><span class="line">[00000000462f1d70] component_mutex</span><br><span class="line">[0000000056c9ed07] crtc_ww_class_acquire</span><br><span class="line">[00000000245c5385] crtc_ww_class_mutex</span><br><span class="line">[00000000ba778323] &amp;dev-&gt;vbl_lock</span><br><span class="line">[0000000064e3aa30] &amp;dev-&gt;vblank_time_lock</span><br><span class="line"></span><br><span class="line">irq_context: 0</span><br><span class="line">[000000008f1413b3] &amp;dev-&gt;mutex</span><br><span class="line">[00000000462f1d70] component_mutex</span><br><span class="line">[0000000056c9ed07] crtc_ww_class_acquire</span><br><span class="line">[00000000245c5385] crtc_ww_class_mutex</span><br><span class="line">[00000000ba778323] &amp;dev-&gt;vbl_lock</span><br><span class="line">[0000000064e3aa30] &amp;dev-&gt;vblank_time_lock</span><br><span class="line">[000000008ecdb10f] &amp;(&amp;vblank-&gt;seqlock)-&gt;lock</span><br><span class="line">[0000000019666686] &amp;____s-&gt;seqcount#5</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>irq_context</code>：这是关系链的上下文描述，为 0 表示此锁依赖关系链未在中断上下文中。</li>
+<li><code>[000000008f1413b3]</code>：表示一个锁的唯一标识符符。</li>
+</ul>
+<p>一个依赖关系链需要从下往上看。第一个关系链，从 <code>&amp;dev-&gt;vblank_time_lock</code> 开始看，持有它前需要先获取 <code>&amp;dev-&gt;vbl_lock</code>；持有<code>&amp;dev-&gt;vbl_lock</code>前需要先获取<code>crtc_ww_class_mutex</code>；就这样以此类推，一直到<code>&amp;dev-&gt;mutex</code>。</p>
+<h1 id="锁的统计信息"><a href="#锁的统计信息" class="headerlink" title="锁的统计信息"></a>锁的统计信息</h1><p>使用以下命令查看统计：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat /proc/lockdep_stat</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line">lock-classes:                         1319 [max: 8192]</span><br><span class="line">direct dependencies:                  8114 [max: 32768]</span><br><span class="line">indirect dependencies:               31984</span><br><span class="line">all direct dependencies:            178533</span><br><span class="line">dependency chains:                    9219 [max: 65536]</span><br><span class="line">dependency chain hlocks used:        35652 [max: 327680]</span><br><span class="line">dependency chain hlocks lost:            0</span><br><span class="line">in-hardirq chains:                      97</span><br><span class="line">in-softirq chains:                     240</span><br><span class="line">in-process chains:                    8882</span><br><span class="line">stack-trace entries:                109642 [max: 524288]</span><br><span class="line">number of stack traces:               5050</span><br><span class="line">number of stack hash chains:          4326</span><br><span class="line">combined max dependencies:       209798694</span><br><span class="line">hardirq-safe locks:                     57</span><br><span class="line">hardirq-unsafe locks:                  883</span><br><span class="line">softirq-safe locks:                    112</span><br><span class="line">softirq-unsafe locks:                  804</span><br><span class="line">irq-safe locks:                        136</span><br><span class="line">irq-unsafe locks:                      883</span><br><span class="line">hardirq-read-safe locks:                 3</span><br><span class="line">hardirq-read-unsafe locks:             123</span><br><span class="line">softirq-read-safe locks:                 8</span><br><span class="line">softirq-read-unsafe locks:             118</span><br><span class="line">irq-read-safe locks:                     8</span><br><span class="line">irq-read-unsafe locks:                 123</span><br><span class="line">uncategorized locks:                   240</span><br><span class="line">unused locks:                            1</span><br><span class="line">max locking depth:                      13</span><br><span class="line">max bfs queue depth:                   239</span><br><span class="line">max lock class index:                 1318</span><br><span class="line">chain lookup misses:                  9261</span><br><span class="line">chain lookup hits:               158109647</span><br><span class="line">cyclic checks:                        8521</span><br><span class="line">redundant checks:                        0</span><br><span class="line">redundant links:                         0</span><br><span class="line">find-mask forwards checks:             941</span><br><span class="line">find-mask backwards checks:           1928</span><br><span class="line">hardirq on events:                93153456</span><br><span class="line">hardirq off events:               93153452</span><br><span class="line">redundant hardirq ons:                   0</span><br><span class="line">redundant hardirq offs:            2708033</span><br><span class="line">softirq on events:                12464414</span><br><span class="line">softirq off events:               12464414</span><br><span class="line">redundant softirq ons:                   0</span><br><span class="line">redundant softirq offs:                  0</span><br><span class="line">debug_locks:                             1</span><br><span class="line"></span><br><span class="line">zapped classes:                          0</span><br><span class="line">zapped lock chains:                      0</span><br><span class="line">large chain blocks:                      1</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<h1 id="追踪锁的状态"><a href="#追踪锁的状态" class="headerlink" title="追踪锁的状态"></a>追踪锁的状态</h1><p>需要支持此功能需要开启 FTrace 机制，使用以下命令查看有哪些能被追踪的方向：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="built_in">ls</span> /sys/kernel/debug/tracing/events/lock/</span><br><span class="line"><span class="built_in">enable</span>          filter          lock_acquire    </span><br><span class="line">lock_acquired   lock_contended  lock_release</span><br></pre></td></tr></table></figure>
+
+<p>由此可知，支持 4 个 event 去追踪锁的状态，挑一个 event 来查看追踪方法：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /sys/kernel/debug/tracing</span><br><span class="line">$ <span class="built_in">cat</span> events/lock/lock_acquired/format</span><br><span class="line">name: lock_acquired</span><br><span class="line">ID: 60</span><br><span class="line">format:</span><br><span class="line">        field:unsigned short common_type;       offset:0;       size:2; signed:0;</span><br><span class="line">        field:unsigned char common_flags;       offset:2;       size:1; signed:0;</span><br><span class="line">        field:unsigned char common_preempt_count;       offset:3;       size:1; signed:0;</span><br><span class="line">        field:int common_pid;   offset:4;       size:4; signed:1;</span><br><span class="line"></span><br><span class="line">        field:__data_loc char[] name;   offset:8;       size:4; signed:0;</span><br><span class="line">        field:void * lockdep_addr;      offset:16;      size:8; signed:0;</span><br><span class="line"></span><br><span class="line"><span class="built_in">print</span> <span class="built_in">fmt</span>: <span class="string">&quot;%p %s&quot;</span>, REC-&gt;lockdep_addr, __get_str(name)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>其中 <code>lockdep_addr</code>是锁的唯一标识符，可以用于过滤锁，仅跟踪该锁的竞争情况：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">&quot;lockdep_addr == 0x0000000064e3aa30&quot;</span> &gt; events/lock/lock_acquired/filter</span><br></pre></td></tr></table></figure>
+
+<p>或也可以过滤名字：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="string">&quot;name==&#x27;rcu_node_0&#x27;&quot;</span> &gt; events/lock/lock_acquired/filter</span><br></pre></td></tr></table></figure>
+
+<p>设置完成后，可参考以下命令进行追踪：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> 0 &gt; tracing_on; <span class="built_in">echo</span> &gt; trace			<span class="comment"># 建议先关闭追踪，清除缓冲区</span></span><br><span class="line"><span class="built_in">echo</span> 1 &gt; events/lock/lock_acquired/enable		<span class="comment"># 使能追踪 lock_acquired</span></span><br><span class="line"><span class="built_in">echo</span> 1 &gt; tracing_on; <span class="built_in">sleep</span> 1; <span class="built_in">echo</span> 0 &gt; tracing_on</span><br><span class="line"><span class="built_in">cat</span> trace</span><br></pre></td></tr></table></figure>
+
+<p>以下是对应的输出结果：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># tracer: nop</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment"># entries-in-buffer/entries-written: 951/951   #P:4</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment">#                                _-----=&gt; irqs-off</span></span><br><span class="line"><span class="comment">#                               / _----=&gt; need-resched</span></span><br><span class="line"><span class="comment">#                              | / _---=&gt; hardirq/softirq</span></span><br><span class="line"><span class="comment">#                              || / _--=&gt; preempt-depth</span></span><br><span class="line"><span class="comment">#                              ||| /     delay</span></span><br><span class="line"><span class="comment">#           TASK-PID     CPU#  ||||   TIMESTAMP  FUNCTION</span></span><br><span class="line"><span class="comment">#              | |         |   ||||      |         |</span></span><br><span class="line">          &lt;idle&gt;-0       [002] d.s2  1644.628868: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">          &lt;idle&gt;-0       [000] d.s2  1644.628883: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">           sleep-424     [003] d.s1  1644.628891: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">          &lt;idle&gt;-0       [001] dNs2  1644.628917: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">     rcu_preempt-12      [001] d..1  1644.628967: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">     rcu_preempt-12      [001] d..1  1644.636946: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">           sleep-424     [003] d.s1  1644.640877: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">     rcu_preempt-12      [001] d..1  1644.640970: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">     rcu_preempt-12      [001] d..1  1644.640975: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">     rcu_preempt-12      [001] d..1  1644.640981: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">     rcu_preempt-12      [001] d..1  1644.640987: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">     rcu_preempt-12      [001] d..2  1644.640995: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">     rcu_preempt-12      [001] d..1  1644.641001: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">          &lt;idle&gt;-0       [000] d.s2  1644.648858: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">          &lt;idle&gt;-0       [003] d.s2  1644.648874: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">          &lt;idle&gt;-0       [001] dNs2  1644.648912: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">     rcu_preempt-12      [001] d..1  1644.648961: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">     rcu_preempt-12      [001] d..1  1644.648968: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">     rcu_preempt-12      [001] d..1  1644.648973: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">     rcu_preempt-12      [001] d..1  1644.648978: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">     rcu_preempt-12      [001] d..1  1644.648984: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">     rcu_preempt-12      [001] d..1  1644.648989: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line">     rcu_preempt-12      [001] d..2  1644.648996: lock_acquired: ffffffc011f63458 rcu_node_0</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/debug/" rel="tag"># debug</a>
+              <a href="/tags/Lockdep/" rel="tag"># Lockdep</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/03/08/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90RCU%E5%8E%9F%E7%90%86%E4%BB%A5%E5%8F%8A%E5%BA%94%E7%94%A8/" rel="prev" title="Linux - 深入分析RCU原理以及应用">
+                  <i class="fa fa-angle-left"></i> Linux - 深入分析RCU原理以及应用
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/03/23/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-hwspinlock%E6%A1%86%E6%9E%B6%E8%A7%A3%E6%9E%90/" rel="next" title="Linux - hwspinlock框架解析">
+                  Linux - hwspinlock框架解析 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">339k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">20:32</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>
