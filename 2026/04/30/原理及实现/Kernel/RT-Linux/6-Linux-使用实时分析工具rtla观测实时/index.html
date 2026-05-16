@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="什么是rtlartla 的全称为 Real-Time Linux Analysis ，它是一个基于 FTrace 的实时分析工具集，已在 Linux 5.17 集成。它与 cyclictest 类似，但不同的是，它能监测出中断响应，以及任务唤醒到任务执行之间的抖动延迟；还能监测系统噪音检验任务的可观测性。  系统噪音：指的是一个任务在可运行期间被强行打断，如被高优先级的线程抢占、IRQ、SoftI">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - 使用实时分析工具rtla观测实时">
+<meta property="og:url" content="http://example.com/2026/04/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/6-Linux-%E4%BD%BF%E7%94%A8%E5%AE%9E%E6%97%B6%E5%88%86%E6%9E%90%E5%B7%A5%E5%85%B7rtla%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="什么是rtlartla 的全称为 Real-Time Linux Analysis ，它是一个基于 FTrace 的实时分析工具集，已在 Linux 5.17 集成。它与 cyclictest 类似，但不同的是，它能监测出中断响应，以及任务唤醒到任务执行之间的抖动延迟；还能监测系统噪音检验任务的可观测性。  系统噪音：指的是一个任务在可运行期间被强行打断，如被高优先级的线程抢占、IRQ、SoftI">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/Linux-%E4%BD%BF%E7%94%A8%E5%AE%9E%E6%97%B6%E5%88%86%E6%9E%90%E5%B7%A5%E5%85%B7rtla%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6/cyclictest-latency.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/Linux-%E4%BD%BF%E7%94%A8%E5%AE%9E%E6%97%B6%E5%88%86%E6%9E%90%E5%B7%A5%E5%85%B7rtla%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6/timerlat-latency.drawio.png">
+<meta property="article:published_time" content="2026-04-29T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-05-14T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Ftrace">
+<meta property="article:tag" content="Interrupt">
+<meta property="article:tag" content="Kernel">
+<meta property="article:tag" content="Preempt">
+<meta property="article:tag" content="RTOS">
+<meta property="article:tag" content="rtla">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/Linux-%E4%BD%BF%E7%94%A8%E5%AE%9E%E6%97%B6%E5%88%86%E6%9E%90%E5%B7%A5%E5%85%B7rtla%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6/cyclictest-latency.drawio.png">
+
+
+<link rel="canonical" href="http://example.com/2026/04/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/6-Linux-%E4%BD%BF%E7%94%A8%E5%AE%9E%E6%97%B6%E5%88%86%E6%9E%90%E5%B7%A5%E5%85%B7rtla%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2026/04/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/6-Linux-%E4%BD%BF%E7%94%A8%E5%AE%9E%E6%97%B6%E5%88%86%E6%9E%90%E5%B7%A5%E5%85%B7rtla%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6/","path":"2026/04/30/原理及实现/Kernel/RT-Linux/6-Linux-使用实时分析工具rtla观测实时/","title":"Linux - 使用实时分析工具rtla观测实时"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - 使用实时分析工具rtla观测实时 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AFrtla"><span class="nav-number">1.</span> <span class="nav-text">什么是rtla</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%9A%E4%B9%89%E4%B8%8E%E6%A0%B8%E5%BF%83%E7%89%B9%E6%80%A7"><span class="nav-number">1.1.</span> <span class="nav-text">定义与核心特性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B5%8B%E9%87%8F%E7%9B%AE%E6%A0%87%EF%BC%9A%E5%BB%B6%E8%BF%9F%E4%B8%8E%E5%99%AA%E5%A3%B0"><span class="nav-number">1.2.</span> <span class="nav-text">测量目标：延迟与噪声</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%99%AA%E5%A3%B0%EF%BC%9Artla-osnoise"><span class="nav-number">1.2.1.</span> <span class="nav-text">操作系统噪声：rtla osnoise</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B0%83%E5%BA%A6%E5%BB%B6%E8%BF%9F%EF%BC%9Artla-timerlat"><span class="nav-number">1.2.2.</span> <span class="nav-text">调度延迟：rtla timerlat</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">1.3.</span> <span class="nav-text">小结</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AE%89%E8%A3%85-rtla"><span class="nav-number">2.</span> <span class="nav-text">安装 rtla</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E6%A0%B8%E9%85%8D%E7%BD%AE%EF%BC%88%E5%86%85%E6%A0%B8%E7%89%88%E6%9C%AC-5-15-%E5%8F%8A%E4%BB%A5%E4%B8%8A%EF%BC%89"><span class="nav-number">2.1.</span> <span class="nav-text">内核配置（内核版本 5.15 及以上）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9C%A8-Buildroot-2024-02-%E5%AE%89%E8%A3%85-rtla"><span class="nav-number">2.2.</span> <span class="nav-text">在 Buildroot-2024.02 安装 rtla</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9C%A8-Ubuntu-Debian-%E5%AE%89%E8%A3%85-rtla"><span class="nav-number">2.3.</span> <span class="nav-text">在 Ubuntu&#x2F;Debian 安装 rtla</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8-rtla"><span class="nav-number">3.</span> <span class="nav-text">使用 rtla</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#osnoise"><span class="nav-number">3.1.</span> <span class="nav-text">osnoise</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#top"><span class="nav-number">3.1.1.</span> <span class="nav-text">top</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#hist"><span class="nav-number">3.1.2.</span> <span class="nav-text">hist</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#timerlat"><span class="nav-number">3.2.</span> <span class="nav-text">timerlat</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#top-1"><span class="nav-number">3.2.1.</span> <span class="nav-text">top</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#hist-1"><span class="nav-number">3.2.2.</span> <span class="nav-text">hist</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#rtla%E8%83%8C%E5%90%8E%E7%9A%84%E5%86%85%E6%A0%B8%E6%8A%80%E6%9C%AF%EF%BC%88%E5%9F%BA%E4%BA%8E-Linux-6-1-%EF%BC%89"><span class="nav-number">4.</span> <span class="nav-text">rtla背后的内核技术（基于 Linux-6.1 ）</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#osnoise-tracer"><span class="nav-number">4.1.</span> <span class="nav-text">osnoise tracer</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9F%BA%E6%9C%AC%E5%8E%9F%E7%90%86"><span class="nav-number">4.1.1.</span> <span class="nav-text">基本原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86"><span class="nav-number">4.1.2.</span> <span class="nav-text">工作原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8"><span class="nav-number">4.1.3.</span> <span class="nav-text">如何使用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">4.1.4.</span> <span class="nav-text">总结</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#timerlat-tracer"><span class="nav-number">4.2.</span> <span class="nav-text">timerlat tracer</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%9F%BA%E6%9C%AC%E5%8E%9F%E7%90%86-1"><span class="nav-number">4.2.1.</span> <span class="nav-text">基本原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B7%A5%E4%BD%9C%E5%8E%9F%E7%90%86-1"><span class="nav-number">4.2.2.</span> <span class="nav-text">工作原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8-1"><span class="nav-number">4.2.3.</span> <span class="nav-text">如何使用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93-1"><span class="nav-number">4.2.4.</span> <span class="nav-text">总结</span></a></li></ol></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">73</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">73</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2026/04/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/6-Linux-%E4%BD%BF%E7%94%A8%E5%AE%9E%E6%97%B6%E5%88%86%E6%9E%90%E5%B7%A5%E5%85%B7rtla%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - 使用实时分析工具rtla观测实时 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - 使用实时分析工具rtla观测实时
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2026-04-30 00:00:00" itemprop="dateCreated datePublished" datetime="2026-04-30T00:00:00+08:00">2026-04-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2026-05-15 00:00:00" itemprop="dateModified" datetime="2026-05-15T00:00:00+08:00">2026-05-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>9k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>33 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="什么是rtla"><a href="#什么是rtla" class="headerlink" title="什么是rtla"></a>什么是rtla</h1><p>rtla 的全称为 Real-Time Linux Analysis ，它是一个基于 FTrace 的实时分析工具集，已在 Linux 5.17 集成。它与 cyclictest 类似，但不同的是，它能监测出中断响应，以及任务唤醒到任务执行之间的抖动延迟；还能监测系统噪音检验任务的可观测性。</p>
+<blockquote>
+<p>系统噪音：指的是一个任务在可运行期间被强行打断，如被高优先级的线程抢占、IRQ、SoftIRQ、NMI 和 SMI 等。</p>
+</blockquote>
+<p>rtla 背靠 FTrace 的 osnoise 和 timerlat 机制，不仅能量化系统的调度延迟与抖动，更能自动定位产生高延迟的根本原因（如中断屏蔽、长临界区或硬件干扰）。也由此可知，它解决了 cyclictest 只能测“延迟有多大”却无法回答“延迟从哪来”的痛点。</p>
+<h2 id="定义与核心特性"><a href="#定义与核心特性" class="headerlink" title="定义与核心特性"></a>定义与核心特性</h2><p>rtla 是一个前端工具，它的后端是 FTrace 的 osnoise 和 timerlat ，所以它属于白盒测量。而传统的延迟测试工具（如 cyclictest），则是采用黑盒测量。<br>cyclictest 的基本实现是：为每个 CPU 新建一个高实时优先级的应用线程，主动调用 nanosleep() 休眠并等待唤醒，通过计算预期唤醒时间与实际唤醒时间的差值，以此得到一个延迟样本。<br>cyclictest 无法与内核直接建立“联系” ，它仅能计算整体的延迟，见以下例图：</p>
+<div align=center><img src="/images/原理及实现/Kernel/RT-Linux/Linux-使用实时分析工具rtla观测实时/cyclictest-latency.drawio.png"></div>
+
+<span id="more"></span>
+
+<p>整体的延迟包含：</p>
+<ul>
+<li>Timer 的“硬件中断触发-&gt;内核响应中断”的延迟；</li>
+<li>Timer IRQ 的执行耗时（包含唤醒）；</li>
+<li>调度以及任务切换的耗时；</li>
+<li>从内核层返回到用户空间的耗时；</li>
+<li>还有可能隐含的硬件延迟。</li>
+</ul>
+<p>类似的，rtla 也为每个 CPU 新建一个高实时优先级的内核线程，除了捕获整体延迟外，还能捕获中断响应的延迟，而整体延迟被命名为线程响应延迟。而且当检测到延迟超过阈值时，它会自动触发内核追踪，抓取当时的调用栈、中断状态和调度信息，将延迟拆解为可理解的组成部分，实现从“盲目调优”到“精准定位”的转变。</p>
+<h2 id="测量目标：延迟与噪声"><a href="#测量目标：延迟与噪声" class="headerlink" title="测量目标：延迟与噪声"></a>测量目标：延迟与噪声</h2><p>rtla 的核心目标是量化与分析影响实时性的两大阻碍：调度延迟与系统抖动&#x2F;噪声。它通过两个核心子命令 <code>timerlat</code> 和 <code>osnoise</code> 覆盖完整的测量链路。</p>
+<h3 id="操作系统噪声：rtla-osnoise"><a href="#操作系统噪声：rtla-osnoise" class="headerlink" title="操作系统噪声：rtla osnoise"></a>操作系统噪声：rtla osnoise</h3><p><code>rtla osnoise</code> 用于检测和分析操作系统层面的干扰源。它在用户指定的 CPU 上持续运行密集循环，记录任何打断其执行的因素，包括：</p>
+<ul>
+<li>IRQs&#x2F;SoftIRQs：硬件中断和软中断的处理时间。</li>
+<li>Threads：其他线程抢占当前 CPU 的时间。</li>
+<li>NMI：不可屏蔽中断的影响。</li>
+<li>SMI：硬件和固件的执行延迟。</li>
+</ul>
+<p>当实时任务出现延迟时，osnoise 数据能帮助确认是否被上述 OS 事件干扰。</p>
+<h3 id="调度延迟：rtla-timerlat"><a href="#调度延迟：rtla-timerlat" class="headerlink" title="调度延迟：rtla timerlat"></a>调度延迟：rtla timerlat</h3><p><code>rtla timerlat</code> 用于测量实时任务从“被定时器唤醒”到“实际在 CPU 上执行”所花费的时间，并将总延迟拆解为两个关键阶段：</p>
+<ul>
+<li>IRQ Latency（中断延迟）：定时器硬件中断发生后，到内核开始执行该中断处理程序的时间差。此阶段的高延迟通常表示系统存在长时间关闭中断的临界区（如 irq_disable() 区段），或处于 NMI 或 SMI 阶段。</li>
+<li>Thread Latency（线程延迟）：记录从中断响应（即包含中断延迟），到中断处理程序唤醒实时线程，再到该线程真正被调度并在用户态&#x2F;内核态执行的时间差值。此阶段的高延迟除了中断延迟外，通常指向唤醒延迟（代码机制本身）、调度器延迟、其他高优先级任务干扰或长时间禁用抢占的代码段。</li>
+</ul>
+<p><code>rtla timerlat</code> 通过记录最大延迟（top）和延迟直方图（hist），直观反映系统的抖动情况。</p>
+<h2 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h2><p>综上所述，rtla 是一个基于内核机制 FTrace 的白盒工具。它测量延迟与噪声的数值，同时通过内核追踪切片透视延迟的内部结构，为后续的实时优化（如调整隔离 CPU、关中断代码审计）提供直接证据。</p>
+<h1 id="安装-rtla"><a href="#安装-rtla" class="headerlink" title="安装 rtla"></a>安装 rtla</h1><p>rtla 的安装步骤较为繁琐，请严格按以下步骤安装。</p>
+<h2 id="内核配置（内核版本-5-15-及以上）"><a href="#内核配置（内核版本-5-15-及以上）" class="headerlink" title="内核配置（内核版本 5.15 及以上）"></a>内核配置（内核版本 5.15 及以上）</h2><p>根据上一小节对 rtla 的介绍，可知它的后端是内核的 FTrace 的 osnoise 和 timerlat ，则开启以下配置：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">CONFIG_FTRACE</span><br><span class="line">CONFIG_OSNOISE_TRACER</span><br><span class="line">CONFIG_TIMERLAT_TRACER</span><br></pre></td></tr></table></figure>
+<p>完成后编译即可。</p>
+<h2 id="在-Buildroot-2024-02-安装-rtla"><a href="#在-Buildroot-2024-02-安装-rtla" class="headerlink" title="在 Buildroot-2024.02 安装 rtla"></a>在 Buildroot-2024.02 安装 rtla</h2><p>rtla 工具依赖库 libtraceevent 和 libtracefs ，不同的根文件系统有不同的编译和安装方式。<br>在 buildroot 的配置单中，添加以下配置以安装库：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">BR2_PACKAGE_LIBTRACEEVENT</span><br><span class="line">BR2_PACKAGE_LIBTRACEFS</span><br></pre></td></tr></table></figure>
+<p>完成后选择以下配置安装 rtla ：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">BR2_PACKAGE_LINUX_TOOLS_RTLA</span><br></pre></td></tr></table></figure>
+<p>完成后编译烧录即可。</p>
+<h2 id="在-Ubuntu-Debian-安装-rtla"><a href="#在-Ubuntu-Debian-安装-rtla" class="headerlink" title="在 Ubuntu&#x2F;Debian 安装 rtla"></a>在 Ubuntu&#x2F;Debian 安装 rtla</h2><p>在 Ubuntu&#x2F;Debian ，可以直接在系统上安装库，但在此之前需要安装以下前置工具：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> apt-get update</span><br><span class="line"><span class="built_in">sudo</span> apt-get install make git gcc pkg-config python3-docutils</span><br></pre></td></tr></table></figure>
+<p>另外，还需要确保 &#x2F;usr&#x2F;include 内的内核头文件对应的是 Linux 5.15 或以上的头文件。<br>可以通过以下命令安装：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> apt-get install linux-headers-$(<span class="built_in">uname</span> -r)</span><br></pre></td></tr></table></figure>
+<p>注意你的内核版本是否是 5.15 及以上。</p>
+<p>如果以上步骤不行，或者你有内核源码（5.15 及以上），可以在内核目录下执行以下命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">make O=<span class="string">&quot;<span class="variable">$&#123;headers_build_dir&#125;</span>&quot;</span> ARCH=<span class="string">&quot;<span class="variable">$&#123;ARCH&#125;</span>&quot;</span> headers_install</span><br></pre></td></tr></table></figure>
+<p>完成后，建议把 &#x2F;usr&#x2F;include 备份，然后把头文件复制到 &#x2F;usr&#x2F;include 即可。</p>
+<p>接下来跳转到 downloads 文件夹，执行以下命令，下载 libtraceevent 和 libtracefs 的源码并编译：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> git://git.kernel.org/pub/scm/libs/libtrace/libtraceevent.git</span><br><span class="line"><span class="built_in">cd</span> libtraceevent/</span><br><span class="line">make</span><br><span class="line"><span class="built_in">sudo</span> make install</span><br><span class="line"><span class="built_in">cd</span> ..</span><br><span class="line"></span><br><span class="line">git <span class="built_in">clone</span> git://git.kernel.org/pub/scm/libs/libtrace/libtracefs.git</span><br><span class="line"><span class="built_in">cd</span> libtracefs/</span><br><span class="line">make</span><br><span class="line"><span class="built_in">sudo</span> make install</span><br><span class="line"><span class="built_in">cd</span> ..</span><br></pre></td></tr></table></figure>
+
+<p>接下来安装 rtla ，rtla 源代码在内核目录的 tools&#x2F;tracing&#x2F;rtla 内，把它复制到开发板。<br>进入源代码目录，打开 Makefile ，找到目标 install ，把它的依赖项 doc_install 移除，不需要 doc 文档：</p>
+<figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">  .PHONY: install</span><br><span class="line">- install: doc_install</span><br><span class="line">+ install: </span><br><span class="line">          <span class="variable">$(MKDIR)</span> -p <span class="variable">$(DESTDIR)</span><span class="variable">$(BINDIR)</span></span><br><span class="line">          <span class="variable">$(INSTALL)</span> rtla -m 755 <span class="variable">$(DESTDIR)</span><span class="variable">$(BINDIR)</span></span><br><span class="line">          <span class="variable">$(STRIP)</span> <span class="variable">$(DESTDIR)</span><span class="variable">$(BINDIR)</span>/rtla</span><br><span class="line">          @test ! -f <span class="variable">$(DESTDIR)</span><span class="variable">$(BINDIR)</span>/osnoise || rm <span class="variable">$(DESTDIR)</span><span class="variable">$(BINDIR)</span>/osnoise</span><br><span class="line">          ln -s rtla <span class="variable">$(DESTDIR)</span><span class="variable">$(BINDIR)</span>/osnoise</span><br><span class="line">          @test ! -f <span class="variable">$(DESTDIR)</span><span class="variable">$(BINDIR)</span>/timerlat || rm <span class="variable">$(DESTDIR)</span><span class="variable">$(BINDIR)</span>/timerlat</span><br><span class="line">          ln -s rtla <span class="variable">$(DESTDIR)</span><span class="variable">$(BINDIR)</span>/timerlat</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>你也可以保留该依赖项，但是要把对应的文档目录放到开发板，并修改 doc_install 的执行语句。</p>
+</blockquote>
+<p>编译并安装 rtla ：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">make</span><br><span class="line"><span class="built_in">sudo</span> make install</span><br></pre></td></tr></table></figure>
+
+<h1 id="使用-rtla"><a href="#使用-rtla" class="headerlink" title="使用 rtla"></a>使用 rtla</h1><blockquote>
+<p>硬件环境：RK3588<br>软件环境：Linux-6.1.141-rt36 + Buildroot<br>内核参数：isolcpus&#x3D;4-7 nohz_full&#x3D;6-7 rcu_nocbs&#x3D;6-7</p>
+</blockquote>
+<h2 id="osnoise"><a href="#osnoise" class="headerlink" title="osnoise"></a>osnoise</h2><p>结合以上小节可知，osnoise 用于监测一个线程被干扰的程度，如被 IRQ、SoftIRQ、高优先级线程、NMI 和 SMI 等。接下来分别使用 <code>osnoise top</code> 和 <code>osnoise hist</code> 来观察。</p>
+<h3 id="top"><a href="#top" class="headerlink" title="top"></a>top</h3><p>top 是记录测试过程中的最大值，比如我需要观测所有 CPU 的运行情况，为在每个 CPU 创建一个观测线程观测：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rtla osnoise top -p 1000000 -r 950000 -P f:80 -d 1m</span><br></pre></td></tr></table></figure>
+<p>参数说明：</p>
+<ul>
+<li><code>-p 1000000</code> ：指定观测线程的一次运行时长，名为 sample_period ，单位为 us ，一般为 1000000us ，即 1 秒</li>
+<li><code>-r 950000</code> ：指定观测线程在指定的运行时长内观测多久，名为 sample_runtime ，单位为 us ，该数值不能超过 sample_period 。</li>
+<li><code>-P f:80</code> ：指定观测线程的调度策略，以及优先级。这里选择 SCHED_FIFO ，实时优先级为 80 。</li>
+<li><code>-d 1m</code> ：指定本次观测系统需要多长时间，这里仅观测 1 分钟</li>
+</ul>
+<p>结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">duration:   0 00:01:00 | time is in us</span><br><span class="line">CPU Period       Runtime        Noise  % CPU Aval   Max Noise   Max Single          HW          NMI          IRQ      Softirq       Thread</span><br><span class="line">  0 #60         57000001       167295    99.70650        6440         1014           0            0        57084            0           52</span><br><span class="line">  1 #60         57000001       117321    99.79417        6486         1057           0            0        57090            0           51</span><br><span class="line">  2 #60         57000000       194595    99.65860        6515         1017           0            0        57152            0           62</span><br><span class="line">  3 #60         57000000       148776    99.73898        6393         1024           0            0        57000            0           64</span><br><span class="line">  4 #60         57000000          430    99.99924          61           27           0            0        57029            0           39</span><br><span class="line">  5 #60         57000000          795    99.99860          68           61           0            0        57029            0           39</span><br><span class="line">  6 #60         57000000          856    99.99849          72           66           0            0        57029            0           40</span><br><span class="line">  7 #60         57000000         1299    99.99772          75           65           0            0        57029            0           41</span><br></pre></td></tr></table></figure>
+<p>见以下解析（时间单位都为 us ）：</p>
+<ul>
+<li>CPU ：表示有哪些 CPU 被观测</li>
+<li>Period ：表示这次总共观测了多少个周期。由于指定了 1 分钟的总观测时长，而且 sample_period 被设为 1 秒，则表示总共观测了 60 次。</li>
+<li>Runtime ：表示这次总共观测了多久，与 sample_runtime 相关，总共观测了 60*950000&#x3D;57,000,000us 。</li>
+<li>Noise ：统计了这次观测有多少噪音总量，这个属于 Runtime 的一部分。</li>
+<li>% CPU Aval ：表示在这次观测中，观测线程在 Runtime 期间得到执行权的百分比，即 <code>(57000001-167295) / 57000001 ≈ 0.9970650 ≈ 99.70650%</code> 。</li>
+<li>Max Noise ：在一个周期的观测中，可能存在有多个不同噪音叠加下的噪音，比如 IRQ 噪音和 Thread 噪音叠加在一起，并把这些噪音记录起来并报告最大的一次噪音。</li>
+<li>Max Single ：在这次观测中，按类型分别记录了噪音总量，并报告单个最大噪音（但没有报告是哪种类型的噪音）。比如在 CPU0 ，单个最大噪音为 1014us ，它可能是 由 IRQ 产生的，也可能是 Thread 的。</li>
+</ul>
+<p>或者我更细化一点，仅追踪 CPU1~3 ，且捕获到 1000us 的单次最大噪音，或捕获到叠加的最大噪音 6000us 后停止，并把 tracer osnoise 捕获的记录保存到当前目录下的 osnoise_trace.txt ：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rtla osnoise top -p 1000000 -r 950000 -P f:80 -c 0-3 --stop=1000 --stop-total=6000 -t -d 1m</span><br></pre></td></tr></table></figure>
+<p>结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">duration:   0 00:00:01 | time is in us</span><br><span class="line">CPU Period       Runtime        Noise  % CPU Aval   Max Noise   Max Single          HW          NMI          IRQ      Softirq       Thread</span><br><span class="line">  1 #1            950000         5222    99.45031        5222           26           0            0          954            0            8</span><br><span class="line">  2 #1            950000         1885    99.80157        1885           63           0            0          954            0            8</span><br><span class="line">  3 #1            950000         2880    99.69684        2880         1027           0            0          951            0            9</span><br><span class="line">osnoise hit stop tracing</span><br><span class="line">  Saving trace to osnoise_trace.txt</span><br></pre></td></tr></table></figure>
+<p>可以发现是捕获到 CPU3 的 Max Single 为 1027 后退出观测的，与 <code>--stop=1000</code> 相呼应。另外，我们可以查看 osnoise_trace.txt 了解观测的详细信息。</p>
+<h3 id="hist"><a href="#hist" class="headerlink" title="hist"></a>hist</h3><p>本人在基于内核版本 6.1 的 rtla 测试，发现 osnoise hist 无法使用。</p>
+<h2 id="timerlat"><a href="#timerlat" class="headerlink" title="timerlat"></a>timerlat</h2><p>结合以上小节可知，timerlat 用于监测中断和线程的响应时间。接下来分别使用 <code>timerlat top</code> 和 <code>timerlat hist</code> 来观察。</p>
+<h3 id="top-1"><a href="#top-1" class="headerlink" title="top"></a>top</h3><p>top 是记录测试过程中的最大值，比如我需要观测所有 CPU 的响应情况，为在每个 CPU 创建一个测试线程观测，以下是进行空载测试：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rtla timerlat top -c 0-7 -p 1000 -P f:80 -d 1m -n</span><br></pre></td></tr></table></figure>
+<p>参数说明：</p>
+<ul>
+<li><code>-c 0-7</code> ：指定观测线程运行在哪些 CPU 。</li>
+<li><code>-p 1000</code> ：指定观测线程的睡眠时长，名为 timerlat_period ，单位为 us ，一般为 1000us 。</li>
+<li><code>-P f:80</code> ：指定观测线程的调度策略，以及优先级。这里选择 SCHED_FIFO ，实时优先级为 80 。</li>
+<li><code>-d 1m</code> ：指定本次观测系统需要多长时间，这里仅观测 1 分钟</li>
+<li><code>-n</code> ：使用纳秒来展示观测数据。</li>
+</ul>
+<p>结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">                                     Timer Latency</span><br><span class="line">  0 00:01:00   |          IRQ Timer Latency (ns)        |         Thread Timer Latency (ns)</span><br><span class="line">CPU COUNT      |      cur       min       avg       max |      cur       min       avg       max</span><br><span class="line">  0 #60000     |     2352       991      2201     15279 |     9643      7139      9527     26070</span><br><span class="line">  1 #60000     |     3227      1384      3054      7796 |    10227      6984     10206     24189</span><br><span class="line">  2 #60000     |     2644       522      2317     11334 |     9352      7193      9450     21250</span><br><span class="line">  3 #60000     |     2061      1429      2195      5269 |     9060      6921      9349     14846</span><br><span class="line">  4 #60001     |      894       796       958      2139 |     2936      2838      3013      4764</span><br><span class="line">  5 #60000     |      806       796       963      1847 |     2847      2838      3031      4472</span><br><span class="line">  6 #60000     |      806       796       945      1379 |     2848      2838      2994      3889</span><br><span class="line">  7 #60000     |      806       796       945      1379 |     2848      2838      2993      3911</span><br></pre></td></tr></table></figure>
+<p>根据结果可知，CPU0-3 与 CPU4-7 相比差距很大，这是因为我把 CPU4-7 隔离了。</p>
+<p>接下来进行满载测试，我们给隔离核 CPU4-7 性能拉满，加上压力：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> userspace &gt; /sys/class/devfreq/dmc/governor</span><br><span class="line"><span class="built_in">echo</span> 2112000000 &gt; /sys/class/devfreq/dmc/userspace/set_freq</span><br><span class="line"><span class="keyword">for</span> n <span class="keyword">in</span> &#123;4..7&#125;; <span class="keyword">do</span></span><br><span class="line">	<span class="built_in">echo</span> performance &gt; /sys/devices/system/cpu/cpu<span class="variable">$&#123;n&#125;</span>/cpufreq/scaling_governor</span><br><span class="line">	stress-ng --vm 1 --vm-bytes 10% --io 1 -c 1 --cpu-method all --taskset <span class="variable">$&#123;n&#125;</span> --<span class="built_in">timeout</span> 5m &amp;</span><br><span class="line"><span class="keyword">done</span></span><br><span class="line">ps -eLo pid,tid,psr,<span class="built_in">comm</span> | grep stress-ng</span><br></pre></td></tr></table></figure>
+<p>进行测试：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rtla timerlat top -c 4-7 -p 1000 -P f:80 -d 1m -n</span><br></pre></td></tr></table></figure>
+<p>结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">                                     Timer Latency</span><br><span class="line">  0 00:00:06   |          IRQ Timer Latency (ns)        |         Thread Timer Latency (ns)</span><br><span class="line">CPU COUNT      |      cur       min       avg       max |      cur       min       avg       max</span><br><span class="line">  4 #5252      |     8210       583      1183      8210 |    14919      3500      5938     14919</span><br><span class="line">  5 #5251      |     1086       542      1142      5917 |     6044      3458      5771     10876</span><br><span class="line">  6 #5251      |     3419       583      1195      4960 |     9252      3500      5864     12001</span><br><span class="line">  7 #5251      |     3710       544      1187      6083 |     8960      3542      5807     11293</span><br></pre></td></tr></table></figure>
+<p>中断响应的最大延迟范围在 7782<del>10220ns ，线程响应的最大延迟范围在 12074</del>14886ns 。由于测试的时间很短，建议至少测试 2 小时。</p>
+<p>假如，我现在捕获到中断延迟和线程延迟的最大值分别是 10us 和 14us ，那么我想定位为什么延迟那么大，可以这样做：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rtla timerlat top -c 4-7 -p 1000 --irq=10 --thread=14 --stack=14 -P f:80 -t -d 1m -n</span><br></pre></td></tr></table></figure>
+<p>参数说明：</p>
+<ul>
+<li><code>--irq=10</code> ：当中断响应延迟大于等于 10us 时，停止观测</li>
+<li><code>--thread=14</code> ：当线程响应延迟大于等于 14us 时，停止观测</li>
+<li><code>--stack=14</code> ：当线程响应延迟大于等于 14us 时，打印在中断上下文的调用栈，以此判断中断响应延迟问题</li>
+<li><code>-t</code> ：把 tracer timerlat 捕获的记录保存到当前目录下的 timerlat_trace.txt</li>
+</ul>
+<p>结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">                                     Timer Latency</span><br><span class="line">  0 00:00:06   |          IRQ Timer Latency (ns)        |         Thread Timer Latency (ns)</span><br><span class="line">CPU COUNT      |      cur       min       avg       max |      cur       min       avg       max</span><br><span class="line">  4 #5252      |     8210       583      1183      8210 |    14919      3500      5938     14919</span><br><span class="line">  5 #5251      |     1086       542      1142      5917 |     6044      3458      5771     10876</span><br><span class="line">  6 #5251      |     3419       583      1195      4960 |     9252      3500      5864     12001</span><br><span class="line">  7 #5251      |     3710       544      1187      6083 |     8960      3542      5807     11293</span><br><span class="line">rtla timerlat hit stop tracing</span><br><span class="line">  Saving trace to timerlat_trace.txt</span><br></pre></td></tr></table></figure>
+<p>查看 timerlat_trace.txt ：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"># tracer: timerlat</span><br><span class="line">#</span><br><span class="line">#                                _-------=&gt; irqs-off</span><br><span class="line">#                               / _------=&gt; need-resched</span><br><span class="line">#                              | / _-----=&gt; need-resched-lazy</span><br><span class="line">#                              || / _----=&gt; hardirq/softirq</span><br><span class="line">#                              ||| / _---=&gt; preempt-depth</span><br><span class="line">#                              |||| / _--=&gt; preempt-lazy-depth</span><br><span class="line">#                              ||||| / _-=&gt; migrate-disable</span><br><span class="line">#                              |||||| /</span><br><span class="line">#                              |||||||             ACTIVATION</span><br><span class="line">#           TASK-PID      CPU# |||||||   TIMESTAMP    ID            CONTEXT                LATENCY</span><br><span class="line">#              | |         |   |||||||      |         |                  |                       |</span><br><span class="line">...</span><br><span class="line">    stress-ng-io-6679    [004] d..h.11 10204.897989: #5262  context    irq timer_latency      8210 ns</span><br><span class="line">    stress-ng-io-6679    [004] dn.h111 10204.897992: irq_noise: arch_timer:13 start 10204.897988154 duration 3208 ns</span><br><span class="line">    stress-ng-io-6679    [004] d...311 10204.897995: thread_noise: stress-ng-io:6679 start 10204.897988737 duration 2333 ns</span><br><span class="line">      timerlat/4-6695    [004] ....... 10204.897996: #5262  context thread timer_latency     14919 ns</span><br><span class="line">      timerlat/4-6695    [004] d..h2.. 10204.897999: irq_noise: IPI:6 start 10204.897997195 duration 1750 ns</span><br><span class="line">      timerlat/4-6695    [004] ....1.. 10204.898001: &lt;stack trace&gt;</span><br><span class="line"> =&gt; timerlat_irq</span><br><span class="line"> =&gt; __hrtimer_run_queues</span><br><span class="line"> =&gt; hrtimer_interrupt</span><br><span class="line"> =&gt; arch_timer_handler_phys</span><br><span class="line"> =&gt; handle_percpu_devid_irq</span><br><span class="line"> =&gt; handle_irq_desc</span><br><span class="line"> =&gt; generic_handle_domain_irq</span><br><span class="line"> =&gt; gic_handle_irq</span><br><span class="line"> =&gt; call_on_irq_stack</span><br><span class="line"> =&gt; do_interrupt_handler</span><br><span class="line"> =&gt; el1_interrupt</span><br><span class="line"> =&gt; el1h_64_irq_handler</span><br><span class="line"> =&gt; el1h_64_irq</span><br><span class="line"> =&gt; mod_delayed_work_on</span><br><span class="line"> =&gt; wb_queue_work</span><br><span class="line"> =&gt; sync_inodes_sb</span><br><span class="line"> =&gt; sync_filesystem</span><br><span class="line"> =&gt; __arm64_sys_syncfs</span><br><span class="line"> =&gt; invoke_syscall</span><br><span class="line"> =&gt; el0_svc_common.constprop.0</span><br><span class="line"> =&gt; do_el0_svc</span><br><span class="line"> =&gt; el0_svc</span><br><span class="line"> =&gt; el0t_64_sync_handler</span><br><span class="line"> =&gt; el0t_64_sync</span><br></pre></td></tr></table></figure>
+<p>irq_noise 和 thread_noise 都是由 tracer timerlat 启动的。其中 irq_noise 记录并展示了 timerlat 观测线程或其它线程被中断打断的耗时；而 thread_noise 记录并展示了 timerlat 观测线程的被其它线程打断的耗时。<br>先从第一条记录开始讲解：</p>
+<ol>
+<li>第一条记录：<ul>
+<li>此时系统状态：中断已关闭，且已经进入硬中断上下文。</li>
+<li>此时捕获到：线程 stress-ng-io-6679 在运行时，CPU4 响应中断 arch_timer:13 ，但是从该中断发出到该 CPU 响应该中断，时间相差了 8210ns 。注意此时 tracer timerlat 已经在记录中断上下文的调用栈了。</li>
+</ul>
+</li>
+<li>第二条记录：<ul>
+<li>此时系统状态：中断已关闭，且已经进入硬中断上下文；线程 stress-ng-io-6679 被标记为 need-resched ；抢占计数为 1，这是 trace event 本身机制导致的递增，结束后会递减，可忽略。</li>
+<li>此时捕获到：记录当前运行的线程被哪个中断打断，并记录该中断处理程序运行的耗时。查看记录可知，中断 arch_timer:13 在时间戳 10204.897988154 打断线程 stress-ng-io-6679 的运行，而且它运行了 3208ns 。换句话说，就是该中断影响了 stress-ng-io-6679 的运行，属于 HardIRQ 噪音。注意此时的时间戳 10204.897992 ，结合记录的 start 和 duration ，则 10204.897988154 + 0.000003208 &#x3D; 10204.897991362 ，这是相近的。</li>
+</ul>
+</li>
+<li>第三条记录：<ul>
+<li>此时系统状态：中断已关闭，但已退出中断上下文；线程 stress-ng-io-6679 的标记 need-resched 被清除；抢占计数为 3 ，其中有两个是属于 trace event ，最后一个是调用 preempt_schedule_irq() 时递增的。</li>
+<li>此时捕获到：stress-ng-io:6679 将被切换，把 CPU 执行权移交给 timerlat&#x2F;4-6695 。但是在切换前（在进程上下文），stress-ng-io:6679 从 10204.897988737 开始，运行了 2333ns 。</li>
+</ul>
+</li>
+<li>第四条记录：<ul>
+<li>此时系统状态：中断已开启；已在进程上下文；timerlat&#x2F;4-6695 的标记 need-resched 被清除；抢占计数为 0 。</li>
+<li>此时捕获到：线程 timerlat&#x2F;4-6695 已得到执行，从 中断发出-&gt;中断响应-&gt;线程唤醒-&gt;线程调度-&gt;线程执行 ，耗时了 14919ns 。由于线程响应延迟大于 14us ，停止观测并打印在中断上下文记录的调用栈。</li>
+</ul>
+</li>
+<li>第五条记录：<ul>
+<li>此时系统状态：中断已关闭，且已经进入硬中断上下文；抢占计数为 2，其中一个这是 trace event 本身机制导致的递增，结束后会递减，可忽略。</li>
+<li>此时捕获到：中断 IPI:6 在时间戳 10204.897997195 打断线程 timerlat&#x2F;4-6695 的运行，而且它运行了 1750ns 。换句话说，就是该中断影响了 timerlat&#x2F;4-6695 的运行，属于 HardIRQ 噪音。</li>
+</ul>
+</li>
+</ol>
+<p>现在我们通过调用栈查看为什么中断响应要那么久，直接把目光定位到 mod_delayed_work_on() ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">bool</span> <span class="title function_">mod_delayed_work_on</span><span class="params">(<span class="type">int</span> cpu, <span class="keyword">struct</span> workqueue_struct *wq,</span></span><br><span class="line"><span class="params">			 <span class="keyword">struct</span> delayed_work *dwork, <span class="type">unsigned</span> <span class="type">long</span> delay)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">unsigned</span> <span class="type">long</span> flags;</span><br><span class="line">	<span class="type">int</span> ret;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">do</span> &#123;</span><br><span class="line">		ret = try_to_grab_pending(&amp;dwork-&gt;work, <span class="literal">true</span>, &amp;flags);</span><br><span class="line">	&#125; <span class="keyword">while</span> (unlikely(ret == -EAGAIN));</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (likely(ret &gt;= <span class="number">0</span>)) &#123;</span><br><span class="line">		__queue_delayed_work(cpu, wq, dwork, delay);</span><br><span class="line">		local_irq_restore(flags);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* -ENOENT from try_to_grab_pending() becomes %true */</span></span><br><span class="line">	<span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>该函数有一个局部变量 <code>flags</code> ，那么八九不离十，大概率是因为中断关闭导致的，接着追踪 try_to_grab_pending() ：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">try_to_grab_pending</span><span class="params">(<span class="keyword">struct</span> work_struct *work, <span class="type">bool</span> is_dwork,</span></span><br><span class="line"><span class="params">			       <span class="type">unsigned</span> <span class="type">long</span> *flags)</span></span><br><span class="line">&#123;</span><br><span class="line">	...</span><br><span class="line">	local_irq_save(*flags);</span><br><span class="line">	...</span><br><span class="line">	raw_spin_lock(&amp;pool-&gt;lock);</span><br><span class="line">	...</span><br><span class="line">	<span class="keyword">if</span> (pwq &amp;&amp; pwq-&gt;pool == pool) &#123;</span><br><span class="line">		...</span><br><span class="line">		raw_spin_unlock(&amp;pool-&gt;lock);</span><br><span class="line">		rcu_read_unlock();</span><br><span class="line">		<span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	raw_spin_unlock(&amp;pool-&gt;lock);</span><br><span class="line">fail:</span><br><span class="line">	...</span><br><span class="line">	local_irq_restore(*flags);</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里我保留了互斥与同步的代码，这也确认了根源，就是因为中断关闭导致的。但是为什么要长时间地关闭中断？函数 mod_delayed_work_on() 的功能是给 delay_work 更改并重新开始延迟时间。至于为什么会出现这个问题，为了不脱离本文档主题，请自行定位了。</p>
+<p>根据以上的讲解，得出以下流程图：</p>
+<div align=center><img src="/images/原理及实现/Kernel/RT-Linux/Linux-使用实时分析工具rtla观测实时/timerlat-latency.drawio.png"></div>
+
+<h3 id="hist-1"><a href="#hist-1" class="headerlink" title="hist"></a>hist</h3><p>hist 是记录测试过程中的各个延迟时间点，除了能定位最大延迟外，还能定位最大延迟以内的延迟布局，能更清晰地判断系统的响应性能。<br>就比如说我使用 <code>timerlat top</code> 在 CPU4-7 捕获到最大的线程响应延迟为 14us ，那么我可以使用 <code>timerlat hist</code> 来定位一个问题，就是有多少次延迟是在 14us 左右的。<br>接下来进行满载测试，我们给隔离核 CPU4-7 性能拉满，加上压力：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> userspace &gt; /sys/class/devfreq/dmc/governor</span><br><span class="line"><span class="built_in">echo</span> 2112000000 &gt; /sys/class/devfreq/dmc/userspace/set_freq</span><br><span class="line"><span class="keyword">for</span> n <span class="keyword">in</span> &#123;4..7&#125;; <span class="keyword">do</span></span><br><span class="line">	<span class="built_in">echo</span> performance &gt; /sys/devices/system/cpu/cpu<span class="variable">$&#123;n&#125;</span>/cpufreq/scaling_governor</span><br><span class="line">	stress-ng --vm 1 --vm-bytes 10% --io 1 -c 1 --cpu-method all --taskset <span class="variable">$&#123;n&#125;</span> --<span class="built_in">timeout</span> 5m &amp;</span><br><span class="line"><span class="keyword">done</span></span><br><span class="line">ps -eLo pid,tid,psr,<span class="built_in">comm</span> | grep stress-ng</span><br></pre></td></tr></table></figure>
+<p>开始测试：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rtla timerlat hist -c 4-7 -p 1000 -P f:80 -d 1m -n</span><br></pre></td></tr></table></figure>
+<p>结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"># RTLA timerlat histogram</span><br><span class="line"># Time unit is microseconds (us)</span><br><span class="line"># Duration:   0 00:01:00</span><br><span class="line">Index   IRQ-004   Thr-004   IRQ-005   Thr-005   IRQ-006   Thr-006   IRQ-007   Thr-007</span><br><span class="line">0         20123         0     20863         0     21392         0     20034         0</span><br><span class="line">1         37782         0     37138         0     36706         0     37989         0</span><br><span class="line">2          1738         4      1666         5      1578         3      1691         1</span><br><span class="line">3           309      8864       289      6646       287      9723       255      8247</span><br><span class="line">4            29     33090        35     35557        22     35087        19     35885</span><br><span class="line">5            14     13043         4     13070         9     11198        12     11719</span><br><span class="line">6             5      3720         4      3558         5      3018         0      3143</span><br><span class="line">7             0      1001         0       934         1       814         1       815</span><br><span class="line">8             0       232         1       205         1       135         0       174</span><br><span class="line">9             0        38         0        20         0        15         0        14</span><br><span class="line">10            0         6         0         4         0         6         0         1</span><br><span class="line">11            0         2         0         0         0         1         0         1</span><br><span class="line">12            0         0         0         1         0         1         0         0</span><br><span class="line">over:         0         0         0         0         0         0         0         0</span><br><span class="line">count:    60000     60000     60000     60000     60001     60001     60001     60000</span><br><span class="line">min:          0         2         0         2         0         2         0         2</span><br><span class="line">avg:          0         4         0         4         0         4         0         4</span><br><span class="line">max:          6        11         8        12         8        12         7        11</span><br></pre></td></tr></table></figure>
+<p>可以发现大多数线程响应延迟是在 4us 左右，中断响应延迟是在 1us 左右。<br>另外，对于线程响应的大延迟范围是在 8~12us 。那么，我们可以设置线程响应延迟超过 9us 后，停止追踪并记录中断上下文的调用栈：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">rtla timerlat hist -c 4-7 -p 1000 -P f:80 --thread=9 --stack=9 -t -d 1m</span><br></pre></td></tr></table></figure>
+<p>结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"># RTLA timerlat histogram</span><br><span class="line"># Time unit is microseconds (us)</span><br><span class="line"># Duration:   0 00:00:01</span><br><span class="line">Index   IRQ-004   Thr-004   IRQ-005   Thr-005   IRQ-006   Thr-006   IRQ-007   Thr-007</span><br><span class="line">0             5         0         5         0         6         0         6         0</span><br><span class="line">1            13         0        12         0        13         0        12         0</span><br><span class="line">2             0         0         1         0         0         0         0         0</span><br><span class="line">3             1         0         0         0         0         0         0         1</span><br><span class="line">4             0        13         0         9         0        11         0        13</span><br><span class="line">5             0         3         0         7         0         6         0         2</span><br><span class="line">6             0         2         1         1         0         2         0         2</span><br><span class="line">7             0         1         0         1         0         0         0         0</span><br><span class="line">10            0         0         0         1         0         0         0         0</span><br><span class="line">over:         0         0         0         0         0         0         0         0</span><br><span class="line">count:       19        19        19        19        19        19        18        18</span><br><span class="line">min:          0         4         0         4         0         4         0         3</span><br><span class="line">avg:          0         4         1         4         0         4         0         4</span><br><span class="line">max:          3         7         6        10         1         6         1         6</span><br><span class="line">rtla timerlat hit stop tracing</span><br><span class="line">  Saving trace to timerlat_trace.txt</span><br></pre></td></tr></table></figure>
+<p>定位到 CPU5 ，发现线程响应延迟 10us ，查看 timerlat_trace.txt ：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line"># tracer: timerlat</span><br><span class="line">#</span><br><span class="line">#                                _-------=&gt; irqs-off</span><br><span class="line">#                               / _------=&gt; need-resched</span><br><span class="line">#                              | / _-----=&gt; need-resched-lazy</span><br><span class="line">#                              || / _----=&gt; hardirq/softirq</span><br><span class="line">#                              ||| / _---=&gt; preempt-depth</span><br><span class="line">#                              |||| / _--=&gt; preempt-lazy-depth</span><br><span class="line">#                              ||||| / _-=&gt; migrate-disable</span><br><span class="line">#                              |||||| /</span><br><span class="line">#                              |||||||             ACTIVATION</span><br><span class="line">#           TASK-PID      CPU# |||||||   TIMESTAMP    ID            CONTEXT                LATENCY</span><br><span class="line">#              | |         |   |||||||      |         |                  |                       |</span><br><span class="line">...</span><br><span class="line">    stress-ng-vm-31062   [005] d.Lh1.. 119470.853663: irq_noise: IPI:1 start 119470.853662868 duration 0 ns</span><br><span class="line">    stress-ng-io-31054   [005] d..h1.. 119470.853667: #991   context    irq timer_latency      4292 ns</span><br><span class="line">    stress-ng-io-31054   [005] dn.h2.. 119470.853669: irq_noise: arch_timer:13 start 119470.853666076 duration 2625 ns</span><br><span class="line">    stress-ng-io-31054   [005] d...3.. 119470.853670: thread_noise: stress-ng-io:31054 start 119470.853666660 duration 1750 ns</span><br><span class="line">      timerlat/5-31170   [005] ....... 119470.853671: #991   context thread timer_latency      9250 ns</span><br><span class="line">      timerlat/5-31170   [005] ....1.. 119470.853672: &lt;stack trace&gt;</span><br><span class="line"> =&gt; timerlat_irq</span><br><span class="line"> =&gt; __hrtimer_run_queues</span><br><span class="line"> =&gt; hrtimer_interrupt</span><br><span class="line"> =&gt; arch_timer_handler_phys</span><br><span class="line"> =&gt; handle_percpu_devid_irq</span><br><span class="line"> =&gt; handle_irq_desc</span><br><span class="line"> =&gt; generic_handle_domain_irq</span><br><span class="line"> =&gt; gic_handle_irq</span><br><span class="line"> =&gt; call_on_irq_stack</span><br><span class="line"> =&gt; do_interrupt_handler</span><br><span class="line"> =&gt; el1_interrupt</span><br><span class="line"> =&gt; el1h_64_irq_handler</span><br><span class="line"> =&gt; el1h_64_irq</span><br><span class="line"> =&gt; finish_task_switch.isra.0</span><br><span class="line"> =&gt; __schedule</span><br><span class="line"> =&gt; schedule</span><br><span class="line"> =&gt; schedule_timeout</span><br><span class="line"> =&gt; io_schedule_timeout</span><br><span class="line"> =&gt; wait_for_completion_io</span><br><span class="line"> =&gt; submit_bio_wait</span><br><span class="line"> =&gt; blkdev_issue_flush</span><br><span class="line"> =&gt; ext4_sync_fs</span><br><span class="line"> =&gt; sync_filesystem</span><br><span class="line"> =&gt; __arm64_sys_syncfs</span><br><span class="line"> =&gt; invoke_syscall</span><br><span class="line"> =&gt; el0_svc_common.constprop.0</span><br><span class="line"> =&gt; do_el0_svc</span><br><span class="line"> =&gt; el0_svc</span><br><span class="line"> =&gt; el0t_64_sync_handler</span><br><span class="line"> =&gt; el0t_64_sync</span><br></pre></td></tr></table></figure>
+<p>发现又是因为 stress-ng-io:31054 出现的延迟问题，具体问题就不定位了，这里仅作演示。</p>
+<h1 id="rtla背后的内核技术（基于-Linux-6-1-）"><a href="#rtla背后的内核技术（基于-Linux-6-1-）" class="headerlink" title="rtla背后的内核技术（基于 Linux-6.1 ）"></a>rtla背后的内核技术（基于 Linux-6.1 ）</h1><p>了解 rtla 的用法后，下一步是需要了解一下 <code>rtla osnoise</code> 和 <code>rtla timerlat</code> 背后的内核技术，这样能更熟练地使用 rtla 。</p>
+<h2 id="osnoise-tracer"><a href="#osnoise-tracer" class="headerlink" title="osnoise tracer"></a>osnoise tracer</h2><blockquote>
+<p>参考：<a target="_blank" rel="noopener" href="https://www.kernel.org/doc/html/v6.13/trace/osnoise-tracer.html">https://www.kernel.org/doc/html/v6.13/trace/osnoise-tracer.html</a></p>
+</blockquote>
+<h3 id="基本原理"><a href="#基本原理" class="headerlink" title="基本原理"></a>基本原理</h3><p>rtla osnoise 背后的技术是 osnoise tracer ，它的作用是什么？<br>它用于测量和分析操作系统噪声。在高性能计算环境中，操作系统噪声指的是由于操作系统内部活动（如中断、线程调度等）或硬件活动（如系统管理中断、陷入比操作系统更高级的 CPU 运行等级），进程造成的运行时干扰。而 osnoise tracer 就是把这些噪音记录起来。它站在一个普通线程的视角，记录下所有可能打断它的“噪音事件”，帮助开发者和系统管理员找出系统性能不稳定的根源。</p>
+<p>在 Linux 系统中，一个普通线程在执行过程中会被各种事件打断，例如：</p>
+<ul>
+<li>NMI：不可屏蔽中断</li>
+<li>IRQ：硬中断</li>
+<li>SoftIRQ：软中断</li>
+<li>Thread：其他线程的抢占</li>
+<li>HW：硬件噪声，如系统管理中断或虚拟机管理程序的干扰。</li>
+</ul>
+<p>设计灵感：OSNOISE Tracer 的设计借鉴了另一个工具 —— hwlat_detector（硬件延迟检测器）。</p>
+<p>hwlat_detector 通过禁用中断和抢占，然后不断轮询时间戳计数器来检测硬件或 NMI 引起的延迟。<br>OSNOISE Tracer 采用了类似的轮询思想，但不会禁用中断和抢占。这使得它可以捕捉到所有类型的操作系统噪声。</p>
+<h3 id="工作原理"><a href="#工作原理" class="headerlink" title="工作原理"></a>工作原理</h3><p>OSNOISE Tracer 的工作原理可以概括为以下几个步骤：</p>
+<ul>
+<li>创建内核线程：它默认为每个 CPU 创建一个内核采样线程（osnoise&#x2F;CPU），用户也可以自己指定 CPU 。</li>
+<li>轮询采样：这个线程在一个运行周期内，一直循环读取时间戳，如 TSC 寄存器，又或者调用 sched_clock() 读取。每次读取之间的时间差（delta），如果它超过 5us（默认设定），就是一次潜在的噪声样本。另外，用户可指定 tracing_thresh ，单位为 ns ，如果噪声样本大于等于 tracing_thresh ，才被确认为噪声。</li>
+<li>事件追踪：在轮询之前，OSNOISE 通过调用 osnoise_hook_events() ，在关键的内核事件点（如中断入口&#x2F;出口、任务切换等）注册了钩子函数。当这些事件发生时，钩子函数会被触发，记录下事件的开始时间、结束时间和类型。</li>
+</ul>
+<p>噪声分类：</p>
+<ul>
+<li>如果两次轮询之间的时间差超过了预设的阈值（tracing_thresh），就认为发生了一次噪声事件。</li>
+<li>此时，OSNOISE 会检查在噪声发生期间，是否有其他被追踪的事件（如 IRQ、NMI）发生。<ul>
+<li>如果有，则将该噪声归因于对应的事件（例如，一个 IRQ 发生了，噪声就记在 IRQ 头上）。</li>
+<li>如果没有任何操作系统级别的事件发生，则判定为硬件噪声（HW）。</li>
+</ul>
+</li>
+</ul>
+<p>输出结果：在每个采样周期结束时，OSNOISE 会输出一份报告，汇总该周期内的噪声情况。</p>
+<h3 id="如何使用"><a href="#如何使用" class="headerlink" title="如何使用"></a>如何使用</h3><p>使用 OSNOISE Tracer 非常简单，主要通过 tracefs 文件系统进行操作。<br>启用跟踪器：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /sys/kernel/tracing/</span><br><span class="line">osnoise &gt; current_tracer</span><br></pre></td></tr></table></figure>
+
+<p>查看跟踪结果：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> trace</span><br></pre></td></tr></table></figure>
+<p>结果内包含丰富的字段，用于分析噪声。一个典型的输出行如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">#                                _-----=&gt; irqs-off</span><br><span class="line">#                               / _----=&gt; need-resched</span><br><span class="line">#                              | / _---=&gt; hardirq/softirq</span><br><span class="line">#                              || / _--=&gt; preempt-depth                            MAX</span><br><span class="line">#                              || /                                             SINGLE     Interference counters:</span><br><span class="line">#                              ||||               RUNTIME      NOISE   % OF CPU  NOISE    +-----------------------------+</span><br><span class="line">#           TASK-PID      CPU# ||||   TIMESTAMP    IN US       IN US  AVAILABLE  IN US     HW    NMI    IRQ   SIRQ THREAD</span><br><span class="line">#              | |         |   ||||      |           |             |    |            |      |      |      |      |      |</span><br><span class="line">            &lt;...&gt;-864    [005] ....    81.638286: 1000000        263  99.97370      57      6      0   1006     26      2</span><br></pre></td></tr></table></figure>
+
+<p><strong>各字段含义如下：</strong></p>
+<table>
+<thead>
+<tr>
+<th align="center">字段</th>
+<th align="left">含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">RUNTIME IN US</td>
+<td align="left">本次采样周期内，osnoise 线程实际运行的时间（微秒）。</td>
+</tr>
+<tr>
+<td align="center">NOISE IN US</td>
+<td align="left">本次采样周期内，观察到的总噪声时间（微秒）。</td>
+</tr>
+<tr>
+<td align="center">% OF CPU AVAILABLE</td>
+<td align="left">在采样周期内，osnoise 线程可用的 CPU 时间百分比。值越高，说明系统越“干净”。</td>
+</tr>
+<tr>
+<td align="center">MAX SINGLE NOISE IN US</td>
+<td align="left">本次采样周期内，观察到的最大单次噪声（微秒）。</td>
+</tr>
+<tr>
+<td align="center">HW</td>
+<td align="left">硬件噪声发生的次数。</td>
+</tr>
+<tr>
+<td align="center">NMI</td>
+<td align="left">不可屏蔽中断发生的次数。</td>
+</tr>
+<tr>
+<td align="center">IRQ</td>
+<td align="left">硬中断发生的次数。</td>
+</tr>
+<tr>
+<td align="center">SIRQ</td>
+<td align="left">软中断发生的次数。</td>
+</tr>
+<tr>
+<td align="center">THREAD</td>
+<td align="left">其他线程干扰发生的次数。</td>
+</tr>
+</tbody></table>
+<p><strong>配置选项</strong><br>OSNOISE Tracer 提供了丰富的配置选项，位于 &#x2F;sys&#x2F;kernel&#x2F;tracing&#x2F;osnoise&#x2F; 目录下：</p>
+<table>
+<thead>
+<tr>
+<th align="center">配置文件</th>
+<th align="left">功能</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">osnoise&#x2F;cpus</td>
+<td align="left">指定 osnoise 线程在哪些 CPU 上运行。默认是所有 CPU。</td>
+</tr>
+<tr>
+<td align="center">osnoise&#x2F;period_us</td>
+<td align="left">osnoise 线程的运行周期（微秒）。默认是 1000000 (1秒)。</td>
+</tr>
+<tr>
+<td align="center">osnoise&#x2F;runtime_us</td>
+<td align="left">在每个周期内，osnoise 线程实际进行采样的时间（微秒）。默认是 1000000 (1秒)。</td>
+</tr>
+<tr>
+<td align="center">osnoise&#x2F;stop_tracing_us</td>
+<td align="left">如果单次噪声超过此值（微秒），则停止跟踪。写 0 禁用。</td>
+</tr>
+<tr>
+<td align="center">osnoise&#x2F;stop_tracing_total_us</td>
+<td align="left">如果总噪声超过此值（微秒），则停止跟踪。写 0 禁用。</td>
+</tr>
+<tr>
+<td align="center">tracing_thresh</td>
+<td align="left">被认为是噪声的最小时间差（微秒）。默认值为 5 us。</td>
+</tr>
+<tr>
+<td align="center">osnoise&#x2F;options</td>
+<td align="left">一组开关选项，例如 OSNOISE_WORKLOAD（是否派发工作负载）、PANIC_ON_STOP（停止时触发内核恐慌）等。</td>
+</tr>
+</tbody></table>
+<p><strong>高级追踪：Tracepoints</strong><br>除了周期性的汇总报告，OSNOISE 还提供了一组 tracepoints，用于获取每个噪声事件的详细信息。这些 tracepoints 位于 &#x2F;sys&#x2F;kernel&#x2F;tracing&#x2F;events&#x2F;osnoise&#x2F; 目录下：</p>
+<ul>
+<li>osnoise:sample_threshold：当噪声超过 tracing_thresh 时触发。</li>
+<li>osnoise:nmi_noise：记录 NMI 噪声的详细信息。</li>
+<li>osnoise:irq_noise：记录 IRQ 噪声的详细信息。</li>
+<li>osnoise:softirq_noise：记录 SoftIRQ 噪声的详细信息。</li>
+<li>osnoise:thread_noise：记录线程噪声的详细信息。</li>
+</ul>
+<p>以下是相关例子：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">  osnoise/8-961     [008] d.h.  5789.857532: irq_noise: local_timer:236 start 5789.857529929 duration 1845 ns</span><br><span class="line">  osnoise/8-961     [008] dNh.  5789.858408: irq_noise: local_timer:236 start 5789.858404871 duration 2848 ns</span><br><span class="line">migration/8-54      [008] d...  5789.858413: thread_noise: migration/8:54 start 5789.858409300 duration 3068 ns</span><br><span class="line">  osnoise/8-961     [008] ....  5789.858413: sample_threshold: start 5789.858404555 duration 8812 ns interferences 2</span><br></pre></td></tr></table></figure>
+<p>其中最后一行记录的是噪音的叠加总和，“interferences 2”表示有两个的噪音叠加再一起了。是哪两个噪音？看上面倒数第二个和第三个噪音，分别是 Thread 和 IRQ 噪音。<br>先看 Thread 噪音，osnoise&#x2F;8-961 被线程 migration&#x2F;8-54 干扰了<strong>至少</strong> 3068ns 。<br>再看 IRQ 噪音，osnoise&#x2F;8-961 被中断 local_timer:236 干扰了<strong>至少</strong> 2848ns 。<br>然后我们再从头看起，发现在第二条 IRQ 噪音记录中，osnoise&#x2F;8-961 被标记为 need-sched 。再结合第三条记录，得知它被 migration&#x2F;8-54 抢占。当中断 local_timer:236 对应的处理程序执行完成后，就切换线程，migration&#x2F;8-54 得到执行权。<br>当第三条记录记录下来的期间，migration&#x2F;8-54 被调度，轮到 osnoise&#x2F;8-961 执行，所以你能看到第三和第四条记录的时间戳是一致的（us 之内的差别）。<br>最后一条记录，就记录 osnoise&#x2F;8-961 未被得到执行，被其它噪音干扰的时间。而且还记录了被哪些噪音干扰，能根据此再结合上一条记录回溯情景。</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>OSNOISE Tracer 是一个强大且全面的内核工具，用于诊断和量化 Linux 系统中的性能干扰问题。 它通过一个集成的内核线程和事件追踪机制，能够精确区分并报告来自操作系统和硬件的各种噪声源。无论是用于 HPC 环境优化、实时系统调试，还是日常的性能问题排查，OSNOISE Tracer 都是一个不可或缺的利器。</p>
+<h2 id="timerlat-tracer"><a href="#timerlat-tracer" class="headerlink" title="timerlat tracer"></a>timerlat tracer</h2><blockquote>
+<p>参考：<a target="_blank" rel="noopener" href="https://www.kernel.org/doc/html/v6.13/trace/timerlat-tracer.html">https://www.kernel.org/doc/html/v6.13/trace/timerlat-tracer.html</a></p>
+</blockquote>
+<h3 id="基本原理-1"><a href="#基本原理-1" class="headerlink" title="基本原理"></a>基本原理</h3><p>Timerlat Tracer 是 Linux 内核提供的一个追踪工具，专门用于帮助开发者定位实时线程的**唤醒延迟（wakeup latency）**来源。它通过在内核中断上下文和线程上下文中分别测量定时器唤醒延迟，将延迟拆分为多个阶段，从而精确定位造成高延迟的根本原因。</p>
+<p>Timerlat Tracer 的设计灵感来源于经典的实时延迟测试工具 cyclictest。cyclictest 只能给出一个整体的延迟值，无法告诉开发者延迟具体来自哪个阶段（是中断响应慢？还是线程调度被阻塞？）。Timerlat Tracer 填补了这一空白：</p>
+<ul>
+<li>设置一个周期性定时器，定时器到期时触发一个 IRQ，IRQ 处理函数再唤醒一个实时线程。</li>
+<li>在 IRQ 上下文 和 线程上下文 分别记录延迟值，并通过 ACTIVATION ID 将两者关联起来。</li>
+<li>这样开发者可以一眼看出高延迟是发生在中断处理阶段还是线程调度阶段，进而深入分析。</li>
+</ul>
+<h3 id="工作原理-1"><a href="#工作原理-1" class="headerlink" title="工作原理"></a>工作原理</h3><p>timerlat Tracer 的工作原理可以概括为以下几个步骤：</p>
+<ol>
+<li>在每个 CPU 上创建一个实时优先级为 95 的内核线程（timerlat&#x2F;CPU），用户也可以自己指定 CPU。</li>
+<li>该线程初始化一个高分辨率定时器（hrtimer），设置一个周期（默认 1ms），用户也可以自己指定周期。</li>
+<li>线程进入睡眠，等待定时器到期。<ul>
+<li>定时器到期后，硬件触发中断，执行 timerlat_irq 函数（在 IRQ 上下文中）。</li>
+<li>记录当前时间与预定到期时间的差值，作为 IRQ Latency（硬中断延迟）。</li>
+</ul>
+</li>
+<li>唤醒等待的 timerlat 线程。</li>
+<li>线程被调度执行后，再次计算当前时间与预定到期时间的差值（包含：中断响应-&gt;中断处理（含线程唤醒）-&gt;线程调度-&gt;线程执行），作为 Thread Latency（线程延迟）。</li>
+<li>每次激活输出两条记录，通过相同的 ACTIVATION ID 关联。</li>
+</ol>
+<p>启用 timerlat tracer 后，读取 trace 文件可以看到类似如下输出：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"> tracer: timerlat</span><br><span class="line">#                              _-----=&gt; irqs-off</span><br><span class="line">#                             / _----=&gt; need-resched</span><br><span class="line">#                            | / _---=&gt; hardirq/softirq</span><br><span class="line">#                            || / _--=&gt; preempt-depth</span><br><span class="line">#                            || /</span><br><span class="line">#                            ||||             ACTIVATION</span><br><span class="line">#         TASK-PID      CPU# ||||   TIMESTAMP    ID            CONTEXT                LATENCY</span><br><span class="line">#            | |         |   ||||      |         |                  |                       |</span><br><span class="line">          &lt;idle&gt;-0       [000] d.h1    54.029328: #1     context    irq timer_latency       932 ns</span><br><span class="line">           &lt;...&gt;-867     [000] ....    54.029339: #1     context thread timer_latency     11700 ns</span><br></pre></td></tr></table></figure>
+<ul>
+<li>context irq：表示在硬中断上下文中测量的延迟。</li>
+<li>context thread：表示在线程上下文中测量的延迟。</li>
+<li>ACTIVATION ID（如 #1）用于关联同一轮激活的 IRQ 和线程记录。</li>
+</ul>
+<p><strong>IRQ&#x2F;Thread 拆分的重要性：</strong></p>
+<ul>
+<li>IRQ 延迟 可能由硬件相关因素导致：SMI（系统管理中断）、NMI、其他 IRQ、线程屏蔽中断等。</li>
+<li>Thread 延迟 可能由以下因素导致：其他线程抢占、调度器延迟、中断屏蔽、preempt_disable() 等。</li>
+<li>通过拆分，开发者可以快速判断高延迟是来自中断响应慢还是线程调度受阻，从而缩小排查范围。</li>
+</ul>
+<h3 id="如何使用-1"><a href="#如何使用-1" class="headerlink" title="如何使用"></a>如何使用</h3><p>启用 tracer ：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /sys/kernel/tracing/</span><br><span class="line"><span class="built_in">echo</span> timerlat &gt; current_tracer</span><br><span class="line"><span class="built_in">cat</span> trace</span><br></pre></td></tr></table></figure>
+<p>查看实时输出 ：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> trace_pipe   <span class="comment"># 持续输出</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>配置选项：</strong></p>
+<table>
+<thead>
+<tr>
+<th align="center">选项</th>
+<th align="center">文件</th>
+<th align="center">说明</th>
+<th align="center">默认值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">cpus</td>
+<td align="center">osnoise&#x2F;cpus</td>
+<td align="center">指定运行 timerlat 线程的 CPU 列表</td>
+<td align="center">所有在线 CPU</td>
+</tr>
+<tr>
+<td align="center">timerlat_period_us</td>
+<td align="center">osnoise&#x2F;timerlat_period_us</td>
+<td align="center">定时器周期（微秒）</td>
+<td align="center">1000 (1ms)</td>
+</tr>
+<tr>
+<td align="center">stop_tracing_us</td>
+<td align="center">osnoise&#x2F;stop_tracing_us</td>
+<td align="center">当 IRQ 延迟 超过此值时停止追踪（0 禁用）</td>
+<td align="center">0</td>
+</tr>
+<tr>
+<td align="center">stop_tracing_total_us</td>
+<td align="center">osnoise&#x2F;stop_tracing_total_us</td>
+<td align="center">当 线程延迟 超过此值时停止追踪（0 禁用）</td>
+<td align="center">0</td>
+</tr>
+<tr>
+<td align="center">print_stack</td>
+<td align="center">osnoise&#x2F;print_stack</td>
+<td align="center">当线程延迟超过设定值时，保存 IRQ 发生时的内核堆栈</td>
+<td align="center">0</td>
+</tr>
+</tbody></table>
+<p><strong>IRQ 堆栈追踪（Stack Trace）</strong><br>当线程延迟成为主要因素时，print_stack 选项可以保存 IRQ 发生时的内核堆栈，帮助定位是哪个函数导致了延迟。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> 500 &gt; osnoise/stop_tracing_total_us</span><br><span class="line"><span class="built_in">echo</span> 500 &gt; osnoise/print_stack</span><br><span class="line"><span class="built_in">echo</span> timerlat &gt; current_tracer</span><br><span class="line"><span class="built_in">tail</span> -21 timerlat_trace.txt</span><br></pre></td></tr></table></figure>
+
+<p><strong>与 OSNOISE Tracer 的结合：</strong><br>Timerlat 可以充分利用 osnoise 提供的 tracepoint 事件，获得更细粒度的延迟分解。启用 osnoise 事件后，可以看到每个延迟阶段的具体贡献：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> timerlat &gt; current_tracer</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; events/osnoise/enable</span><br><span class="line"><span class="built_in">echo</span> 25 &gt; osnoise/stop_tracing_total_us</span><br><span class="line"><span class="built_in">tail</span> -10 trace</span><br></pre></td></tr></table></figure>
+<p>用我们使用 <code>rtla timerlat top</code> 时捕获到的记录为输出示例：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">stress-ng-io-6679    [004] d..h.11 10204.897989: #5262  context    irq timer_latency      8210 ns</span><br><span class="line">stress-ng-io-6679    [004] dn.h111 10204.897992: irq_noise: arch_timer:13 start 10204.897988154 duration 3208 ns</span><br><span class="line">stress-ng-io-6679    [004] d...311 10204.897995: thread_noise: stress-ng-io:6679 start 10204.897988737 duration 2333 ns</span><br><span class="line">  timerlat/4-6695    [004] ....... 10204.897996: #5262  context thread timer_latency     14919 ns</span><br><span class="line">  timerlat/4-6695    [004] d..h2.. 10204.897999: irq_noise: IPI:6 start 10204.897997195 duration 1750 ns</span><br><span class="line">  timerlat/4-6695    [004] ....1.. 10204.898001: &lt;stack trace&gt;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>irq_noise：显示具体的中断源及其持续时间（净持续时间）。</li>
+<li>thread_noise：显示阻塞 timerlat 线程的其他线程及其持续时间（净持续时间）。</li>
+<li>净持续时间 vs 总持续时间：osnoise 事件报告的是净持续时间（已扣除嵌套干扰），而 timerlat tracer 报告的 timer_latency 是总持续时间（包含所有干扰）。</li>
+</ul>
+<p>timerlat 的 thread_noise ，它计算持续时间的起始点是以 irq_exit 为起点（Delta Start for Thread Noise），以线程切换 sched_switch 为终点，以此计算 thread_noise 的持续时间。在具体的代码实现如下：<br>在 timerlat 的 IRQ 阶段：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="keyword">enum</span> hrtimer_restart <span class="title function_">timerlat_irq</span><span class="params">(<span class="keyword">struct</span> hrtimer *timer)</span></span><br><span class="line">&#123;</span><br><span class="line">	...</span><br><span class="line">	osn_var-&gt;thread.arrival_time = time_get();</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!IS_ENABLED(CONFIG_PREEMPT_RT) &amp;&amp; osn_var-&gt;softirq.delta_start) &#123;</span><br><span class="line">		copy_int_safe_time(osn_var, &amp;osn_var-&gt;thread.delta_start,</span><br><span class="line">				   &amp;osn_var-&gt;softirq.delta_start);</span><br><span class="line"></span><br><span class="line">		copy_int_safe_time(osn_var, &amp;osn_var-&gt;softirq.delta_start,</span><br><span class="line">				    &amp;osn_var-&gt;irq.delta_start);</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		copy_int_safe_time(osn_var, &amp;osn_var-&gt;thread.delta_start,</span><br><span class="line">				    &amp;osn_var-&gt;irq.delta_start);</span><br><span class="line">	&#125;</span><br><span class="line">	...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>osn_var-&gt;thread.arrival_time</code> 对应以上第三条记录的 10204.897988737 ，但注意，这不是 <code>Delta Start for Thread Noise</code> ，<code>thread.delta_start</code> 才是 <code>Delta Start for Thread Noise</code> 。<br>假设我的内核是 <code>CONFIG_PREEMPT_RT</code> ，<code>irq.delta_start</code> 是在 irq_entry 阶段记录的，此时已赋值给 <code>thread.delta_start</code> 。<br>当进行 irq_exit 时，会对 <code>thread.delta_start</code> 进一步调整：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">void</span> <span class="title function_">osnoise_trace_irq_exit</span><span class="params">(<span class="type">int</span> id, <span class="type">const</span> <span class="type">char</span> *desc)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">osnoise_variables</span> *<span class="title">osn_var</span> =</span> this_cpu_osn_var();</span><br><span class="line">	s64 duration;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!osn_var-&gt;sampling)</span><br><span class="line">		<span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">	duration = get_int_safe_duration(osn_var, &amp;osn_var-&gt;irq.delta_start);</span><br><span class="line">	trace_irq_noise(id, desc, osn_var-&gt;irq.arrival_time, duration);</span><br><span class="line">	osn_var-&gt;irq.arrival_time = <span class="number">0</span>;</span><br><span class="line">	cond_move_softirq_delta_start(osn_var, duration);</span><br><span class="line">	cond_move_thread_delta_start(osn_var, duration);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="keyword">inline</span> <span class="type">void</span></span><br><span class="line"><span class="title function_">cond_move_thread_delta_start</span><span class="params">(<span class="keyword">struct</span> osnoise_variables *osn_var, u64 duration)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="keyword">if</span> (osn_var-&gt;thread.delta_start)</span><br><span class="line">		osn_var-&gt;thread.delta_start += duration;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最后在线程切换时，计算 Thread Noise 的净持续时间：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">void</span></span><br><span class="line"><span class="title function_">thread_exit</span><span class="params">(<span class="keyword">struct</span> osnoise_variables *osn_var, <span class="keyword">struct</span> task_struct *t)</span></span><br><span class="line">&#123;</span><br><span class="line">	s64 duration;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (!osn_var-&gt;sampling)</span><br><span class="line">		<span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (unlikely(timerlat_enabled()))</span><br><span class="line">		<span class="keyword">if</span> (!timerlat_thread_exit(osn_var))</span><br><span class="line">			<span class="keyword">return</span>;</span><br><span class="line"></span><br><span class="line">	duration = get_int_safe_duration(osn_var, &amp;osn_var-&gt;thread.delta_start);</span><br><span class="line"></span><br><span class="line">	trace_thread_noise(t, osn_var-&gt;thread.arrival_time, duration);</span><br><span class="line"></span><br><span class="line">	osn_var-&gt;thread.arrival_time = <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>以以上示例为例，stress-ng-io-6679 的调度策略为 SCHED_NORMAL ，timerlat&#x2F;4-6695 的是 SCHED_FIFO 。根据第三条记录可知，stress-ng-io:6679 被切换，轮到 timerlat&#x2F;4-6695 执行。期间就会调用 thread_exit() 记录 Thread Noise 。</p>
+<h3 id="总结-1"><a href="#总结-1" class="headerlink" title="总结"></a>总结</h3><p>Timerlat Tracer 是 Linux 实时性能调试的核心工具之一，它通过以下特性帮助开发者定位延迟根源：</p>
+<ul>
+<li>IRQ&#x2F;Thread 延迟拆分：明确高延迟发生在哪个阶段。</li>
+<li>与 osnoise 事件结合：提供净持续时间分解，显示每个干扰源的具体贡献。</li>
+<li>IRQ 堆栈追踪：直接指向导致延迟的代码路径。</li>
+<li>用户空间接口：允许自定义工作负载测量调度延迟。</li>
+</ul>
+<p>无论是实时系统开发、内核性能优化，还是 HPC 环境下的噪声分析，Timerlat Tracer 都是一个不可或缺的工具。建议开发者结合 rtla timerlat 的自动分析功能，快速定位并解决调度延迟问题。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Ftrace/" rel="tag"># Ftrace</a>
+              <a href="/tags/Kernel/" rel="tag"># Kernel</a>
+              <a href="/tags/RTOS/" rel="tag"># RTOS</a>
+              <a href="/tags/Preempt/" rel="tag"># Preempt</a>
+              <a href="/tags/Interrupt/" rel="tag"># Interrupt</a>
+              <a href="/tags/rtla/" rel="tag"># rtla</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/04/25/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/5-Linux-%E6%89%8B%E5%8A%A8%E6%B3%A8%E5%85%A5%E5%BB%B6%E8%BF%9F%E6%9D%A5%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/" rel="prev" title="Linux - 手动注入延迟来观测实时抖动">
+                  <i class="fa fa-angle-left"></i> Linux - 手动注入延迟来观测实时抖动
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">369k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">22:22</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

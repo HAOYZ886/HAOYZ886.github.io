@@ -169,7 +169,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">67</span>
+          <span class="site-state-item-count">73</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -180,7 +180,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">70</span>
+        <span class="site-state-item-count">73</span>
         <span class="site-state-item-name">tags</span></a>
       </div>
   </nav>
@@ -220,6 +220,697 @@
     </div>
 
     <div class="main-inner index posts-expand">
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2026/04/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/6-Linux-%E4%BD%BF%E7%94%A8%E5%AE%9E%E6%97%B6%E5%88%86%E6%9E%90%E5%B7%A5%E5%85%B7rtla%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2026/04/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/6-Linux-%E4%BD%BF%E7%94%A8%E5%AE%9E%E6%97%B6%E5%88%86%E6%9E%90%E5%B7%A5%E5%85%B7rtla%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6/" class="post-title-link" itemprop="url">Linux - 使用实时分析工具rtla观测实时</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2026-04-30 00:00:00" itemprop="dateCreated datePublished" datetime="2026-04-30T00:00:00+08:00">2026-04-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2026-05-15 00:00:00" itemprop="dateModified" datetime="2026-05-15T00:00:00+08:00">2026-05-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>9k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>33 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h1 id="什么是rtla"><a href="#什么是rtla" class="headerlink" title="什么是rtla"></a>什么是rtla</h1><p>rtla 的全称为 Real-Time Linux Analysis ，它是一个基于 FTrace 的实时分析工具集，已在 Linux 5.17 集成。它与 cyclictest 类似，但不同的是，它能监测出中断响应，以及任务唤醒到任务执行之间的抖动延迟；还能监测系统噪音检验任务的可观测性。</p>
+<blockquote>
+<p>系统噪音：指的是一个任务在可运行期间被强行打断，如被高优先级的线程抢占、IRQ、SoftIRQ、NMI 和 SMI 等。</p>
+</blockquote>
+<p>rtla 背靠 FTrace 的 osnoise 和 timerlat 机制，不仅能量化系统的调度延迟与抖动，更能自动定位产生高延迟的根本原因（如中断屏蔽、长临界区或硬件干扰）。也由此可知，它解决了 cyclictest 只能测“延迟有多大”却无法回答“延迟从哪来”的痛点。</p>
+<h2 id="定义与核心特性"><a href="#定义与核心特性" class="headerlink" title="定义与核心特性"></a>定义与核心特性</h2><p>rtla 是一个前端工具，它的后端是 FTrace 的 osnoise 和 timerlat ，所以它属于白盒测量。而传统的延迟测试工具（如 cyclictest），则是采用黑盒测量。<br>cyclictest 的基本实现是：为每个 CPU 新建一个高实时优先级的应用线程，主动调用 nanosleep() 休眠并等待唤醒，通过计算预期唤醒时间与实际唤醒时间的差值，以此得到一个延迟样本。<br>cyclictest 无法与内核直接建立“联系” ，它仅能计算整体的延迟，见以下例图：</p>
+<div align=center><img src="/images/原理及实现/Kernel/RT-Linux/Linux-使用实时分析工具rtla观测实时/cyclictest-latency.drawio.png"></div>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2026/04/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/6-Linux-%E4%BD%BF%E7%94%A8%E5%AE%9E%E6%97%B6%E5%88%86%E6%9E%90%E5%B7%A5%E5%85%B7rtla%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2026/04/25/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/5-Linux-%E6%89%8B%E5%8A%A8%E6%B3%A8%E5%85%A5%E5%BB%B6%E8%BF%9F%E6%9D%A5%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2026/04/25/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/5-Linux-%E6%89%8B%E5%8A%A8%E6%B3%A8%E5%85%A5%E5%BB%B6%E8%BF%9F%E6%9D%A5%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/" class="post-title-link" itemprop="url">Linux - 手动注入延迟来观测实时抖动</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2026-04-25 00:00:00" itemprop="dateCreated datePublished" datetime="2026-04-25T00:00:00+08:00">2026-04-25</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2026-05-03 00:00:00" itemprop="dateModified" datetime="2026-05-03T00:00:00+08:00">2026-05-03</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>8.1k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>30 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>根据之前几篇文档的说明可知，RTOS 的确定性来源于项目的需求，而具体的实现是：中断的响应，以及任务的调度和执行完成是否在指定的范围内。<br>在 Linux 中，</p>
+<ul>
+<li>中断的响应快慢，分为以下原因：<ol>
+<li>中断是否被关闭（主要），而中断关闭的原因是：</li>
+</ol>
+<ul>
+<li>框架&#x2F;子系统的实现自身要求的，比如 spin_lock_irq()</li>
+<li>进入中断上下文（包括 NMI ）时关闭</li>
+</ul>
+<ol start="2">
+<li>硬件延迟（SMI）导致（次要），而导致此的原因是：</li>
+</ol>
+<ul>
+<li>如 ARM64 架构，由于 Linux 运行在 EL1 ，则它无法感知 EL2&#x2F;EL3 ，当陷入更高级运行等级时，内核处于停止状态。</li>
+<li>如 X86 架构，BIOS&#x2F;固件执行相关操作，CPU 无法屏蔽，只能等待完成。</li>
+</ul>
+</li>
+<li>任务的响应快慢，分为以下原因：<ol>
+<li>抢占是否被关闭（主要），而抢占关闭的原因是：</li>
+</ol>
+<ul>
+<li>框架&#x2F;子系统的实现自身要求的，比如 spin_lock_irq()</li>
+</ul>
+<ol start="2">
+<li>在就绪队列中的任务，或当前任务的实时优先级比指定调度的任务优先级更高</li>
+<li>实时仲裁（Linux机制，间接导致）。比如在 1 秒时间内要求 0.95 秒跑实时任务，其余时间跑非实时任务。高优先级任务（优先级大于或等于你想要响应的任务）占满 0.95 秒，触发实时仲裁，你想要响应的任务也会被延后至少 0.05 秒得到调度。</li>
+<li>优先级反转。比如低优先级的线程持有锁并正在执行，但是此时高优先级的线程抢占了执行该低优先级的线程的 CPU ，而且尝试获取低优先级的线程已持有的锁，但获取不了从而让出执行权，只能等待低优先级的线程释放锁。</li>
+<li>硬件延迟（SMI）导致</li>
+</ol>
+</li>
+</ul>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2026/04/25/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/5-Linux-%E6%89%8B%E5%8A%A8%E6%B3%A8%E5%85%A5%E5%BB%B6%E8%BF%9F%E6%9D%A5%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2026/04/15/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/4-Linux-%E4%BD%BF%E7%94%A8%E7%A4%BA%E6%B3%A2%E5%99%A8%E8%A7%82%E5%AF%9F%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2026/04/15/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/4-Linux-%E4%BD%BF%E7%94%A8%E7%A4%BA%E6%B3%A2%E5%99%A8%E8%A7%82%E5%AF%9F%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/" class="post-title-link" itemprop="url">Linux - 使用“GPIO+示波器”的方式观测实时抖动</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2026-04-15 00:00:00" itemprop="dateCreated datePublished" datetime="2026-04-15T00:00:00+08:00">2026-04-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2026-04-16 00:00:00" itemprop="dateModified" datetime="2026-04-16T00:00:00+08:00">2026-04-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3.1k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>11 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>现在在想，能否用 GPIO+示波器 的方式去测试实时抖动？通过之前的文档可知，实时操作系统的核心在于确定性，所以我们首要关心的是，在进行长时间的持续测试中，延迟抖动的最大值是多少，以此确定 RTOS 的确定性；其次是平均值是多少，以此确定 RTOS 的性能。<br>见以下例图，使用 cyclictest 能测试出“中断发出-&gt;中断响应-&gt;任务唤醒-&gt;任务调度-&gt;返回到用户空间”的总体耗时。</p>
+<div align=center><img src="/images/原理及实现/Kernel/RT-Linux/Linux-使用示波器观察实时抖动/cyclictest-latency.drawio.png"></div>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2026/04/15/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/4-Linux-%E4%BD%BF%E7%94%A8%E7%A4%BA%E6%B3%A2%E5%99%A8%E8%A7%82%E5%AF%9F%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2026/04/14/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/3-Linux-%E5%AE%9E%E6%97%B6%E8%A1%A5%E4%B8%81%E7%9A%84%E4%BD%BF%E7%94%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2026/04/14/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/3-Linux-%E5%AE%9E%E6%97%B6%E8%A1%A5%E4%B8%81%E7%9A%84%E4%BD%BF%E7%94%A8/" class="post-title-link" itemprop="url">Linux - 实时补丁的使用</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2026-04-14 00:00:00" itemprop="dateCreated datePublished" datetime="2026-04-14T00:00:00+08:00">2026-04-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2.3k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>8 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h1 id="怎么使用实时补丁"><a href="#怎么使用实时补丁" class="headerlink" title="怎么使用实时补丁"></a>怎么使用实时补丁</h1><p>虽然 Linux 6.12 版本已把实时补丁合并到主线，但是随着版本更新，仍有一些新的改动和特性未被合并到主线分支，所以还是有必要了解怎么使用 RT 补丁。</p>
+<h2 id="下载补丁"><a href="#下载补丁" class="headerlink" title="下载补丁"></a>下载补丁</h2><p>实时内核补丁下载地址：</p>
+<p><a target="_blank" rel="noopener" href="https://mirrors.edge.kernel.org/pub/linux/kernel/projects/rt/">https://mirrors.edge.kernel.org/pub/linux/kernel/projects/rt/</a></p>
+<p>在目录内根据内核版本，找到相应的版本的补丁并下载。比如说我的内核版本是 6.1 ，则需要找该版本的实时补丁：</p>
+<div align=center><img src="/images/原理及实现/Kernel/RT-Linux/Linux-实时补丁的使用/rt-patch.png"></div>
+
+<p>补丁文件被压缩成压缩文件，它们可被分为两种，一是单一补丁，可直接使用命令 <code>patch -p1</code> 打补丁；二是多个补丁，需要按顺序打补丁。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2026/04/14/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/3-Linux-%E5%AE%9E%E6%97%B6%E8%A1%A5%E4%B8%81%E7%9A%84%E4%BD%BF%E7%94%A8/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2026/04/09/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/2-Linux-%E5%8F%AF%E6%8A%A2%E5%8D%A0%E5%86%85%E6%A0%B8%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E8%B7%B5/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2026/04/09/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/2-Linux-%E5%8F%AF%E6%8A%A2%E5%8D%A0%E5%86%85%E6%A0%B8%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E8%B7%B5/" class="post-title-link" itemprop="url">Linux-可抢占内核的原理与实践</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2026-04-09 00:00:00" itemprop="dateCreated datePublished" datetime="2026-04-09T00:00:00+08:00">2026-04-09</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2026-04-11 00:00:00" itemprop="dateModified" datetime="2026-04-11T00:00:00+08:00">2026-04-11</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>4.9k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>18 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="可抢占内核和非可抢占内核是什么"><a href="#可抢占内核和非可抢占内核是什么" class="headerlink" title="可抢占内核和非可抢占内核是什么"></a>可抢占内核和非可抢占内核是什么</h2><p>可抢占内核与非可抢占内核的区别在于内核态代码是否允许被强制打断，这直接影响系统在低延迟响应与高吞吐量之间的取舍。</p>
+<h3 id="定义与典型场景"><a href="#定义与典型场景" class="headerlink" title="定义与典型场景"></a>定义与典型场景</h3><ol>
+<li><strong>非可抢占内核</strong><ul>
+<li>当一个进程因系统调用或中断进入内核态运行时，该进程独占 CPU 直至内核态执行完毕（返回用户态）、主动调用调度器让出 CPU，或在显式的抢占点检查调度。即使有更高优先级的就绪任务，也无法抢占当前内核态任务的执行权。</li>
+<li>典型场景：服务器、高性能计算集群。这些场景更关注单位时间内处理的任务总量（吞吐量），而非单个任务的响应延迟。</li>
+</ul>
+</li>
+<li><strong>可抢占内核</strong><ul>
+<li>内核态代码执行路径中，除了持有自旋锁或显式禁用抢占的极短临界区外，均可被高优先级任务强制打断。调度器可以随时剥夺当前内核态任务的执行权，切换至更高优先级的任务。</li>
+<li>典型场景：桌面系统、软实时嵌入式系统、多媒体处理。这些场景要求系统对交互事件或外部中断有较快的响应速度，即使牺牲部分吞吐量。</li>
+</ul>
+</li>
+</ol>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2026/04/09/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/2-Linux-%E5%8F%AF%E6%8A%A2%E5%8D%A0%E5%86%85%E6%A0%B8%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E8%B7%B5/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2026/04/07/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/1-%E5%AE%9E%E6%97%B6%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2026/04/07/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/1-%E5%AE%9E%E6%97%B6%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/" class="post-title-link" itemprop="url">实时操作系统原理浅析</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2026-04-07 00:00:00" itemprop="dateCreated datePublished" datetime="2026-04-07T00:00:00+08:00">2026-04-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2026-04-12 00:00:00" itemprop="dateModified" datetime="2026-04-12T00:00:00+08:00">2026-04-12</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2.7k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>10 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="什么是实时操作系统"><a href="#什么是实时操作系统" class="headerlink" title="什么是实时操作系统"></a>什么是实时操作系统</h2><p>实时操作系统的核心在于确定性——在严格的时间限制内完成任务响应，并且在可预测的时间内完成。<br>通用操作系统追求高吞吐量，实时操作系统追求时间可预测，这是两者设计目标的根本区别。</p>
+<h3 id="实时操作系统与通用操作系统的区别"><a href="#实时操作系统与通用操作系统的区别" class="headerlink" title="实时操作系统与通用操作系统的区别"></a>实时操作系统与通用操作系统的区别</h3><p>操作系统按时间约束的保证能力分为通用操作系统（GPOS）和实时操作系统（RTOS）。区别不在运算速度，而在对时间约束的保证能力。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2026/04/07/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/1-%E5%AE%9E%E6%97%B6%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
 
     
 
@@ -648,628 +1339,8 @@
 
 
 
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2026/02/19/Skill/normal/Linux-samba%E6%90%AD%E5%BB%BA/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/user.png">
-      <meta itemprop="name" content="Calon Zhang">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Calon's Blog">
-      <meta itemprop="description" content="Just for fun.">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | Calon's Blog">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2026/02/19/Skill/normal/Linux-samba%E6%90%AD%E5%BB%BA/" class="post-title-link" itemprop="url">samba搭建</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-
-      <time title="Created: 2026-02-19 00:00:00" itemprop="dateCreated datePublished" datetime="2026-02-19T00:00:00+08:00">2026-02-19</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/Skill/" itemprop="url" rel="index"><span itemprop="name">Skill</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="Word count in article">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">Word count in article: </span>
-      <span>130</span>
-    </span>
-    <span class="post-meta-item" title="Reading time">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">Reading time &asymp;</span>
-      <span>1 mins.</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h1 id="SAMBA-配置"><a href="#SAMBA-配置" class="headerlink" title="SAMBA 配置"></a>SAMBA 配置</h1><h2 id="参考链接"><a href="#参考链接" class="headerlink" title="参考链接"></a>参考链接</h2><p><a target="_blank" rel="noopener" href="https://blog.csdn.net/myt2000/article/details/129661198">https://blog.csdn.net/myt2000/article/details/129661198</a></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2026/02/19/Skill/normal/Linux-samba%E6%90%AD%E5%BB%BA/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2026/02/11/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/user.png">
-      <meta itemprop="name" content="Calon Zhang">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Calon's Blog">
-      <meta itemprop="description" content="Just for fun.">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | Calon's Blog">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2026/02/11/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/" class="post-title-link" itemprop="url">T536 - LocalBus到FPGA到AD7616的调优</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-
-      <time title="Created: 2026-02-11 00:00:00" itemprop="dateCreated datePublished" datetime="2026-02-11T00:00:00+08:00">2026-02-11</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="Word count in article">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">Word count in article: </span>
-      <span>3.2k</span>
-    </span>
-    <span class="post-meta-item" title="Reading time">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">Reading time &asymp;</span>
-      <span>12 mins.</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>本文档的主要调优对象是AD7616的极限采集速率，以及在软件系统层面对数据采集和解析的解耦实现（异步IO），尽可能地“压榨”该采集管道（LocalBus-&gt;FPGA-&gt;AD7616）的性能，使得应用进程在规定时间内，能快速地获取到数据并解析，仅专注解析数据即可。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2026/02/11/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Drivers/T536-LocalBus%E5%88%B0FPGA%E5%88%B0AD7616%E7%9A%84%E8%B0%83%E4%BC%98/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2026/01/16/Skill/debug/Linux%E5%86%85%E6%A0%B8BPF%E8%B0%83%E8%AF%95/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/user.png">
-      <meta itemprop="name" content="Calon Zhang">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Calon's Blog">
-      <meta itemprop="description" content="Just for fun.">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | Calon's Blog">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2026/01/16/Skill/debug/Linux%E5%86%85%E6%A0%B8BPF%E8%B0%83%E8%AF%95/" class="post-title-link" itemprop="url">Linux - BPF调试</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-
-      <time title="Created: 2026-01-16 00:00:00" itemprop="dateCreated datePublished" datetime="2026-01-16T00:00:00+08:00">2026-01-16</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/Skill/" itemprop="url" rel="index"><span itemprop="name">Skill</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="Word count in article">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">Word count in article: </span>
-      <span>222</span>
-    </span>
-    <span class="post-meta-item" title="Reading time">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">Reading time &asymp;</span>
-      <span>1 mins.</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h2 id="BCC、bpftrace和ply"><a href="#BCC、bpftrace和ply" class="headerlink" title="BCC、bpftrace和ply"></a>BCC、bpftrace和ply</h2><p>BCC 的全称是 BPF Compiler Collection ，它是 libbcc 和 libbpf 库的具体实现（又称为前端实现）。它提供了一个编写内核 BPF 程序的 C 语言环境（还有 C++ 、Lua 和 Python 等），还提供了 70 多个 BPF 工具，用于性能分析和排障工作。<br>bpftrace 也是 libbcc 和 libbpf 库的前端实现。它和 BCC 相比，它的优势是编写功能强大的单行程序和短小脚本。BCC 则是更适合开发复杂的脚本和后台程序，还能额外调用其它库做额外处理。<br>ply 可以理解为是轻量化的 bpftrace ，适合在嵌入式 Linux 环境下使用。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2026/01/16/Skill/debug/Linux%E5%86%85%E6%A0%B8BPF%E8%B0%83%E8%AF%95/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2026/01/16/%E9%85%8D%E7%BD%AE/allwinner/Buildroot%E7%B3%BB%E7%BB%9F%E8%87%AA%E5%8A%A8%E7%99%BB%E5%BD%95/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/user.png">
-      <meta itemprop="name" content="Calon Zhang">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Calon's Blog">
-      <meta itemprop="description" content="Just for fun.">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | Calon's Blog">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2026/01/16/%E9%85%8D%E7%BD%AE/allwinner/Buildroot%E7%B3%BB%E7%BB%9F%E8%87%AA%E5%8A%A8%E7%99%BB%E5%BD%95/" class="post-title-link" itemprop="url">Buildroot系统自动登录</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-
-      <time title="Created: 2026-01-16 00:00:00" itemprop="dateCreated datePublished" datetime="2026-01-16T00:00:00+08:00">2026-01-16</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E9%85%8D%E7%BD%AE/" itemprop="url" rel="index"><span itemprop="name">配置</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="Word count in article">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">Word count in article: </span>
-      <span>561</span>
-    </span>
-    <span class="post-meta-item" title="Reading time">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">Reading time &asymp;</span>
-      <span>2 mins.</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>本文档在全志 Tina5.0 SDK 验证可行，但是方法是通用的。</p>
-<h1 id="添加AGETTY工具"><a href="#添加AGETTY工具" class="headerlink" title="添加AGETTY工具"></a>添加AGETTY工具</h1><p>需要在 Buildroot 配置单中添加以下配置，使用 <code>./build.sh buildroot_menuconfig</code> 进入配置菜单：</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">BR2_PACKAGE_UTIL_LINUX=y</span><br><span class="line">BR2_PACKAGE_UTIL_LINUX_AGETTY=y</span><br></pre></td></tr></table></figure>
-
-<p>然后使用 <code>./build.sh buildroot_saveconfig</code> 保存配置。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2026/01/16/%E9%85%8D%E7%BD%AE/allwinner/Buildroot%E7%B3%BB%E7%BB%9F%E8%87%AA%E5%8A%A8%E7%99%BB%E5%BD%95/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2025/12/18/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/user.png">
-      <meta itemprop="name" content="Calon Zhang">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Calon's Blog">
-      <meta itemprop="description" content="Just for fun.">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | Calon's Blog">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2025/12/18/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/" class="post-title-link" itemprop="url">DRAM基础和调参</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-
-      <time title="Created: 2025-12-18 00:00:00" itemprop="dateCreated datePublished" datetime="2025-12-18T00:00:00+08:00">2025-12-18</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/Hardware/" itemprop="url" rel="index"><span itemprop="name">Hardware</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="Word count in article">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">Word count in article: </span>
-      <span>9.1k</span>
-    </span>
-    <span class="post-meta-item" title="Reading time">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">Reading time &asymp;</span>
-      <span>33 mins.</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h2 id="DRAM的基础概念"><a href="#DRAM的基础概念" class="headerlink" title="DRAM的基础概念"></a>DRAM的基础概念</h2><h3 id="DRAM子系统"><a href="#DRAM子系统" class="headerlink" title="DRAM子系统"></a>DRAM子系统</h3><p>DRAM子系统是我们整个嵌入式系统的核心，由多个硬件和逻辑组件协同工作，实现数据的存储、访问和管理。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2025/12/18/Hardware/arch/DRAM%E5%9F%BA%E7%A1%80%E5%92%8C%E8%B0%83%E5%8F%82/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2025/11/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-MIPI-DSI%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/user.png">
-      <meta itemprop="name" content="Calon Zhang">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Calon's Blog">
-      <meta itemprop="description" content="Just for fun.">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | Calon's Blog">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2025/11/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-MIPI-DSI%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/" class="post-title-link" itemprop="url">Linux - MIPI-DSI开发要点</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-
-      <time title="Created: 2025-11-30 00:00:00" itemprop="dateCreated datePublished" datetime="2025-11-30T00:00:00+08:00">2025-11-30</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2025-12-13 00:00:00" itemprop="dateModified" datetime="2025-12-13T00:00:00+08:00">2025-12-13</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="Word count in article">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">Word count in article: </span>
-      <span>24k</span>
-    </span>
-    <span class="post-meta-item" title="Reading time">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">Reading time &asymp;</span>
-      <span>1:26</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>以下是参考文档：</p>
-<ol>
-<li>《mipi_DSI-2_specification_v1-0》</li>
-<li>《MIPI_D-PHY_specification_Version_2.5》</li>
-<li>《MIPI Alliance Standard for Display Pixel Interface（DPI-2）》</li>
-<li>《MIPI Alliance Standard for Display Bus Interface（V2.0）》</li>
-<li>《Specification for Display Command Set (DCS)》</li>
-<li>《IMX8MPRM》</li>
-</ol>
-<h2 id="MIPI-DSI的基本概念"><a href="#MIPI-DSI的基本概念" class="headerlink" title="MIPI-DSI的基本概念"></a>MIPI-DSI的基本概念</h2><h3 id="总线概述"><a href="#总线概述" class="headerlink" title="总线概述"></a>总线概述</h3><p>MIPI-DSI 是由 MIPI 联盟开发的一种标准的输出视频流总线规范，规定了主机与外围设备之间的连接标准，如 SoC 与显示屏之间的连接。DSI 全称是 Display Serial Interface ，顾名思义，该规范是把主机的数据按位串行发送到外围设备。<br>该总线还额外基于 DPI-2（Display Pixel Interface）、DBI-2（Display Bus Interface）和 DCS（Display Command Set）标准，其中 DCS 是一种命令标准。该总线能发送命令或像素数据到外围设备，也能从外围设备中获取相关信息。它有两种传输模式，分别是 LP（Low Power）和 HS（High Speed）。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2025/11/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/DRM/Linux-MIPI-DSI%E5%BC%80%E5%8F%91%E8%A6%81%E7%82%B9/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
   <nav class="pagination">
-    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><span class="space">&hellip;</span><a class="page-number" href="/page/7/">7</a><a class="extend next" rel="next" title="Next page" aria-label="Next page" href="/page/2/"><i class="fa fa-angle-right"></i></a>
+    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><span class="space">&hellip;</span><a class="page-number" href="/page/8/">8</a><a class="extend next" rel="next" title="Next page" aria-label="Next page" href="/page/2/"><i class="fa fa-angle-right"></i></a>
   </nav>
 
 </div>
@@ -1291,13 +1362,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="Word count total">339k</span>
+    <span title="Word count total">369k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="Reading time total">20:32</span>
+    <span title="Reading time total">22:22</span>
   </span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>

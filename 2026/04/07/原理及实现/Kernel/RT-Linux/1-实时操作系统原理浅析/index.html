@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="什么是实时操作系统实时操作系统的核心在于确定性——在严格的时间限制内完成任务响应，并且在可预测的时间内完成。通用操作系统追求高吞吐量，实时操作系统追求时间可预测，这是两者设计目标的根本区别。 实时操作系统与通用操作系统的区别操作系统按时间约束的保证能力分为通用操作系统（GPOS）和实时操作系统（RTOS）。区别不在运算速度，而在对时间约束的保证能力。">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="实时操作系统原理浅析">
+<meta property="og:url" content="http://example.com/2026/04/07/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/1-%E5%AE%9E%E6%97%B6%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="什么是实时操作系统实时操作系统的核心在于确定性——在严格的时间限制内完成任务响应，并且在可预测的时间内完成。通用操作系统追求高吞吐量，实时操作系统追求时间可预测，这是两者设计目标的根本区别。 实时操作系统与通用操作系统的区别操作系统按时间约束的保证能力分为通用操作系统（GPOS）和实时操作系统（RTOS）。区别不在运算速度，而在对时间约束的保证能力。">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2026-04-06T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-04-11T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Kernel">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="Preempt">
+<meta property="article:tag" content="RTOS">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2026/04/07/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/1-%E5%AE%9E%E6%97%B6%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2026/04/07/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/1-%E5%AE%9E%E6%97%B6%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/","path":"2026/04/07/原理及实现/Kernel/RT-Linux/1-实时操作系统原理浅析/","title":"实时操作系统原理浅析"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>实时操作系统原理浅析 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BB%80%E4%B9%88%E6%98%AF%E5%AE%9E%E6%97%B6%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F"><span class="nav-number">1.</span> <span class="nav-text">什么是实时操作系统</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9E%E6%97%B6%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E4%B8%8E%E9%80%9A%E7%94%A8%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="nav-number">1.1.</span> <span class="nav-text">实时操作系统与通用操作系统的区别</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BB%B6%E8%BF%9F%E6%8A%96%E5%8A%A8%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-number">1.2.</span> <span class="nav-text">延迟抖动是什么</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%AB%98%E4%BC%98%E5%85%88%E7%BA%A7%E4%BB%BB%E5%8A%A1%E4%B8%8E%E4%B8%AD%E6%96%AD%E7%9A%84%E7%A1%AE%E5%AE%9A%E6%80%A7%E5%93%8D%E5%BA%94"><span class="nav-number">1.3.</span> <span class="nav-text">高优先级任务与中断的确定性响应</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BB%BB%E5%8A%A1%E6%89%A7%E8%A1%8C%E6%97%B6%E9%97%B4%E7%9A%84%E7%A1%AE%E5%AE%9A%E6%80%A7"><span class="nav-number">1.4.</span> <span class="nav-text">任务执行时间的确定性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%90%9E%E5%90%90%E9%87%8F%E4%B8%8E%E7%A1%AE%E5%AE%9A%E6%80%A7%E7%9A%84%E6%9D%83%E8%A1%A1"><span class="nav-number">1.5.</span> <span class="nav-text">吞吐量与确定性的权衡</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">1.6.</span> <span class="nav-text">小结</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BD%AF%E5%AE%9E%E6%97%B6%E5%92%8C%E7%A1%AC%E5%AE%9E%E6%97%B6%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="nav-number">2.</span> <span class="nav-text">软实时和硬实时的区别</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9A%E4%B9%89%E3%80%81%E5%90%8E%E6%9E%9C%E4%B8%8E%E5%85%B8%E5%9E%8B%E5%9C%BA%E6%99%AF"><span class="nav-number">2.1.</span> <span class="nav-text">定义、后果与典型场景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9B%B4%E6%B7%B1%E5%B1%82%E7%9A%84%E5%88%86%E6%9E%90%E5%AF%B9%E6%AF%94"><span class="nav-number">2.2.</span> <span class="nav-text">更深层的分析对比</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Linux-%E6%98%AF%E4%BB%80%E4%B9%88%E7%B1%BB%E5%9E%8B%E7%9A%84%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%88%E5%86%85%E6%A0%B8%EF%BC%89"><span class="nav-number">3.</span> <span class="nav-text">Linux 是什么类型的操作系统（内核）</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">73</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">73</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2026/04/07/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/1-%E5%AE%9E%E6%97%B6%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="实时操作系统原理浅析 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          实时操作系统原理浅析
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2026-04-07 00:00:00" itemprop="dateCreated datePublished" datetime="2026-04-07T00:00:00+08:00">2026-04-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2026-04-12 00:00:00" itemprop="dateModified" datetime="2026-04-12T00:00:00+08:00">2026-04-12</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2.7k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>10 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="什么是实时操作系统"><a href="#什么是实时操作系统" class="headerlink" title="什么是实时操作系统"></a>什么是实时操作系统</h2><p>实时操作系统的核心在于确定性——在严格的时间限制内完成任务响应，并且在可预测的时间内完成。<br>通用操作系统追求高吞吐量，实时操作系统追求时间可预测，这是两者设计目标的根本区别。</p>
+<h3 id="实时操作系统与通用操作系统的区别"><a href="#实时操作系统与通用操作系统的区别" class="headerlink" title="实时操作系统与通用操作系统的区别"></a>实时操作系统与通用操作系统的区别</h3><p>操作系统按时间约束的保证能力分为通用操作系统（GPOS）和实时操作系统（RTOS）。区别不在运算速度，而在对时间约束的保证能力。</p>
+<span id="more"></span>
+<table>
+<thead>
+<tr>
+<th align="left">特性</th>
+<th align="left">通用操作系统</th>
+<th align="left">实时操作系统</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">核心目标</td>
+<td align="left">吞吐量优先：单位时间内处理尽可能多的任务</td>
+<td align="left">确定性优先：高优先级任务在截止时间前必须完成</td>
+</tr>
+<tr>
+<td align="left">调度策略</td>
+<td align="left">公平调度（如 CFS），所有进程公平分享 CPU</td>
+<td align="left">优先级调度（如 SCHED_FIFO），高优先级任务立即抢占 CPU</td>
+</tr>
+<tr>
+<td align="left">响应表现</td>
+<td align="left">平均响应时间可能较短，但最大延迟不可预测</td>
+<td align="left">平均响应时间可能较长，但最大延迟有上界</td>
+</tr>
+<tr>
+<td align="left">典型场景</td>
+<td align="left">服务器、桌面 PC、移动终端</td>
+<td align="left">工业控制、航空航天、医疗设备、汽车电子</td>
+</tr>
+<tr>
+<td align="left">失败后果</td>
+<td align="left">体验下降（视频卡顿、鼠标延迟）</td>
+<td align="left">系统失效（安全气囊未弹出、导弹拦截失败）</td>
+</tr>
+</tbody></table>
+<p>NASA Langley 研究中心在《<a target="_blank" rel="noopener" href="https://ntrs.nasa.gov/api/citations/20200002390/downloads/20200002390.pdf">Challenges Using Linux as a Real-Time Operating System</a>》中指出，Linux 内核包含大量优先考虑吞吐量而非确定性的设计决策。例如，通用操作系统会为了提高磁盘 I&#x2F;O 吞吐量而合并相邻的中断请求，但单个请求的响应延迟因此增加；RTOS 则牺牲部分吞吐量来保证每个请求都被及时处理。</p>
+<h3 id="延迟抖动是什么"><a href="#延迟抖动是什么" class="headerlink" title="延迟抖动是什么"></a>延迟抖动是什么</h3><p>在观看大多数的与 RTOS 有关的文档时，经常提起延迟抖动，那么延迟抖动是什么意思？<br><strong>延迟</strong> 来衡量响应速度；<strong>抖动</strong> 来衡量响应时间的波动范围。</p>
+<ul>
+<li><strong>延迟</strong>：事件发生到任务被执行的时间差。</li>
+<li><strong>抖动</strong>：延迟的变化幅度。例如，平均延迟 20us，但偶尔出现 500us 的峰值，这就是巨大的抖动。</li>
+</ul>
+<p>这两个名词都是与 RTOS 的确定性紧密相连，以此确定整个系统是否满足项目要求的最大实时抖动，以及平均延迟是否满足所要求的性能指标。</p>
+<h3 id="高优先级任务与中断的确定性响应"><a href="#高优先级任务与中断的确定性响应" class="headerlink" title="高优先级任务与中断的确定性响应"></a>高优先级任务与中断的确定性响应</h3><p>RTOS 保证高优先级任务和中断在确定的时间窗口内完成响应，依赖两个机制：</p>
+<ol>
+<li><strong>任务抢占</strong>：当高优先级任务就绪时，调度器立即暂停当前低优先级任务，将 CPU 分配给高优先级任务。这个过程的时间有上限，称为任务切换延迟。</li>
+<li><strong>中断响应</strong>：RTOS 对中断的处理延迟低且可预测。<ul>
+<li>低延迟中断：RTOS 通常允许中断嵌套，高优先级中断可以打断低优先级中断，关键硬件事件不会被阻塞。</li>
+<li>确定性处理：中断服务程序（ISR）遵循”快进快出”原则，只做最必要的硬件操作，复杂逻辑延迟到任务上下文中执行，避免长时间关闭中断。</li>
+</ul>
+</li>
+</ol>
+<p>对比：</p>
+<ul>
+<li>RTOS 场景：汽车碰撞传感器触发中断，RTOS 必须在微秒级时间内响应并调度安全气囊弹出任务。超过截止时间的延迟不可接受。</li>
+<li>GPOS 场景：用户移动鼠标时系统正在处理繁重后台任务，鼠标指针短暂卡顿。影响体验，但系统并未崩溃，这种延迟在 GPOS 设计中被允许。</li>
+</ul>
+<h3 id="任务执行时间的确定性"><a href="#任务执行时间的确定性" class="headerlink" title="任务执行时间的确定性"></a>任务执行时间的确定性</h3><p>实时性还有一个隐含要求：任务自身执行时间也必须是可预测的。</p>
+<p>如果事件处理程序的执行时间忽长忽短（因为 Cache miss、动态内存分配或访问换页），实时性同样会被破坏。因此，实时应用通常会锁定内存（避免缺页异常）、避免在实时路径中动态申请内存，确保执行时间存在一个可靠的<strong>最大上界</strong>。</p>
+<h3 id="吞吐量与确定性的权衡"><a href="#吞吐量与确定性的权衡" class="headerlink" title="吞吐量与确定性的权衡"></a>吞吐量与确定性的权衡</h3><p>吞吐量指系统在单位时间内处理任务或数据的能力（如 Web 服务器每秒处理的 HTTP 请求数）。提升吞吐量通常意味着优化缓存、批量处理数据、减少上下文切换开销。</p>
+<p>实时确定性指系统行为在时间上的可预测性——无论系统负载如何，关键任务的执行时间始终稳定在已知范围内。</p>
+<p>两者在系统设计中存在冲突：</p>
+<ul>
+<li>提高吞吐量时，系统可能采用批量处理策略（如 Linux 的页缓存回写），某些操作被延迟执行，引入不可预测的抖动。</li>
+<li>保证确定性时，RTOS 可能频繁打断当前任务进行调度，或禁止某些批量优化，整体吞吐量因此降低。</li>
+</ul>
+<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><p>RTOS 的核心是时间确定性。从外部事件发生（设备中断→CPU），到任务被唤醒调度（线程调度延迟），再到最终执行完具体动作（CPU→设备执行），整条链路的抢占延迟必须有界，任务自身的执行时间必须可预测。</p>
+<h2 id="软实时和硬实时的区别"><a href="#软实时和硬实时的区别" class="headerlink" title="软实时和硬实时的区别"></a>软实时和硬实时的区别</h2><p>软实时与硬实时的区别在于错过截止时间后的后果严重程度。硬实时零容忍，软实时允许偶尔牺牲时效性以换取更高的系统吞吐量。</p>
+<h3 id="定义、后果与典型场景"><a href="#定义、后果与典型场景" class="headerlink" title="定义、后果与典型场景"></a>定义、后果与典型场景</h3><p>实时系统通常分为软实时和硬实时。部分学术分类中还有”准实时”，但本节重点对比软硬实时。</p>
+<table>
+<thead>
+<tr>
+<th align="left">维度</th>
+<th align="left">硬实时</th>
+<th align="left">软实时</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">定义</td>
+<td align="left">必须在严格截止时间前完成任务，任何超时都不可接受</td>
+<td align="left">尽力在截止时间前完成任务，允许偶尔错过期限</td>
+</tr>
+<tr>
+<td align="left">错过期限的后果</td>
+<td align="left">灾难性：系统失效、设备损坏、数据丢失、危及人身安全</td>
+<td align="left">服务质量下降，体验变差，但系统可继续运行</td>
+</tr>
+<tr>
+<td align="left">确定性要求</td>
+<td align="left">100% 保证，需通过形式化验证或 WCET 分析证明</td>
+<td align="left">统计概率保证（如 99.9% 按时完成），允许极少数异常</td>
+</tr>
+<tr>
+<td align="left">典型场景</td>
+<td align="left">飞行控制系统、汽车安全气囊触发、心脏起搏器、核电站监控</td>
+<td align="left">视频流媒体播放、VoIP 通话、网络游戏、非关键数据采集</td>
+</tr>
+</tbody></table>
+<p>硬实时案例：汽车防抱死制动系统（ABS）中，控制信号未能在毫秒级时间窗口内输出，车辆可能失控。迟到的计算结果不仅毫无价值，更可能引发事故。</p>
+<p>软实时案例：观看 4K 视频时，解码器偶尔错过一帧的显示时间，画面短暂卡顿，但播放器不会崩溃，用户也未受到物理伤害。</p>
+<h3 id="更深层的分析对比"><a href="#更深层的分析对比" class="headerlink" title="更深层的分析对比"></a>更深层的分析对比</h3><p>除了定义差异，软硬实时在系统设计哲学和实现机制上存在深层对立。</p>
+<p><strong>结果的有效性</strong></p>
+<p>硬实时中，结果的价值具有严格的时间窗口性。超过截止时间，结果的价值归零甚至变为负值（造成危害）。安全气囊必须在碰撞后的特定毫秒数内弹出，晚一毫秒弹出毫无意义。</p>
+<p>软实时中，结果的价值随时间推移逐渐降低但不会瞬间归零。网络数据包延迟到达可能导致语音通话出现杂音，但数据包本身仍包含有效信息。</p>
+<p><strong>资源利用率与吞吐量的权衡</strong></p>
+<p>硬实时为了确保最坏情况下的响应时间，往往需要预留大量闲置资源。CPU 可能必须保持较低负载率（如 50% 以下）以应对突发实时任务，平均吞吐量因此较低。</p>
+<p>软实时允许系统在高负载下运行，追求更高的资源利用率。负载过重时系统可以降低服务质量（如降低帧率）来维持运行，从而获得较高的平均吞吐量。</p>
+<p><strong>验证与保障机制</strong></p>
+<p>硬实时不能仅依靠测试验证，因为测试无法覆盖所有最坏情况组合。通常需要形式化验证，证明在任何逻辑路径下任务都能在截止期内完成。</p>
+<p>软实时通常通过统计测试（如长时间压力测试）验证。只要错过期限的概率低到可接受范围（如每 24 小时丢帧不超过 1 次），即认为系统合格。</p>
+<h2 id="Linux-是什么类型的操作系统（内核）"><a href="#Linux-是什么类型的操作系统（内核）" class="headerlink" title="Linux 是什么类型的操作系统（内核）"></a>Linux 是什么类型的操作系统（内核）</h2><p>尽管 Linux 从 2.6 版本开始引入了内核抢占功能，具备了软实时能力，但标准 Linux 内核（Mainline Kernel）不是实时操作系统。原因在以下三个核心机制：</p>
+<ol>
+<li><strong>不可抢占的临界区</strong>：<br>Linux 内核广泛使用自旋锁保护共享数据。持有自旋锁期间内核抢占被禁用，即使有更高优先级的实时任务就绪，也必须等锁释放后才能执行。这导致长时间的调度延迟，违背了 RTOS 的确定性要求。（PREEMPT_RT 补丁将大部分自旋锁替换为可抢占的互斥锁，正是为了解决这个问题。）</li>
+</ol>
+<blockquote>
+<p>主要影响任务抢占延迟。</p>
+</blockquote>
+<ol start="2">
+<li><strong>中断处理的不可预测性</strong>：<br>标准 Linux 中，中断处理程序（ISR）在中断上下文中执行，期间会关闭本地中断。ISR 执行时间过长或发生中断风暴时，系统无法响应其他事件，导致严重的延迟抖动。</li>
+</ol>
+<blockquote>
+<p>主要影响中断响应延迟。</p>
+</blockquote>
+<ol start="3">
+<li><strong>内存管理的非确定性</strong>：<br>Linux 采用虚拟内存管理，支持按需分页。实时任务访问的内存页不在物理 RAM 中时触发缺页中断，导致磁盘 I&#x2F;O，产生毫秒级延迟。虽然可以通过 <code>mlockall()</code> 锁定内存，但这需要应用层显式干预，不是内核原生行为。</li>
+</ol>
+<blockquote>
+<p>主要影响任务执行完成的可预测性。</p>
+</blockquote>
+<p>标准 Linux 内核是通用操作系统，提供了软实时支持，但无法提供硬实时系统所要求的、数学上可证明的确定性保证。要在 Linux 上实现硬实时能力，需要打实时补丁（如 PREEMPT_RT）或采用双内核架构（如 Xenomai）进行深度改造。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://ntrs.nasa.gov/api/citations/20200002390/downloads/20200002390.pdf">Challenges Using Linux as a Real-Time Operating System</a></li>
+<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s?__biz=Mzg2OTc0ODAzMw==&mid=2247503198&idx=1&sn=ad00ac47f358a2175da146b6227a0060&chksm=ce9ad170f9ed5866a2566d5ace606598bbce3c69aab7c9dd86d2faae741f49ba05796541a324&scene=21&mediaId=wechatarticle_8710008be1a7dad37af47b4b6ed96750_f16a479d2fe0926e698af56e834bf2c37303329721909104&openFrom=1#wechat_redirect">浅谈Linux内核的实时性优化</a></li>
+<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s?__biz=Mzg2OTc0ODAzMw==&mid=2247502355&idx=1&sn=b5e3e2364979ec4ea591ec137537366e&chksm=ce9ad63df9ed5f2b48a4cff407d15256f032bb3fabe98a387650242f82603b368e8c05cf4da7&scene=21&mediaId=wechatarticle_8710008be1a7dad37af47b4b6ed96750_03a61212ad0a7138106e52032b03eebb7303329721909104&openFrom=1#wechat_redirect">宋宝华：在实时操作系统里面随便怎么写代码都能硬实时吗？</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Kernel/" rel="tag"># Kernel</a>
+              <a href="/tags/RTOS/" rel="tag"># RTOS</a>
+              <a href="/tags/Preempt/" rel="tag"># Preempt</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/03/23/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-hwspinlock%E6%A1%86%E6%9E%B6%E8%A7%A3%E6%9E%90/" rel="prev" title="Linux - hwspinlock框架解析">
+                  <i class="fa fa-angle-left"></i> Linux - hwspinlock框架解析
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/04/09/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/2-Linux-%E5%8F%AF%E6%8A%A2%E5%8D%A0%E5%86%85%E6%A0%B8%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E8%B7%B5/" rel="next" title="Linux-可抢占内核的原理与实践">
+                  Linux-可抢占内核的原理与实践 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">369k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">22:22</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

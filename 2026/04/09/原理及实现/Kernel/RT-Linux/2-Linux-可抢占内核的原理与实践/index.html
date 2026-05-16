@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="可抢占内核和非可抢占内核是什么可抢占内核与非可抢占内核的区别在于内核态代码是否允许被强制打断，这直接影响系统在低延迟响应与高吞吐量之间的取舍。 定义与典型场景 非可抢占内核 当一个进程因系统调用或中断进入内核态运行时，该进程独占 CPU 直至内核态执行完毕（返回用户态）、主动调用调度器让出 CPU，或在显式的抢占点检查调度。即使有更高优先级的就绪任务，也无法抢占当前内核态任务的执行权。 典型场景：">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux-可抢占内核的原理与实践">
+<meta property="og:url" content="http://example.com/2026/04/09/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/2-Linux-%E5%8F%AF%E6%8A%A2%E5%8D%A0%E5%86%85%E6%A0%B8%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E8%B7%B5/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="可抢占内核和非可抢占内核是什么可抢占内核与非可抢占内核的区别在于内核态代码是否允许被强制打断，这直接影响系统在低延迟响应与高吞吐量之间的取舍。 定义与典型场景 非可抢占内核 当一个进程因系统调用或中断进入内核态运行时，该进程独占 CPU 直至内核态执行完毕（返回用户态）、主动调用调度器让出 CPU，或在显式的抢占点检查调度。即使有更高优先级的就绪任务，也无法抢占当前内核态任务的执行权。 典型场景：">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2026-04-08T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-04-10T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Ftrace">
+<meta property="article:tag" content="Kernel">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="Preempt">
+<meta property="article:tag" content="RTOS">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2026/04/09/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/2-Linux-%E5%8F%AF%E6%8A%A2%E5%8D%A0%E5%86%85%E6%A0%B8%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E8%B7%B5/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2026/04/09/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/2-Linux-%E5%8F%AF%E6%8A%A2%E5%8D%A0%E5%86%85%E6%A0%B8%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E8%B7%B5/","path":"2026/04/09/原理及实现/Kernel/RT-Linux/2-Linux-可抢占内核的原理与实践/","title":"Linux-可抢占内核的原理与实践"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux-可抢占内核的原理与实践 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%AF%E6%8A%A2%E5%8D%A0%E5%86%85%E6%A0%B8%E5%92%8C%E9%9D%9E%E5%8F%AF%E6%8A%A2%E5%8D%A0%E5%86%85%E6%A0%B8%E6%98%AF%E4%BB%80%E4%B9%88"><span class="nav-number">1.</span> <span class="nav-text">可抢占内核和非可抢占内核是什么</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9A%E4%B9%89%E4%B8%8E%E5%85%B8%E5%9E%8B%E5%9C%BA%E6%99%AF"><span class="nav-number">1.1.</span> <span class="nav-text">定义与典型场景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9B%B4%E6%B7%B1%E5%B1%82%E7%9A%84%E5%AF%B9%E6%AF%94"><span class="nav-number">1.2.</span> <span class="nav-text">更深层的对比</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%BB%B6%E8%BF%9F%E7%9A%84%E6%A0%B9%E6%BA%90%EF%BC%9A%E6%8A%A2%E5%8D%A0%E7%82%B9%E5%88%86%E5%B8%83%E5%B7%AE%E5%BC%82"><span class="nav-number">1.2.1.</span> <span class="nav-text">延迟的根源：抢占点分布差异</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%90%9E%E5%90%90%E9%87%8F%E7%9A%84%E4%BB%A3%E4%BB%B7%EF%BC%9A%E4%B8%8A%E4%B8%8B%E6%96%87%E5%88%87%E6%8D%A2%E4%B8%8E%E7%BC%93%E5%AD%98%E6%83%A9%E7%BD%9A"><span class="nav-number">1.2.2.</span> <span class="nav-text">吞吐量的代价：上下文切换与缓存惩罚</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%AE%9E%E7%8E%B0%E5%A4%8D%E6%9D%82%E5%BA%A6%EF%BC%9A%E4%B8%B4%E7%95%8C%E5%8C%BA%E7%9A%84%E4%BF%9D%E6%8A%A4"><span class="nav-number">1.2.3.</span> <span class="nav-text">实现复杂度：临界区的保护</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%80%9A%E8%BF%87%E5%AE%9E%E8%B7%B5%E8%A7%82%E6%B5%8B"><span class="nav-number">2.</span> <span class="nav-text">通过实践观测</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%85%E6%A0%B8%E5%8F%82%E6%95%B0%E5%92%8C%E6%B5%8B%E8%AF%95%E4%BB%A3%E7%A0%81"><span class="nav-number">2.1.</span> <span class="nav-text">内核参数和测试代码</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E8%AE%BE%E8%AE%A1%EF%BC%88%E6%A8%A1%E6%8B%9F%E8%80%97%E6%97%B6%E7%B3%BB%E7%BB%9F%E8%B0%83%E7%94%A8%EF%BC%89"><span class="nav-number">2.1.1.</span> <span class="nav-text">内核模块设计（模拟耗时系统调用）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E7%94%A8%E6%88%B7%E6%80%81%E6%B5%8B%E8%AF%95%E7%A8%8B%E5%BA%8F"><span class="nav-number">2.1.2.</span> <span class="nav-text">用户态测试程序</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8D%E5%8F%AF%E6%8A%A2%E5%8D%A0%E5%86%85%E6%A0%B8"><span class="nav-number">2.2.</span> <span class="nav-text">不可抢占内核</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%87%AA%E6%84%BF%E6%8A%A2%E5%8D%A0%E5%86%85%E6%A0%B8"><span class="nav-number">2.3.</span> <span class="nav-text">自愿抢占内核</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%8A%A2%E5%8D%A0%E5%86%85%E6%A0%B8"><span class="nav-number">2.4.</span> <span class="nav-text">抢占内核</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%9E%E6%97%B6%E6%8A%A2%E5%8D%A0%E5%86%85%E6%A0%B8"><span class="nav-number">2.5.</span> <span class="nav-text">实时抢占内核</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">4.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">73</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">73</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2026/04/09/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/2-Linux-%E5%8F%AF%E6%8A%A2%E5%8D%A0%E5%86%85%E6%A0%B8%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E8%B7%B5/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux-可抢占内核的原理与实践 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux-可抢占内核的原理与实践
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2026-04-09 00:00:00" itemprop="dateCreated datePublished" datetime="2026-04-09T00:00:00+08:00">2026-04-09</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2026-04-11 00:00:00" itemprop="dateModified" datetime="2026-04-11T00:00:00+08:00">2026-04-11</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>4.9k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>18 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="可抢占内核和非可抢占内核是什么"><a href="#可抢占内核和非可抢占内核是什么" class="headerlink" title="可抢占内核和非可抢占内核是什么"></a>可抢占内核和非可抢占内核是什么</h2><p>可抢占内核与非可抢占内核的区别在于内核态代码是否允许被强制打断，这直接影响系统在低延迟响应与高吞吐量之间的取舍。</p>
+<h3 id="定义与典型场景"><a href="#定义与典型场景" class="headerlink" title="定义与典型场景"></a>定义与典型场景</h3><ol>
+<li><strong>非可抢占内核</strong><ul>
+<li>当一个进程因系统调用或中断进入内核态运行时，该进程独占 CPU 直至内核态执行完毕（返回用户态）、主动调用调度器让出 CPU，或在显式的抢占点检查调度。即使有更高优先级的就绪任务，也无法抢占当前内核态任务的执行权。</li>
+<li>典型场景：服务器、高性能计算集群。这些场景更关注单位时间内处理的任务总量（吞吐量），而非单个任务的响应延迟。</li>
+</ul>
+</li>
+<li><strong>可抢占内核</strong><ul>
+<li>内核态代码执行路径中，除了持有自旋锁或显式禁用抢占的极短临界区外，均可被高优先级任务强制打断。调度器可以随时剥夺当前内核态任务的执行权，切换至更高优先级的任务。</li>
+<li>典型场景：桌面系统、软实时嵌入式系统、多媒体处理。这些场景要求系统对交互事件或外部中断有较快的响应速度，即使牺牲部分吞吐量。</li>
+</ul>
+</li>
+</ol>
+<span id="more"></span>
+
+<h3 id="更深层的对比"><a href="#更深层的对比" class="headerlink" title="更深层的对比"></a>更深层的对比</h3><p>非可抢占与可抢占内核并非简单的二选一，而是两种不同的设计哲学，体现在以下维度：</p>
+<table>
+<thead>
+<tr>
+<th align="left">对比维度</th>
+<th align="left">非可抢占内核</th>
+<th align="left">可抢占内核</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">调度延迟</td>
+<td align="left">无界：延迟取决于内核态代码执行时长，可能达到数百毫秒</td>
+<td align="left">有界：延迟极短且可预测，通常在微秒至毫秒级</td>
+</tr>
+<tr>
+<td align="left">吞吐量</td>
+<td align="left">高：更少的上下文切换与缓存失效，CPU 时间更多用于实际计算</td>
+<td align="left">相对较低：频繁的抢占带来上下文切换开销，影响 Cache&#x2F;Pipeline 性能</td>
+</tr>
+<tr>
+<td align="left">锁机制复杂度</td>
+<td align="left">低：内核态天然串行，对自旋锁等保护机制的要求较弱</td>
+<td align="left">高：必须使用 <code>preempt_disable()</code> 或自旋锁严格保护临界区，防止并发导致数据损坏</td>
+</tr>
+<tr>
+<td align="left">设计目标</td>
+<td align="left">让 CPU 尽可能多地执行计算任务</td>
+<td align="left">让高优先级任务尽可能快地得到响应</td>
+</tr>
+</tbody></table>
+<h4 id="延迟的根源：抢占点分布差异"><a href="#延迟的根源：抢占点分布差异" class="headerlink" title="延迟的根源：抢占点分布差异"></a>延迟的根源：抢占点分布差异</h4><p>内核通过设置 <code>TIF_NEED_RESCHED</code> 标志位来表示需要调度，但”何时检查该标志位”决定了抢占模式：</p>
+<ul>
+<li><strong>非可抢占内核</strong>：仅在返回用户态前夕（如系统调用返回、中断返回用户态）检查标志位。如果低优先级任务陷入一个耗时 5 秒的系统调用，高优先级任务即使被唤醒，也必须等待这 5 秒。</li>
+<li><strong>可抢占内核</strong>：在返回内核态前夕（如中断返回内核态）、释放自旋锁时（<code>preempt_enable</code>）以及显式抢占点（<code>cond_resched</code>）都会检查标志位。条件满足则立即触发调度。</li>
+</ul>
+<h4 id="吞吐量的代价：上下文切换与缓存惩罚"><a href="#吞吐量的代价：上下文切换与缓存惩罚" class="headerlink" title="吞吐量的代价：上下文切换与缓存惩罚"></a>吞吐量的代价：上下文切换与缓存惩罚</h4><ul>
+<li><strong>非可抢占内核</strong>：内核态执行流不被打断，指令流水线和 CPU 缓存（Cache）能保持高命中率，硬件预取也能高效工作，从而实现高吞吐量。</li>
+<li><strong>可抢占内核</strong>：频繁的抢占导致 CPU 不得不保存&#x2F;恢复寄存器状态（上下文切换），且新任务可能访问不同的内存区域，导致 Cache 大面积失效。这种”缓存颠簸”直接损耗了 CPU 的有效计算时间。</li>
+</ul>
+<h4 id="实现复杂度：临界区的保护"><a href="#实现复杂度：临界区的保护" class="headerlink" title="实现复杂度：临界区的保护"></a>实现复杂度：临界区的保护</h4><p>在非可抢占内核中，由于内核态本身不可被调度，内核代码在一定程度上天然避免了并发冲突。但在可抢占内核中，任何可能被抢占的代码路径如果访问共享数据，都必须通过禁用抢占（<code>preempt_disable</code>）或加锁来保护。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 可抢占内核中的典型临界区保护示例</span></span><br><span class="line">preempt_disable();      <span class="comment">// 禁止抢占，保护临界区</span></span><br><span class="line"><span class="comment">/* 访问共享数据的临界区代码 */</span></span><br><span class="line">preempt_enable();       <span class="comment">// 恢复抢占，若此时 TIF_NEED_RESCHED 被设置，会立即触发调度</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="通过实践观测"><a href="#通过实践观测" class="headerlink" title="通过实践观测"></a>通过实践观测</h2><p>理论分析指出，抢占模式的核心差异在于”何时检查 <code>TIF_NEED_RESCHED</code> 标志位”。为了直观验证这一点，设计了一个测试用例，通过在高优先级任务唤醒时，观察低优先级任务在内核态的执行路径是否被打断，来对比 <code>CONFIG_PREEMPT_NONE</code>、<code>CONFIG_PREEMPT_VOLUNTARY</code>、<code>CONFIG_PREEMPT</code> 和 <code>CONFIG_PREEMPT_RT</code> 模式的实际行为。</p>
+<h3 id="内核参数和测试代码"><a href="#内核参数和测试代码" class="headerlink" title="内核参数和测试代码"></a>内核参数和测试代码</h3><p>为了排除干扰，使用以下内核参数隔离 CPU2，并将所有测试线程绑定到该 CPU 上：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">isolcpus=2</span><br></pre></td></tr></table></figure>
+
+<h4 id="内核模块设计（模拟耗时系统调用）"><a href="#内核模块设计（模拟耗时系统调用）" class="headerlink" title="内核模块设计（模拟耗时系统调用）"></a>内核模块设计（模拟耗时系统调用）</h4><p>编写一个字符设备驱动，在其 <code>read</code> 接口中调用 <code>mdelay()</code> 模拟一个耗时的内核态执行路径：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/module.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/fs.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/kernel.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/io.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/device.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;linux/delay.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">unsigned</span> <span class="type">int</span> major;</span><br><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="keyword">class</span> *<span class="keyword">class</span>;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// callback for read system call on the device</span></span><br><span class="line"><span class="type">static</span> <span class="type">ssize_t</span> </span><br><span class="line"><span class="title function_">demo_read</span><span class="params">(<span class="keyword">struct</span> file *file, <span class="type">char</span> __user *buf, <span class="type">size_t</span> count, <span class="type">loff_t</span> *ppos)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> len = <span class="number">5</span>;</span><br><span class="line">	<span class="keyword">if</span> (*ppos &gt; <span class="number">0</span>)</span><br><span class="line">		<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	mdelay(<span class="number">5000</span>);</span><br><span class="line">	<span class="keyword">if</span> (copy_to_user(buf, <span class="string">&quot;hello&quot;</span>, len))</span><br><span class="line">		<span class="keyword">return</span> -EFAULT;</span><br><span class="line"></span><br><span class="line">	*ppos += len;</span><br><span class="line">	<span class="keyword">return</span> len;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">file_operations</span> <span class="title">demo_fops</span> =</span> &#123;</span><br><span class="line">	.owner = THIS_MODULE,</span><br><span class="line">	.read = demo_read,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">int</span> <span class="title function_">demo_init</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> ret = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">	ret = register_chrdev(<span class="number">0</span>, <span class="string">&quot;demo&quot;</span>, &amp;demo_fops);</span><br><span class="line">	<span class="keyword">if</span> (ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">		pr_err(<span class="string">&quot;failed to register chrdev.\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> ret;</span><br><span class="line">	&#125;</span><br><span class="line">	major = ret;</span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">class</span> =</span> class_create(THIS_MODULE, <span class="string">&quot;demo&quot;</span>);</span><br><span class="line">	<span class="keyword">if</span> (IS_ERR(class)) &#123;</span><br><span class="line">		pr_err(<span class="string">&quot;failed to create class.\n&quot;</span>);</span><br><span class="line">		unregister_chrdev(major, <span class="string">&quot;demo&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> PTR_ERR(class);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	device_create(class, <span class="literal">NULL</span>, MKDEV(major, <span class="number">0</span>), <span class="literal">NULL</span>, <span class="string">&quot;demo&quot;</span>);</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">static</span> <span class="type">void</span> <span class="title function_">demo_cleanup</span><span class="params">(<span class="type">void</span>)</span></span><br><span class="line">&#123;</span><br><span class="line">	device_destroy(class, MKDEV(major, <span class="number">0</span>));</span><br><span class="line">	class_destroy(class);</span><br><span class="line">	unregister_chrdev(major, <span class="string">&quot;demo&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">module_init(demo_init);</span><br><span class="line">module_exit(demo_cleanup);</span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL&quot;</span>);</span><br></pre></td></tr></table></figure>
+
+<h4 id="用户态测试程序"><a href="#用户态测试程序" class="headerlink" title="用户态测试程序"></a>用户态测试程序</h4><p>创建两个实时线程，优先级如下：</p>
+<ul>
+<li><strong>低优先级线程（<code>low_prio</code>）</strong>：FIFO 优先级为 30，调用 <code>read()</code> 触发驱动的 <code>mdelay(5000)</code>，占据 CPU 至少 5 秒。</li>
+<li><strong>高优先级线程（<code>hi_prio</code>）</strong>：FIFO 优先级为 50，睡眠 3 秒后醒来。</li>
+</ul>
+<p>预期行为：如果内核支持抢占，<code>hi_prio</code> 在第 3 秒醒来时应立即抢占正在内核态执行 <code>mdelay</code> 的 <code>low_prio</code>；如果不支持抢占，<code>hi_prio</code> 必须等待 <code>low_prio</code> 的 5 秒内核态执行结束（即第 5 秒以后）才能运行。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> _GNU_SOURCE</span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;pthread.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/types.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/stat.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/syscall.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;pthread.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">void</span> *<span class="title function_">hi_prio</span><span class="params">(<span class="type">void</span> *p)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> cpu = *(<span class="type">int</span> *)p;</span><br><span class="line">	<span class="type">cpu_set_t</span> cpuset;</span><br><span class="line">	<span class="type">pthread_attr_t</span> attr;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">sched_param</span> <span class="title">param</span> =</span> &#123; .sched_priority = <span class="number">50</span> &#125;;</span><br><span class="line"></span><br><span class="line">	pthread_setschedparam(pthread_self(), SCHED_FIFO, &amp;param);</span><br><span class="line">	CPU_ZERO(&amp;cpuset);</span><br><span class="line">	CPU_SET(cpu, &amp;cpuset);</span><br><span class="line">	pthread_setaffinity_np(pthread_self(), <span class="keyword">sizeof</span>(<span class="type">cpu_set_t</span>), &amp;cpuset);</span><br><span class="line"></span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;thread1 tid=%d\n&quot;</span>, (<span class="type">pid_t</span>)syscall(SYS_gettid));</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;thread1 start time=%ld\n&quot;</span>, time(<span class="literal">NULL</span>));</span><br><span class="line">	sleep(<span class="number">3</span>);</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;thread1 stop time=%ld\n&quot;</span>, time(<span class="literal">NULL</span>));</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">void</span> *<span class="title function_">low_prio</span><span class="params">(<span class="type">void</span> *p)</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">int</span> cpu = *(<span class="type">int</span> *)p;</span><br><span class="line">	<span class="type">cpu_set_t</span> cpuset;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">sched_param</span> <span class="title">param</span> =</span> &#123; .sched_priority = <span class="number">30</span> &#125;;</span><br><span class="line"></span><br><span class="line">	pthread_setschedparam(pthread_self(), SCHED_FIFO, &amp;param);</span><br><span class="line">	CPU_ZERO(&amp;cpuset);</span><br><span class="line">	CPU_SET(cpu, &amp;cpuset);</span><br><span class="line">	pthread_setaffinity_np(pthread_self(), <span class="keyword">sizeof</span>(<span class="type">cpu_set_t</span>), &amp;cpuset);</span><br><span class="line"></span><br><span class="line">	<span class="type">char</span> buf[<span class="number">20</span>];</span><br><span class="line">	<span class="type">int</span> fd = open(<span class="string">&quot;/dev/demo&quot;</span>, O_RDWR);  <span class="comment">// #mknod /dev/demo c 400 0</span></span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;thread2 tid=%d\n&quot;</span>, (<span class="type">pid_t</span>)syscall(SYS_gettid));</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;thread2 start\n&quot;</span>);</span><br><span class="line">	read(fd, buf, <span class="number">20</span>);</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;thread2 stop\n&quot;</span>);</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">NULL</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="type">int</span> <span class="title function_">main</span><span class="params">(<span class="type">int</span> argc, <span class="type">char</span> *argv[])</span></span><br><span class="line">&#123;</span><br><span class="line">	<span class="type">pthread_t</span> t1, t2;</span><br><span class="line">	<span class="type">int</span> cpu;</span><br><span class="line"></span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;main process pid=%d\n&quot;</span>, getpid());</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (argc &lt;= <span class="number">1</span>) &#123;</span><br><span class="line">		cpu = <span class="number">0</span>;</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		cpu = atoi(argv[<span class="number">1</span>]);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="built_in">printf</span>(<span class="string">&quot;bind cpu%d to test\n&quot;</span>, cpu);</span><br><span class="line"></span><br><span class="line">	pthread_create(&amp;t1, <span class="literal">NULL</span>, hi_prio, &amp;cpu);</span><br><span class="line">	pthread_create(&amp;t2, <span class="literal">NULL</span>, low_prio, &amp;cpu);</span><br><span class="line"></span><br><span class="line">	pthread_join(t1, <span class="literal">NULL</span>);</span><br><span class="line">	pthread_join(t2, <span class="literal">NULL</span>);</span><br><span class="line"></span><br><span class="line">	sleep(<span class="number">7</span>);</span><br><span class="line">	<span class="built_in">puts</span>(<span class="string">&quot;end test&quot;</span>);</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="不可抢占内核"><a href="#不可抢占内核" class="headerlink" title="不可抢占内核"></a>不可抢占内核</h3><p>在非可抢占内核下，内核态代码执行期间不会发生抢占调度。</p>
+<p>选择配置：<code>CONFIG_PREEMPT_NONE</code></p>
+<p>使用以下命令运行：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">insmod /root/preempt_test.ko</span><br><span class="line">/root/preempt_test 2</span><br></pre></td></tr></table></figure>
+
+<p>运行结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">main process pid=418</span><br><span class="line">bind cpu2 to test</span><br><span class="line">thread1 tid=419</span><br><span class="line">thread1 start time=85450</span><br><span class="line">thread2 tid=420</span><br><span class="line">thread2 start</span><br><span class="line">thread1 stop time=85455</span><br><span class="line">thread2 stop</span><br><span class="line">end test</span><br></pre></td></tr></table></figure>
+
+<p>高优先级线程 <code>thread1</code> 睡眠 3 秒后醒来，但此时低优先级线程 <code>thread2</code> 正在内核态执行 <code>mdelay(5)</code>。由于内核不可抢占，<code>thread1</code> 必须等待 <code>thread2</code> 从内核态返回用户态（即 5 秒延时结束），因此 <code>thread1</code> 的唤醒延迟了约 3 秒，总运行时间差为 6 秒（85456 - 85450）。</p>
+<p>使用ftrace观测：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /sys/kernel/debug/tracing/</span><br><span class="line"><span class="built_in">echo</span> 0 &gt; tracing_on; <span class="built_in">echo</span> &gt; trace</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; events/sched/sched_switch/enable</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; events/sched/sched_wakeup/enable</span><br><span class="line"><span class="built_in">echo</span> 4 &gt; tracing_cpumask	<span class="comment"># 在cpu2测试</span></span><br><span class="line"><span class="built_in">echo</span> 1 &gt; tracing_on; /root/preempt_test 2; <span class="built_in">echo</span> 0 &gt; tracing_on</span><br><span class="line"><span class="built_in">cat</span> trace_pipe</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"># tracer: nop</span><br><span class="line">#</span><br><span class="line"># entries-in-buffer/entries-written: 27/27   #P:4</span><br><span class="line">#</span><br><span class="line">#                                _-----=&gt; irqs-off</span><br><span class="line">#                               / _----=&gt; need-resched</span><br><span class="line">#                              | / _---=&gt; hardirq/softirq</span><br><span class="line">#                              || / _--=&gt; preempt-depth</span><br><span class="line">#                              ||| /     delay</span><br><span class="line">#           TASK-PID     CPU#  ||||   TIMESTAMP  FUNCTION</span><br><span class="line">#              | |         |   ||||      |         |</span><br><span class="line">          &lt;idle&gt;-0       [002] d...   300.657132: sched_switch: prev_comm=swapper/2 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=preempt_test next_pid=419 next_prio=49</span><br><span class="line">    preempt_test-419     [002] d...   300.657238: sched_switch: prev_comm=preempt_test prev_pid=419 prev_prio=49 prev_state=S ==&gt; next_comm=preempt_test next_pid=420 next_prio=69</span><br><span class="line">    preempt_test-420     [002] d.s.   300.663744: sched_wakeup: comm=kworker/2:1 pid=407 prio=120 target_cpu=002</span><br><span class="line">    preempt_test-420     [002] dnh.   303.657239: sched_wakeup: comm=preempt_test pid=419 prio=49 target_cpu=002</span><br><span class="line">    preempt_test-420     [002] d...   305.657388: sched_switch: prev_comm=preempt_test prev_pid=420 prev_prio=69 prev_state=R ==&gt; next_comm=preempt_test next_pid=419 next_prio=49</span><br><span class="line">    preempt_test-419     [002] d...   305.657513: sched_wakeup: comm=preempt_test pid=418 prio=120 target_cpu=000</span><br><span class="line">    preempt_test-419     [002] d...   305.657540: sched_switch: prev_comm=preempt_test prev_pid=419 prev_prio=49 prev_state=X ==&gt; next_comm=preempt_test next_pid=420 next_prio=69</span><br><span class="line">    preempt_test-420     [002] d...   305.657581: sched_wakeup: comm=preempt_test pid=418 prio=120 target_cpu=000</span><br><span class="line">    preempt_test-420     [002] d...   305.657606: sched_switch: prev_comm=preempt_test prev_pid=420 prev_prio=69 prev_state=X ==&gt; next_comm=kworker/2:1 next_pid=407 next_prio=120</span><br><span class="line">     kworker/2:1-407     [002] d...   305.657624: sched_switch: prev_comm=kworker/2:1 prev_pid=407 prev_prio=120 prev_state=I ==&gt; next_comm=swapper/2 next_pid=0 next_prio=120</span><br><span class="line">          &lt;idle&gt;-0       [002] d.s.   305.663729: sched_wakeup: comm=rcu_sched pid=11 prio=120 target_cpu=000</span><br></pre></td></tr></table></figure>
+
+<p>注意第 15 行，在 <code>sched_wakeup</code> 期间，处于硬中断上下文，thread2 的 <code>TIF_NEED_RESCHED</code> 标志位被置位。</p>
+<p>注意第 15~16 行，<code>sched_wakeup</code>（时刻 303.65）与 <code>sched_switch</code>（时刻 305.65）之间存在 2 秒的巨大时间差，这正是调度延迟的直观体现。</p>
+<h3 id="自愿抢占内核"><a href="#自愿抢占内核" class="headerlink" title="自愿抢占内核"></a>自愿抢占内核</h3><p>选择配置：<code>CONFIG_PREEMPT_VOLUNTARY</code></p>
+<p>自愿抢占模式在内核代码中增加了显式的抢占点。在驱动的 <code>mdelay</code> 之后插入 <code>might_resched()</code> 来模拟这一机制：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">static</span> <span class="type">ssize_t</span> </span><br><span class="line"><span class="title function_">demo_read</span><span class="params">(<span class="keyword">struct</span> file *file, <span class="type">char</span> __user *buf, <span class="type">size_t</span> count, <span class="type">loff_t</span> *ppos)</span></span><br><span class="line">&#123;</span><br><span class="line">    <span class="type">int</span> len = <span class="number">5</span>;</span><br><span class="line">    <span class="keyword">if</span> (*ppos &gt; <span class="number">0</span>)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    mdelay(<span class="number">3000</span>);</span><br><span class="line">    might_resched();</span><br><span class="line">    ndelay(<span class="number">5000</span>);  <span class="comment">// 5微秒极短延迟，模拟抢占点之后的残余内核态执行</span></span><br><span class="line">    <span class="keyword">if</span> (copy_to_user(buf, <span class="string">&quot;hello&quot;</span>, len))</span><br><span class="line">        <span class="keyword">return</span> -EFAULT;</span><br><span class="line"></span><br><span class="line">    *ppos += len;</span><br><span class="line">    <span class="keyword">return</span> len;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>运行结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">main process pid=414</span><br><span class="line">bind cpu2 to test</span><br><span class="line">thread1 tid=415</span><br><span class="line">thread1 start time=91450</span><br><span class="line">thread2 tid=416</span><br><span class="line">thread2 start</span><br><span class="line">[   52.062371] sched: RT throttling activated</span><br><span class="line">thread1 stop time=91453</span><br><span class="line">thread2 stop</span><br><span class="line">end test</span><br></pre></td></tr></table></figure>
+
+<p><code>thread2</code> 在内核态执行 3 秒后，遇到 <code>might_resched()</code> 抢占点。此时正好 <code>thread1</code> 睡眠到期醒来，调度器在此处检查到 <code>TIF_NEED_RESCHED</code> 标志，立即切换到 <code>thread1</code>。因此 <code>thread1</code> 准时在第 3 秒恢复运行，时间差为 3 秒。</p>
+<p>使用 ftrace 的观测结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"># tracer: nop</span><br><span class="line">#</span><br><span class="line"># entries-in-buffer/entries-written: 11/11   #P:4</span><br><span class="line">#</span><br><span class="line">#                                _-----=&gt; irqs-off</span><br><span class="line">#                               / _----=&gt; need-resched</span><br><span class="line">#                              | / _---=&gt; hardirq/softirq</span><br><span class="line">#                              || / _--=&gt; preempt-depth</span><br><span class="line">#                              ||| /     delay</span><br><span class="line">#           TASK-PID     CPU#  ||||   TIMESTAMP  FUNCTION</span><br><span class="line">#              | |         |   ||||      |         |</span><br><span class="line">          &lt;idle&gt;-0       [002] d...    51.106820: sched_switch: prev_comm=swapper/2 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=preempt_test next_pid=415 next_prio=49</span><br><span class="line">    preempt_test-415     [002] d...    51.106904: sched_switch: prev_comm=preempt_test prev_pid=415 prev_prio=49 prev_state=S ==&gt; next_comm=preempt_test next_pid=416 next_prio=69</span><br><span class="line">    preempt_test-416     [002] dnh.    52.076941: sched_wakeup: comm=klogd pid=110 prio=120 target_cpu=000</span><br><span class="line">    preempt_test-416     [002] dnh.    54.106904: sched_wakeup: comm=preempt_test pid=415 prio=49 target_cpu=002</span><br><span class="line">    preempt_test-416     [002] d...    54.110986: sched_switch: prev_comm=preempt_test prev_pid=416 prev_prio=69 prev_state=R+ ==&gt; next_comm=preempt_test next_pid=415 next_prio=49</span><br><span class="line">    preempt_test-415     [002] d...    54.111129: sched_wakeup: comm=preempt_test pid=414 prio=120 target_cpu=000</span><br><span class="line">    preempt_test-415     [002] d...    54.111166: sched_switch: prev_comm=preempt_test prev_pid=415 prev_prio=49 prev_state=X ==&gt; next_comm=preempt_test next_pid=416 next_prio=69</span><br><span class="line">    preempt_test-416     [002] d...    54.111217: sched_wakeup: comm=preempt_test pid=414 prio=120 target_cpu=000</span><br><span class="line">    preempt_test-416     [002] d...    54.111236: sched_switch: prev_comm=preempt_test prev_pid=416 prev_prio=69 prev_state=X ==&gt; next_comm=kworker/2:1 next_pid=386 next_prio=120</span><br><span class="line">     kworker/2:1-386     [002] d...    54.111255: sched_switch: prev_comm=kworker/2:1 prev_pid=386 prev_prio=120 prev_state=I ==&gt; next_comm=swapper/2 next_pid=0 next_prio=120</span><br><span class="line">          &lt;idle&gt;-0       [002] d.s.    54.112378: sched_wakeup: comm=rcu_sched pid=11 prio=120 target_cpu=000</span><br></pre></td></tr></table></figure>
+
+<p>注意第 15 行，在 <code>sched_wakeup</code> 期间，处于硬中断上下文，thread2 的 <code>TIF_NEED_RESCHED</code> 标志位被置位。</p>
+<p>注意第 15~16 行，调度延迟从 NON-PREEMPT 模式的数秒缩短到了毫秒级（54.110 - 54.106 ≈ 4ms），这取决于抢占点设置的密度。</p>
+<h3 id="抢占内核"><a href="#抢占内核" class="headerlink" title="抢占内核"></a>抢占内核</h3><p>在可抢占内核下，除了临界区外，内核代码可随时被高优先级任务抢占。驱动代码恢复为最初的 5 秒 <code>mdelay</code>。</p>
+<p>选择配置：<code>CONFIG_PREEMPT</code></p>
+<p>运行结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">main process pid=405</span><br><span class="line">bind cpu2 to test</span><br><span class="line">thread1 tid=406</span><br><span class="line">thread1 start time=90822</span><br><span class="line">thread2 tid=407</span><br><span class="line">thread2 start</span><br><span class="line">[  102.496374] sched: RT throttling activated</span><br><span class="line">thread1 stop time=90825</span><br><span class="line">thread2 stop</span><br><span class="line">end test</span><br></pre></td></tr></table></figure>
+
+<p><code>thread2</code> 在内核态执行期间，<code>thread1</code> 于第 3 秒醒来。此时内核检查 <code>preempt_count</code> 为 0 且 <code>TIF_NEED_RESCHED</code> 被设置，立即触发抢占，无需等待 <code>mdelay</code> 结束或显式抢占点。<code>thread1</code> 准时在第 3 秒恢复运行。</p>
+<p>使用 ftrace 的观测结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"># tracer: nop</span><br><span class="line">#</span><br><span class="line"># entries-in-buffer/entries-written: 23/23   #P:4</span><br><span class="line">#</span><br><span class="line">#                                _-----=&gt; irqs-off</span><br><span class="line">#                               / _----=&gt; need-resched</span><br><span class="line">#                              | / _---=&gt; hardirq/softirq</span><br><span class="line">#                              || / _--=&gt; preempt-depth</span><br><span class="line">#                              ||| /     delay</span><br><span class="line">#           TASK-PID     CPU#  ||||   TIMESTAMP  FUNCTION</span><br><span class="line">#              | |         |   ||||      |         |</span><br><span class="line">          &lt;idle&gt;-0       [002] d..2   101.541710: sched_switch: prev_comm=swapper/2 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=preempt_test next_pid=406 next_prio=49</span><br><span class="line">    preempt_test-406     [002] d..2   101.541820: sched_switch: prev_comm=preempt_test prev_pid=406 prev_prio=49 prev_state=S ==&gt; next_comm=preempt_test next_pid=407 next_prio=69</span><br><span class="line">    preempt_test-407     [002] d..2   102.496395: sched_switch: prev_comm=preempt_test prev_pid=407 prev_prio=69 prev_state=R+ ==&gt; next_comm=kworker/2:1 next_pid=403 next_prio=120</span><br><span class="line">     kworker/2:1-403     [002] d..2   102.496417: sched_switch: prev_comm=kworker/2:1 prev_pid=403 prev_prio=120 prev_state=I ==&gt; next_comm=swapper/2 next_pid=0 next_prio=120</span><br><span class="line">          &lt;idle&gt;-0       [002] d..2   102.541631: sched_switch: prev_comm=swapper/2 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=preempt_test next_pid=407 next_prio=69</span><br><span class="line">    preempt_test-407     [002] d.s4   102.556374: sched_wakeup: comm=rcu_preempt pid=12 prio=120 target_cpu=000</span><br><span class="line">    preempt_test-407     [002] d..2   103.496373: sched_switch: prev_comm=preempt_test prev_pid=407 prev_prio=69 prev_state=R+ ==&gt; next_comm=swapper/2 next_pid=0 next_prio=120</span><br><span class="line">          &lt;idle&gt;-0       [002] d..2   103.541625: sched_switch: prev_comm=swapper/2 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=preempt_test next_pid=407 next_prio=69</span><br><span class="line">    preempt_test-407     [002] d.s4   104.086373: sched_wakeup: comm=kworker/2:1 pid=403 prio=120 target_cpu=002</span><br><span class="line">    preempt_test-407     [002] d..2   104.486375: sched_switch: prev_comm=preempt_test prev_pid=407 prev_prio=69 prev_state=R+ ==&gt; next_comm=kworker/2:1 next_pid=403 next_prio=120</span><br><span class="line">     kworker/2:1-403     [002] d..2   104.486389: sched_switch: prev_comm=kworker/2:1 prev_pid=403 prev_prio=120 prev_state=I ==&gt; next_comm=swapper/2 next_pid=0 next_prio=120</span><br><span class="line">          &lt;idle&gt;-0       [002] d..2   104.541623: sched_switch: prev_comm=swapper/2 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=preempt_test next_pid=407 next_prio=69</span><br><span class="line">    preempt_test-407     [002] dnh3   104.541818: sched_wakeup: comm=preempt_test pid=406 prio=49 target_cpu=002</span><br><span class="line">    preempt_test-407     [002] d..2   104.541824: sched_switch: prev_comm=preempt_test prev_pid=407 prev_prio=69 prev_state=R+ ==&gt; next_comm=preempt_test next_pid=406 next_prio=49</span><br><span class="line">    preempt_test-406     [002] d..3   104.541957: sched_wakeup: comm=preempt_test pid=405 prio=120 target_cpu=000</span><br><span class="line">    preempt_test-406     [002] d..2   104.541998: sched_switch: prev_comm=preempt_test prev_pid=406 prev_prio=49 prev_state=X ==&gt; next_comm=preempt_test next_pid=407 next_prio=69</span><br><span class="line">    preempt_test-407     [002] d..2   105.496378: sched_switch: prev_comm=preempt_test prev_pid=407 prev_prio=69 prev_state=R+ ==&gt; next_comm=kworker/2:1 next_pid=403 next_prio=120</span><br><span class="line">     kworker/2:1-403     [002] d..2   105.496394: sched_switch: prev_comm=kworker/2:1 prev_pid=403 prev_prio=120 prev_state=I ==&gt; next_comm=swapper/2 next_pid=0 next_prio=120</span><br><span class="line">          &lt;idle&gt;-0       [002] d..2   105.541626: sched_switch: prev_comm=swapper/2 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=preempt_test next_pid=407 next_prio=69</span><br><span class="line">    preempt_test-407     [002] d..2   106.486372: sched_switch: prev_comm=preempt_test prev_pid=407 prev_prio=69 prev_state=R+ ==&gt; next_comm=swapper/2 next_pid=0 next_prio=120</span><br><span class="line">          &lt;idle&gt;-0       [002] d..2   106.541624: sched_switch: prev_comm=swapper/2 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=preempt_test next_pid=407 next_prio=69</span><br><span class="line">    preempt_test-407     [002] d..3   106.786699: sched_wakeup: comm=preempt_test pid=405 prio=120 target_cpu=000</span><br><span class="line">    preempt_test-407     [002] d..2   106.786731: sched_switch: prev_comm=preempt_test prev_pid=407 prev_prio=69 prev_state=X ==&gt; next_comm=swapper/2 next_pid=0 next_prio=120</span><br></pre></td></tr></table></figure>
+
+<p>注意第 24 行，在 <code>sched_wakeup</code> 期间，处于硬中断上下文，thread2 的 <code>TIF_NEED_RESCHED</code> 标志位被置位。结合可抢占内核的特性，在中断返回期间 thread1 得到 CPU 的执行权。</p>
+<p>注意第 24~25 行，<code>sched_wakeup</code> 与 <code>sched_switch</code> 的时间差仅为微秒级（104.541824 - 104.541818 ≈ 6μs），实现了近乎零延迟的抢占响应。</p>
+<h3 id="实时抢占内核"><a href="#实时抢占内核" class="headerlink" title="实时抢占内核"></a>实时抢占内核</h3><p>选择配置：<code>CONFIG_PREEMPT_RT</code></p>
+<p>相比普通抢占内核，PREEMPT_RT 进一步扩大了可抢占的范围，绝大部分内核代码都可以被抢占。主要改动包括：</p>
+<ol>
+<li>将大部分自旋锁替换为可抢占的实时互斥锁（rt_mutex），使得持有锁的代码路径也能被抢占。</li>
+<li>将硬中断处理程序（ISR）线程化，在进程上下文中以内核线程的形式执行。不同中断可配置不同的实时优先级（默认通常为 50），使得中断处理也能参与调度和抢占。</li>
+<li>将软中断的处理移至 <code>ksoftirqd</code> 内核线程的进程上下文中执行，避免在任意上下文中长时间关闭抢占。</li>
+<li>采用高精度定时器，提供更精确的时间管理。</li>
+</ol>
+<p>运行结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">main process pid=627</span><br><span class="line">bind cpu2 to test</span><br><span class="line">thread1 tid=628</span><br><span class="line">thread1 start time=43959</span><br><span class="line">thread2 tid=629</span><br><span class="line">thread2 start</span><br><span class="line">thread2 stop</span><br><span class="line">thread1 stop time=43962</span><br><span class="line">end test</span><br></pre></td></tr></table></figure>
+
+<p><code>thread2</code> 在内核态执行期间，<code>thread1</code> 于第 3 秒醒来。此时内核检查 <code>preempt_count</code> 为 0 且 <code>TIF_NEED_RESCHED</code> 被设置，立即触发抢占，无需等待 <code>mdelay</code> 结束或显式抢占点。<code>thread1</code> 准时在第 3 秒恢复运行。</p>
+<p>使用 ftrace 的观测：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /sys/kernel/debug/tracing/</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; options/event-fork</span><br><span class="line"><span class="built_in">echo</span> 0 &gt; tracing_on; <span class="built_in">echo</span> &gt; trace</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; events/sched/sched_switch/enable</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; events/sched/sched_wakeup/enable</span><br><span class="line">sh -c <span class="string">&#x27;echo $$ &gt; set_event_pid; \</span></span><br><span class="line"><span class="string">echo 1 &gt; tracing_on; \</span></span><br><span class="line"><span class="string">exec /mnt/UDISK/preempt_test 2; \</span></span><br><span class="line"><span class="string">echo 0 &gt; tracing_on&#x27;</span></span><br><span class="line"><span class="built_in">cat</span> trace_pipe</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"># tracer: nop</span><br><span class="line">#</span><br><span class="line"># entries-in-buffer/entries-written: 38/38   #P:4</span><br><span class="line">#</span><br><span class="line">#                                _-------=&gt; irqs-off</span><br><span class="line">#                               / _------=&gt; need-resched</span><br><span class="line">#                              | / _-----=&gt; need-resched-lazy</span><br><span class="line">#                              || / _----=&gt; hardirq/softirq</span><br><span class="line">#                              ||| / _---=&gt; preempt-depth</span><br><span class="line">#                              |||| / _--=&gt; preempt-lazy-depth</span><br><span class="line">#                              ||||| / _-=&gt; migrate-disable</span><br><span class="line">#                              |||||| /     delay</span><br><span class="line">#           TASK-PID     CPU#  |||||||  TIMESTAMP  FUNCTION</span><br><span class="line">#              | |         |   |||||||      |         |</span><br><span class="line">    preempt_test-627     [000] dN.h3.. 43959.851184: sched_wakeup: comm=irq/44-uart-ng0 pid=429 prio=49 target_cpu=000</span><br><span class="line">    preempt_test-627     [000] dN.h4.. 43959.851204: sched_wakeup: comm=irq_work/0 pid=16 prio=98 target_cpu=000</span><br><span class="line">    preempt_test-627     [000] d...2.. 43959.851215: sched_switch: prev_comm=preempt_test prev_pid=627 prev_prio=120 prev_state=R+ ==&gt; next_comm=irq/44-uart-ng0 next_pid=429 next_prio=49</span><br><span class="line">      irq_work/0-16      [000] d...2.. 43959.851257: sched_switch: prev_comm=irq_work/0 prev_pid=16 prev_prio=98 prev_state=S ==&gt; next_comm=preempt_test next_pid=627 next_prio=120</span><br><span class="line">    preempt_test-627     [000] dN.h3.. 43959.851355: sched_wakeup: comm=rcuc/0 pid=14 prio=98 target_cpu=000</span><br><span class="line">    preempt_test-627     [000] dN..3.. 43959.851369: sched_wakeup: comm=ksoftirqd/0 pid=11 prio=120 target_cpu=000</span><br><span class="line">    preempt_test-627     [000] d...2.. 43959.851375: sched_switch: prev_comm=preempt_test prev_pid=627 prev_prio=120 prev_state=R ==&gt; next_comm=rcuc/0 next_pid=14 next_prio=98</span><br><span class="line">     ksoftirqd/0-11      [000] d...2.. 43959.851410: sched_switch: prev_comm=ksoftirqd/0 prev_pid=11 prev_prio=120 prev_state=S ==&gt; next_comm=preempt_test next_pid=627 next_prio=120</span><br><span class="line">          &lt;idle&gt;-0       [001] d...2.. 43959.851543: sched_switch: prev_comm=swapper/1 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=preempt_test next_pid=628 next_prio=120</span><br><span class="line">    preempt_test-628     [001] d...2.. 43959.851574: sched_switch: prev_comm=preempt_test prev_pid=628 prev_prio=120 prev_state=R ==&gt; next_comm=swapper/1 next_pid=0 next_prio=120</span><br><span class="line">    preempt_test-627     [000] d...4.. 43959.851580: sched_wakeup: comm=preempt_test pid=628 prio=120 target_cpu=001</span><br><span class="line">          &lt;idle&gt;-0       [001] d...2.. 43959.851586: sched_switch: prev_comm=swapper/1 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=preempt_test next_pid=628 next_prio=120</span><br><span class="line">    preempt_test-628     [001] dN..4.. 43959.851660: sched_wakeup: comm=migration/1 pid=20 prio=0 target_cpu=001</span><br><span class="line">    preempt_test-628     [001] d...2.. 43959.851666: sched_switch: prev_comm=preempt_test prev_pid=628 prev_prio=49 prev_state=R+ ==&gt; next_comm=migration/1 next_pid=20 next_prio=0</span><br><span class="line">          &lt;idle&gt;-0       [002] d...2.. 43959.851692: sched_switch: prev_comm=swapper/2 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=preempt_test next_pid=628 next_prio=49</span><br><span class="line">     migration/1-20      [001] d...2.. 43959.851702: sched_switch: prev_comm=migration/1 prev_pid=20 prev_prio=0 prev_state=S ==&gt; next_comm=preempt_test next_pid=629 next_prio=120</span><br><span class="line">    preempt_test-627     [000] d...2.. 43959.851712: sched_switch: prev_comm=preempt_test prev_pid=627 prev_prio=120 prev_state=S ==&gt; next_comm=swapper/0 next_pid=0 next_prio=120</span><br><span class="line">    preempt_test-629     [001] dN..4.. 43959.851755: sched_wakeup: comm=migration/1 pid=20 prio=0 target_cpu=001</span><br><span class="line">    preempt_test-629     [001] d...2.. 43959.851759: sched_switch: prev_comm=preempt_test prev_pid=629 prev_prio=69 prev_state=R+ ==&gt; next_comm=migration/1 next_pid=20 next_prio=0</span><br><span class="line">    preempt_test-628     [002] d...2.. 43959.851797: sched_switch: prev_comm=preempt_test prev_pid=628 prev_prio=49 prev_state=S ==&gt; next_comm=preempt_test next_pid=629 next_prio=69</span><br><span class="line">    preempt_test-629     [002] d...2.. 43959.852020: sched_switch: prev_comm=preempt_test prev_pid=629 prev_prio=69 prev_state=X ==&gt; next_comm=swapper/2 next_pid=0 next_prio=120</span><br><span class="line">          &lt;idle&gt;-0       [002] dN.h4.. 43962.851796: sched_wakeup: comm=preempt_test pid=628 prio=49 target_cpu=002</span><br><span class="line">          &lt;idle&gt;-0       [002] d...2.. 43962.851809: sched_switch: prev_comm=swapper/2 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=preempt_test next_pid=628 next_prio=49</span><br><span class="line">    preempt_test-628     [002] d...3.. 43962.851900: sched_wakeup: comm=preempt_test pid=627 prio=120 target_cpu=000</span><br><span class="line">          &lt;idle&gt;-0       [000] d...2.. 43962.851909: sched_switch: prev_comm=swapper/0 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=preempt_test next_pid=627 next_prio=120</span><br><span class="line">    preempt_test-627     [000] d...2.. 43962.851940: sched_switch: prev_comm=preempt_test prev_pid=627 prev_prio=120 prev_state=S ==&gt; next_comm=swapper/0 next_pid=0 next_prio=120</span><br><span class="line">    preempt_test-628     [002] d...2.. 43962.851950: sched_switch: prev_comm=preempt_test prev_pid=628 prev_prio=49 prev_state=X ==&gt; next_comm=swapper/2 next_pid=0 next_prio=120</span><br><span class="line">     ksoftirqd/0-11      [000] dnLs313 43969.852005: sched_wakeup: comm=preempt_test pid=627 prio=120 target_cpu=000</span><br><span class="line">     ksoftirqd/0-11      [000] d...2.. 43969.852018: sched_switch: prev_comm=ksoftirqd/0 prev_pid=11 prev_prio=120 prev_state=R+ ==&gt; next_comm=preempt_test next_pid=627 next_prio=120</span><br><span class="line">    preempt_test-627     [000] dN.h3.. 43969.852061: sched_wakeup: comm=irq/44-uart-ng0 pid=429 prio=49 target_cpu=000</span><br><span class="line">    preempt_test-627     [000] d...2.. 43969.852069: sched_switch: prev_comm=preempt_test prev_pid=627 prev_prio=120 prev_state=R+ ==&gt; next_comm=irq/44-uart-ng0 next_pid=429 next_prio=49</span><br><span class="line"> irq/44-uart-ng0-429     [000] d...2.. 43969.852092: sched_switch: prev_comm=irq/44-uart-ng0 prev_pid=429 prev_prio=49 prev_state=S ==&gt; next_comm=preempt_test next_pid=627 next_prio=120</span><br><span class="line">    preempt_test-627     [000] d...313 43969.852583: sched_wakeup: comm=bash pid=444 prio=120 target_cpu=000</span><br><span class="line">    preempt_test-627     [000] d...2.. 43969.852597: sched_switch: prev_comm=preempt_test prev_pid=627 prev_prio=120 prev_state=Z ==&gt; next_comm=bash next_pid=444 next_prio=120</span><br></pre></td></tr></table></figure>
+
+<p>注意第 36 行，在 <code>sched_wakeup</code> 期间，处于硬中断上下文，thread2 的 <code>TIF_NEED_RESCHED</code> 标志位被置位。结合可抢占内核的特性，在中断返回期间 thread1 得到 CPU 的执行权。</p>
+<p>注意第 36~37 行，<code>sched_wakeup</code> 与 <code>sched_switch</code> 的时间差仅为微秒级（43962.851809 - 43962.851796 ≈ 3μs），实时抢占有更快的响应能力。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>从实践结果看，从任务切换的抖动延迟来说，不同的抢占策略，高优先级线程的抢占延迟也不同。如果采用实时抢占内核，高优先级的任务能够更快地得到执行。<br>但是，”更快”并不代表实时抢占内核就是硬实时内核，实时抢占内核只是提供了尽可能达到硬实时的内核基础。因为实时操作系统的核心特性是确定性，而确定性是由使用场景和需求决定，且最终应用到整个操作系统（包含驱动、中间层和应用程序），并非仅用一个内核来决定的。</p>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s?__biz=Mzg2OTc0ODAzMw==&mid=2247502494&idx=1&sn=9c564083127e1713e694d6742196919d&chksm=ce9ad6b0f9ed5fa6b769002859c4c0c55fda05e1667d32b759cb4335bb03bd8f3acbaf2e8e62&scene=21&mediaId=wechatarticle_8710008be1a7dad37af47b4b6ed96750_f846bf799c5d56268c47429e75b068cf7303329721909104&openFrom=1#wechat_redirect">理解Linux内核抢占模型（最透彻一篇）</a></li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Ftrace/" rel="tag"># Ftrace</a>
+              <a href="/tags/Kernel/" rel="tag"># Kernel</a>
+              <a href="/tags/RTOS/" rel="tag"># RTOS</a>
+              <a href="/tags/Preempt/" rel="tag"># Preempt</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/04/07/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/1-%E5%AE%9E%E6%97%B6%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%8E%9F%E7%90%86%E6%B5%85%E6%9E%90/" rel="prev" title="实时操作系统原理浅析">
+                  <i class="fa fa-angle-left"></i> 实时操作系统原理浅析
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/04/14/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/3-Linux-%E5%AE%9E%E6%97%B6%E8%A1%A5%E4%B8%81%E7%9A%84%E4%BD%BF%E7%94%A8/" rel="next" title="Linux - 实时补丁的使用">
+                  Linux - 实时补丁的使用 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">369k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">22:22</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

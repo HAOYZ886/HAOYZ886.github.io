@@ -169,7 +169,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">67</span>
+          <span class="site-state-item-count">73</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -180,7 +180,7 @@
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">70</span>
+        <span class="site-state-item-count">73</span>
         <span class="site-state-item-name">tags</span></a>
       </div>
   </nav>
@@ -220,6 +220,629 @@
     </div>
 
     <div class="main-inner index posts-expand">
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/08/03/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E6%B5%85%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2023/08/03/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E6%B5%85%E6%9E%90/" class="post-title-link" itemprop="url">Linux-文件系统浅析（内核版本 2.4.22）</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2023-08-03 00:00:00" itemprop="dateCreated datePublished" datetime="2023-08-03T00:00:00+08:00">2023-08-03</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2023-08-11 00:00:00" itemprop="dateModified" datetime="2023-08-11T00:00:00+08:00">2023-08-11</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3.7k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>14 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="文件是什么"><a href="#文件是什么" class="headerlink" title="文件是什么"></a>文件是什么</h2><p>文件是一个记录信息的载体，是有次序的、有组织的。它可以被写，也可以被读。人把大脑的想法写到文件去，人亦可阅读文件的信息输入到大脑内。对于的计算机的文件，应从狭义和广义上说。从狭义上说，电脑文件指的是存储在磁盘内的文件。从广义上说，世间万物都是文件，这是因为凡是满足文件的特性，就是能存储信息，且可被读写的事物。比如说，网卡是一个设备文件，它可以“产出”信息，即接收来自其它终端的数据，亦可暂存信息，也可“消耗”信息，即把数据输出到相应进程。所以说它是一个文件也不为过。我们把它从一个设备抽象成一个文件，能够更方便地使用它，能够有组织、有次序的访问它里面的数据（这个体现在文件系统）。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2023/08/03/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F%E6%B5%85%E6%9E%90/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/05/15/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-PCI%E6%80%BB%E7%BA%BF%E6%A1%86%E6%9E%B6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2023/05/15/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-PCI%E6%80%BB%E7%BA%BF%E6%A1%86%E6%9E%B6/" class="post-title-link" itemprop="url">Linux - PCI总线框架（内核版本 2.4.22，32位x86）</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2023-05-15 00:00:00" itemprop="dateCreated datePublished" datetime="2023-05-15T00:00:00+08:00">2023-05-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2023-10-06 00:00:00" itemprop="dateModified" datetime="2023-10-06T00:00:00+08:00">2023-10-06</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>30k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>1:50</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>从本篇文档开始，从底层出发，复现 Linux 2.4 的设备驱动，其中最主要的驱动是：PCI 驱动、IDE 硬盘驱动和块设备驱动。然后，往上复现，即复现虚拟文件系统、EXT2 文件系统、设备文件系统（如果有充裕的时间的话），接着再到用户进程、进程间通信、内存回收、内存交换、OOM。现实中，硬件设备众多，工业级别的操作系统都会有相应的驱动去识别并管理连接到电脑的外部设备。比如现在将要说明的 PCI 驱动，只要连接到 PCI 总线的外部设备，在 PCI 总线遍历搜索，它们统统都会被识别出来，然后分配内存空间去描述它们。下面开始说明 PCI 驱动。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2023/05/15/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/Linux-PCI%E6%80%BB%E7%BA%BF%E6%A1%86%E6%9E%B6/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/05/13/Skill/normal/GIT%E7%9A%84%E4%BD%BF%E7%94%A8%E7%AC%94%E8%AE%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2023/05/13/Skill/normal/GIT%E7%9A%84%E4%BD%BF%E7%94%A8%E7%AC%94%E8%AE%B0/" class="post-title-link" itemprop="url">GIT的使用笔记</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2023-05-13 00:00:00" itemprop="dateCreated datePublished" datetime="2023-05-13T00:00:00+08:00">2023-05-13</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Skill/" itemprop="url" rel="index"><span itemprop="name">Skill</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2.3k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>8 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="创建本地仓库"><a href="#创建本地仓库" class="headerlink" title="创建本地仓库"></a>创建本地仓库</h2><p>在当前的目录下输入：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git init</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2023/05/13/Skill/normal/GIT%E7%9A%84%E4%BD%BF%E7%94%A8%E7%AC%94%E8%AE%B0/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/04/01/Skill/normal/KConfig%E4%BD%BF%E7%94%A8%E7%AC%94%E8%AE%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2023/04/01/Skill/normal/KConfig%E4%BD%BF%E7%94%A8%E7%AC%94%E8%AE%B0/" class="post-title-link" itemprop="url">KConfig 使用笔记</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2023-04-01 00:00:00" itemprop="dateCreated datePublished" datetime="2023-04-01T00:00:00+08:00">2023-04-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2023-06-13 00:00:00" itemprop="dateModified" datetime="2023-06-13T00:00:00+08:00">2023-06-13</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Skill/" itemprop="url" rel="index"><span itemprop="name">Skill</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2.3k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>8 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><p>参考文档：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">任一个Linux内核的Documentation\kbuild\kconfig-language.rst</span><br><span class="line"></span><br><span class="line">https://www.rt-thread.org/document/site/programming-manual/kconfig/kconfig/</span><br></pre></td></tr></table></figure>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2023/04/01/Skill/normal/KConfig%E4%BD%BF%E7%94%A8%E7%AC%94%E8%AE%B0/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/12/30/Skill/debug/bochs%E6%8C%87%E4%BB%A4%E9%9B%86/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2022/12/30/Skill/debug/bochs%E6%8C%87%E4%BB%A4%E9%9B%86/" class="post-title-link" itemprop="url">bochs指令集</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2022-12-30 00:00:00" itemprop="dateCreated datePublished" datetime="2022-12-30T00:00:00+08:00">2022-12-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Skill/" itemprop="url" rel="index"><span itemprop="name">Skill</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>1.1k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>4 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>以下是本人经常使用到的 bochs 调试指令，记录一下。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2022/12/30/Skill/debug/bochs%E6%8C%87%E4%BB%A4%E9%9B%86/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%BB%BB%E5%8A%A1%E8%AE%A9%E5%87%BA%E5%92%8C%E7%9D%A1%E7%9C%A0_i386/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%BB%BB%E5%8A%A1%E8%AE%A9%E5%87%BA%E5%92%8C%E7%9D%A1%E7%9C%A0_i386/" class="post-title-link" itemprop="url">Linux - 任务让出和睡眠（内核版本 2.4.22，32位x86）</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2022-12-30 00:00:00" itemprop="dateCreated datePublished" datetime="2022-12-30T00:00:00+08:00">2022-12-30</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3.5k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>13 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="任务让出"><a href="#任务让出" class="headerlink" title="任务让出"></a>任务让出</h2><p>任务让出就是指主动让出 CPU 使用权给其他在调度队列内权值最高的任务，但注意的是执行任务让出操作的任务是还在调度队列的，但是在该队列的尾部。而且任务策略的不同，做出的让出操作也是不同的。<br>现在来看看在内核内的接口函数 yield() ：</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2022/12/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%BB%BB%E5%8A%A1%E8%AE%A9%E5%87%BA%E5%92%8C%E7%9D%A1%E7%9C%A0_i386/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
 
     
 
@@ -643,322 +1266,8 @@
 
 
 
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%B8%AD%E6%96%AD%E5%AD%90%E7%B3%BB%E7%BB%9F%E5%AD%A6%E4%B9%A0_i386/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/user.png">
-      <meta itemprop="name" content="Calon Zhang">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Calon's Blog">
-      <meta itemprop="description" content="Just for fun.">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | Calon's Blog">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2022/06/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%B8%AD%E6%96%AD%E5%AD%90%E7%B3%BB%E7%BB%9F%E5%AD%A6%E4%B9%A0_i386/" class="post-title-link" itemprop="url">Linux - 中断子系统学习（内核版本 2.4.22，32位x86）</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-
-      <time title="Created: 2022-06-30 00:00:00" itemprop="dateCreated datePublished" datetime="2022-06-30T00:00:00+08:00">2022-06-30</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-09-03 00:00:00" itemprop="dateModified" datetime="2022-09-03T00:00:00+08:00">2022-09-03</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="Word count in article">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">Word count in article: </span>
-      <span>9.4k</span>
-    </span>
-    <span class="post-meta-item" title="Reading time">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">Reading time &asymp;</span>
-      <span>34 mins.</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h1 id="初始化中断-异常"><a href="#初始化中断-异常" class="headerlink" title="初始化中断-异常"></a>初始化中断-异常</h1><p>已知当 CPU 进入保护模式后，原先实模式下的中断向量表已无效，取而代之的是中断描述符表，中断描述表的基地址以及表界限在 IDTR 寄存器。保护模式下的中断号范围依然是 0～255，但有 0～19 是为异常所用，20～32 为保留项。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/06/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E4%B8%AD%E6%96%AD%E5%AD%90%E7%B3%BB%E7%BB%9F%E5%AD%A6%E4%B9%A0_i386/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/02/Skill/normal/LD%E8%84%9A%E6%9C%AC%E7%9A%84%E4%BD%BF%E7%94%A8/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/user.png">
-      <meta itemprop="name" content="Calon Zhang">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Calon's Blog">
-      <meta itemprop="description" content="Just for fun.">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | Calon's Blog">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2022/06/02/Skill/normal/LD%E8%84%9A%E6%9C%AC%E7%9A%84%E4%BD%BF%E7%94%A8/" class="post-title-link" itemprop="url">LD脚本的使用</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-
-      <time title="Created: 2022-06-02 00:00:00" itemprop="dateCreated datePublished" datetime="2022-06-02T00:00:00+08:00">2022-06-02</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/Skill/" itemprop="url" rel="index"><span itemprop="name">Skill</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="Word count in article">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">Word count in article: </span>
-      <span>1.6k</span>
-    </span>
-    <span class="post-meta-item" title="Reading time">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">Reading time &asymp;</span>
-      <span>6 mins.</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h2 id="链接脚本是什么"><a href="#链接脚本是什么" class="headerlink" title="链接脚本是什么"></a>链接脚本是什么</h2><p>了解什么是链接脚本前，需要知道编译过程<br>以 C 语言为例，已知从源码文件编译为可执行文件分为4个步骤：  </p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/06/02/Skill/normal/LD%E8%84%9A%E6%9C%AC%E7%9A%84%E4%BD%BF%E7%94%A8/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/02/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E8%A7%A3%E6%9E%90E820%E5%9B%BE_i386/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/user.png">
-      <meta itemprop="name" content="Calon Zhang">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Calon's Blog">
-      <meta itemprop="description" content="Just for fun.">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | Calon's Blog">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2022/06/02/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E8%A7%A3%E6%9E%90E820%E5%9B%BE_i386/" class="post-title-link" itemprop="url">Linux - 解析E820图（内核版本 2.4.22，32位x86）</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-
-      <time title="Created: 2022-06-02 00:00:00" itemprop="dateCreated datePublished" datetime="2022-06-02T00:00:00+08:00">2022-06-02</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2022-10-28 00:00:00" itemprop="dateModified" datetime="2022-10-28T00:00:00+08:00">2022-10-28</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">In</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
-        </span>
-    </span>
-
-  
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="Word count in article">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">Word count in article: </span>
-      <span>7.6k</span>
-    </span>
-    <span class="post-meta-item" title="Reading time">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">Reading time &asymp;</span>
-      <span>28 mins.</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h2 id="函数-setup-arch"><a href="#函数-setup-arch" class="headerlink" title="函数 setup_arch()"></a>函数 setup_arch()</h2><p>跳转到 start_kernel() ，第一件事就是执行函数 setup_arch() ，每一个平台都有它们自己的 setup_arch()，EleOS 内核仅支持 i386 ，现说明它的 setup_arch() 的执行流程。<br>目前 setup_arch() 首要的任务就是先解析 E820 图：</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/06/02/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/old/Linux-%E8%A7%A3%E6%9E%90E820%E5%9B%BE_i386/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
   <nav class="pagination">
-    <a class="extend prev" rel="prev" title="Previous page" aria-label="Previous page" href="/page/6/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><span class="page-number current">7</span>
+    <a class="extend prev" rel="prev" title="Previous page" aria-label="Previous page" href="/page/6/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><span class="page-number current">7</span><a class="page-number" href="/page/8/">8</a><a class="extend next" rel="next" title="Next page" aria-label="Next page" href="/page/8/"><i class="fa fa-angle-right"></i></a>
   </nav>
 
 </div>
@@ -980,13 +1289,13 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-line"></i>
     </span>
-    <span title="Word count total">339k</span>
+    <span title="Word count total">369k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="Reading time total">20:32</span>
+    <span title="Reading time total">22:22</span>
   </span>
 </div>
   <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>

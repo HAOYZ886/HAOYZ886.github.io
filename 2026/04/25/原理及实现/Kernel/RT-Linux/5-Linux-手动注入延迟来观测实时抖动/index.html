@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言根据之前几篇文档的说明可知，RTOS 的确定性来源于项目的需求，而具体的实现是：中断的响应，以及任务的调度和执行完成是否在指定的范围内。在 Linux 中，  中断的响应快慢，分为以下原因： 中断是否被关闭（主要），而中断关闭的原因是：   框架&#x2F;子系统的实现自身要求的，比如 spin_lock_irq() 进入中断上下文（包括 NMI ）时关闭   硬件延迟（SMI）导致（次要），">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - 手动注入延迟来观测实时抖动">
+<meta property="og:url" content="http://example.com/2026/04/25/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/5-Linux-%E6%89%8B%E5%8A%A8%E6%B3%A8%E5%85%A5%E5%BB%B6%E8%BF%9F%E6%9D%A5%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="前言根据之前几篇文档的说明可知，RTOS 的确定性来源于项目的需求，而具体的实现是：中断的响应，以及任务的调度和执行完成是否在指定的范围内。在 Linux 中，  中断的响应快慢，分为以下原因： 中断是否被关闭（主要），而中断关闭的原因是：   框架&#x2F;子系统的实现自身要求的，比如 spin_lock_irq() 进入中断上下文（包括 NMI ）时关闭   硬件延迟（SMI）导致（次要），">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2026-04-24T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-05-02T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Ftrace">
+<meta property="article:tag" content="Interrupt">
+<meta property="article:tag" content="Kernel">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="Preempt">
+<meta property="article:tag" content="RTOS">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2026/04/25/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/5-Linux-%E6%89%8B%E5%8A%A8%E6%B3%A8%E5%85%A5%E5%BB%B6%E8%BF%9F%E6%9D%A5%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2026/04/25/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/5-Linux-%E6%89%8B%E5%8A%A8%E6%B3%A8%E5%85%A5%E5%BB%B6%E8%BF%9F%E6%9D%A5%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/","path":"2026/04/25/原理及实现/Kernel/RT-Linux/5-Linux-手动注入延迟来观测实时抖动/","title":"Linux - 手动注入延迟来观测实时抖动"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - 手动注入延迟来观测实时抖动 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">2.</span> <span class="nav-text">环境搭建</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E6%A0%B8%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA"><span class="nav-number">2.1.</span> <span class="nav-text">内核环境搭建</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95%E4%BB%A3%E7%A0%81%E4%B8%8B%E8%BD%BD"><span class="nav-number">2.2.</span> <span class="nav-text">测试代码下载</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%80%9A%E8%BF%87%E4%B8%AD%E6%96%AD%E5%85%B3%E9%97%AD%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8"><span class="nav-number">3.</span> <span class="nav-text">通过中断关闭观测实时抖动</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B3%A8%E5%85%A5%E5%BB%B6%E8%BF%9F%EF%BC%9A%E5%8A%A0%E8%BD%BD%E6%B5%8B%E8%AF%95%E6%A8%A1%E5%9D%97"><span class="nav-number">3.1.</span> <span class="nav-text">注入延迟：加载测试模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%8F%E8%A7%82%E8%A7%82%E6%B5%8B%EF%BC%9A%E4%BD%BF%E7%94%A8cyclictest%E8%A7%82%E6%B5%8B"><span class="nav-number">3.2.</span> <span class="nav-text">宏观观测：使用cyclictest观测</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BE%AE%E8%A7%82%E5%AE%9A%E4%BD%8D%EF%BC%9A%E4%BD%BF%E7%94%A8timerlat%E8%A7%82%E6%B5%8B"><span class="nav-number">3.3.</span> <span class="nav-text">微观定位：使用timerlat观测</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8irqsoff%E8%BF%BD%E8%B8%AA%E5%BB%B6%E8%BF%9F%E7%82%B9"><span class="nav-number">3.4.</span> <span class="nav-text">使用irqsoff追踪延迟点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A6%82%E6%9E%9C%E6%B2%A1%E6%9C%89timerlat%E8%AF%A5%E6%80%8E%E4%B9%88%E8%BF%BD%E8%B8%AA%EF%BC%9F"><span class="nav-number">3.5.</span> <span class="nav-text">如果没有timerlat该怎么追踪？</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%80%9A%E8%BF%87%E6%8A%A2%E5%8D%A0%E5%85%B3%E9%97%AD%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8"><span class="nav-number">4.</span> <span class="nav-text">通过抢占关闭观测实时抖动</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B3%A8%E5%85%A5%E5%BB%B6%E8%BF%9F%EF%BC%9A%E5%8A%A0%E8%BD%BD%E6%B5%8B%E8%AF%95%E6%A8%A1%E5%9D%97-1"><span class="nav-number">4.1.</span> <span class="nav-text">注入延迟：加载测试模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8cyclictest%E8%A7%82%E6%B5%8B"><span class="nav-number">4.2.</span> <span class="nav-text">使用cyclictest观测</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BE%AE%E8%A7%82%E5%AE%9A%E4%BD%8D%EF%BC%9A%E4%BD%BF%E7%94%A8timerlat%E8%A7%82%E6%B5%8B-1"><span class="nav-number">4.3.</span> <span class="nav-text">微观定位：使用timerlat观测</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8preemptirqsoff%E8%BF%BD%E8%B8%AA%E5%BB%B6%E8%BF%9F%E7%82%B9"><span class="nav-number">4.4.</span> <span class="nav-text">使用preemptirqsoff追踪延迟点</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%80%9A%E8%BF%87%E7%BA%BF%E7%A8%8B%E6%8A%A2%E5%8D%A0%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8"><span class="nav-number">5.</span> <span class="nav-text">通过线程抢占观测实时抖动</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A6%82%E5%BF%B5%E8%BE%A8%E6%9E%90%EF%BC%9A%E4%BC%98%E5%85%88%E7%BA%A7%E5%8E%8B%E5%88%B6-vs-%E5%85%B3%E9%97%AD%E6%8A%A2%E5%8D%A0"><span class="nav-number">5.1.</span> <span class="nav-text">概念辨析：优先级压制 vs 关闭抢占</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%AF%E5%A2%83%E5%87%86%E5%A4%87"><span class="nav-number">5.2.</span> <span class="nav-text">环境准备</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8timerlat%E8%A7%82%E6%B5%8B"><span class="nav-number">5.3.</span> <span class="nav-text">使用timerlat观测</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">5.4.</span> <span class="nav-text">总结</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%A1%AC%E4%BB%B6%E5%BB%B6%E8%BF%9F"><span class="nav-number">6.</span> <span class="nav-text">硬件延迟</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8E%9F%E7%90%86%EF%BC%9A%E6%B6%88%E5%A4%B1%E7%9A%84%E6%97%B6%E9%97%B4%E5%8E%BB%E5%93%AA%E4%BA%86%EF%BC%9F"><span class="nav-number">6.1.</span> <span class="nav-text">原理：消失的时间去哪了？</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%B9%E4%BA%8EARM64%E6%9E%B6%E6%9E%84"><span class="nav-number">6.1.1.</span> <span class="nav-text">对于ARM64架构</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%B9%E4%BA%8EX86%E6%9E%B6%E6%9E%84"><span class="nav-number">6.1.2.</span> <span class="nav-text">对于X86架构</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8E%92%E6%9F%A5%E5%B7%A5%E5%85%B7%EF%BC%9Ahwlatdetect"><span class="nav-number">6.2.</span> <span class="nav-text">排查工具：hwlatdetect</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%80%BB%E7%BB%93-1"><span class="nav-number">7.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">8.</span> <span class="nav-text">参考</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">73</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">73</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2026/04/25/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/5-Linux-%E6%89%8B%E5%8A%A8%E6%B3%A8%E5%85%A5%E5%BB%B6%E8%BF%9F%E6%9D%A5%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - 手动注入延迟来观测实时抖动 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - 手动注入延迟来观测实时抖动
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2026-04-25 00:00:00" itemprop="dateCreated datePublished" datetime="2026-04-25T00:00:00+08:00">2026-04-25</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2026-05-03 00:00:00" itemprop="dateModified" datetime="2026-05-03T00:00:00+08:00">2026-05-03</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>8.1k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>30 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>根据之前几篇文档的说明可知，RTOS 的确定性来源于项目的需求，而具体的实现是：中断的响应，以及任务的调度和执行完成是否在指定的范围内。<br>在 Linux 中，</p>
+<ul>
+<li>中断的响应快慢，分为以下原因：<ol>
+<li>中断是否被关闭（主要），而中断关闭的原因是：</li>
+</ol>
+<ul>
+<li>框架&#x2F;子系统的实现自身要求的，比如 spin_lock_irq()</li>
+<li>进入中断上下文（包括 NMI ）时关闭</li>
+</ul>
+<ol start="2">
+<li>硬件延迟（SMI）导致（次要），而导致此的原因是：</li>
+</ol>
+<ul>
+<li>如 ARM64 架构，由于 Linux 运行在 EL1 ，则它无法感知 EL2&#x2F;EL3 ，当陷入更高级运行等级时，内核处于停止状态。</li>
+<li>如 X86 架构，BIOS&#x2F;固件执行相关操作，CPU 无法屏蔽，只能等待完成。</li>
+</ul>
+</li>
+<li>任务的响应快慢，分为以下原因：<ol>
+<li>抢占是否被关闭（主要），而抢占关闭的原因是：</li>
+</ol>
+<ul>
+<li>框架&#x2F;子系统的实现自身要求的，比如 spin_lock_irq()</li>
+</ul>
+<ol start="2">
+<li>在就绪队列中的任务，或当前任务的实时优先级比指定调度的任务优先级更高</li>
+<li>实时仲裁（Linux机制，间接导致）。比如在 1 秒时间内要求 0.95 秒跑实时任务，其余时间跑非实时任务。高优先级任务（优先级大于或等于你想要响应的任务）占满 0.95 秒，触发实时仲裁，你想要响应的任务也会被延后至少 0.05 秒得到调度。</li>
+<li>优先级反转。比如低优先级的线程持有锁并正在执行，但是此时高优先级的线程抢占了执行该低优先级的线程的 CPU ，而且尝试获取低优先级的线程已持有的锁，但获取不了从而让出执行权，只能等待低优先级的线程释放锁。</li>
+<li>硬件延迟（SMI）导致</li>
+</ol>
+</li>
+</ul>
+<span id="more"></span>
+
+<p>接下来我们分别在中断上下文和进程上下文，手动注入中断与调度延迟，并结合 <code>timerlat</code>、<code>irqsoff</code> 等内核追踪工具，复现并定位 Linux 实时系统中的微秒级抖动瓶颈。</p>
+<blockquote>
+<p>注意：本文不讨论 PREEMPT_RT 补丁的实现原理，也不深入硬件 SMI 优化，重点讲怎么手动构造延迟、怎么用工具观测和定位实时抖动。</p>
+</blockquote>
+<h1 id="环境搭建"><a href="#环境搭建" class="headerlink" title="环境搭建"></a>环境搭建</h1><p>构建一个支持延迟追踪的 Linux 内核环境，并编译用于注入延迟的测试内核模块。</p>
+<h2 id="内核环境搭建"><a href="#内核环境搭建" class="headerlink" title="内核环境搭建"></a>内核环境搭建</h2><p>要观测微秒级的延迟抖动，内核必须开启相关的追踪功能。我们需要启用 <code>FTrace</code> 及其相关子项：<br><strong>基础追踪框架：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">CONFIG_FTRACE=y</span><br><span class="line">CONFIG_FUNCTION_TRACER=y</span><br><span class="line">CONFIG_FUNCTION_GRAPH_TRACER=y</span><br><span class="line">CONFIG_DYNAMIC_FTRACE=y</span><br><span class="line">CONFIG_STACK_TRACER=y</span><br></pre></td></tr></table></figure>
+<p><strong>延迟追踪器：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">CONFIG_IRQSOFF_TRACER=y</span><br><span class="line">CONFIG_PREEMPT_TRACER=y</span><br><span class="line">CONFIG_SCHED_TRACER=y</span><br><span class="line">CONFIG_HWLAT_TRACER=y</span><br></pre></td></tr></table></figure>
+<p><strong>实时性分析工具：</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">CONFIG_OSNOISE_TRACER=y</span><br><span class="line">CONFIG_TIMERLAT_TRACER=y</span><br></pre></td></tr></table></figure>
+<p>其中 <code>CONFIG_OSNOISE_TRACER</code> 和 <code>CONFIG_TIMERLAT_TRACER</code> 是 Linux 5.14&#x2F;5.15 起引入的 tracer，分别对应 osnoise 和 timerlat。</p>
+<h2 id="测试代码下载"><a href="#测试代码下载" class="headerlink" title="测试代码下载"></a>测试代码下载</h2><p>本实验使用 rt-noise-test 项目，该工程提供了模拟中断关闭 (irq-noise) 和抢占关闭 (preempt-noise) 的内核模块。<br>在开发主机上克隆代码仓库：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/HAOYZ886/rt-noise-test.git</span><br><span class="line"><span class="built_in">cd</span> rt-noise-test</span><br></pre></td></tr></table></figure>
+<p>建议分别打开项目子目录 irq-noise 和 preempt-noise 的 Makefile ，提前指定交叉编译链以及内核所在的文件路径。</p>
+<blockquote>
+<p>注意：<br>以下的实践都在 Linux-6.1 进行。<br>以下实践的目的是揪出延迟抖动所在，手动注入延迟是模拟环境。</p>
+</blockquote>
+<h1 id="通过中断关闭观测实时抖动"><a href="#通过中断关闭观测实时抖动" class="headerlink" title="通过中断关闭观测实时抖动"></a>通过中断关闭观测实时抖动</h1><p>本节目标：模拟中断被长时间关闭的场景，实践如何使用 <code>cyclictest</code> 发现延迟，并借助 <code>timerlat</code> 精准定性为“中断响应延迟”。</p>
+<blockquote>
+<p>以下实践指定使用 CPU6 为例，读者根据自己的实践环境修改。</p>
+</blockquote>
+<h2 id="注入延迟：加载测试模块"><a href="#注入延迟：加载测试模块" class="headerlink" title="注入延迟：加载测试模块"></a>注入延迟：加载测试模块</h2><ol>
+<li>编译内核模块 irq-noise ，并把它放到开发板 &#x2F;root ：</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> irq-noise &amp;&amp; make </span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>加载模块，将模块绑定至 CPU6，避免干扰其它 CPU</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">insmod /root/irq-noise.ko</span><br><span class="line"><span class="built_in">echo</span> 6 &gt; /sys/module/irq_noise/parameters/cpu</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li>将 CPU6 设为性能模式</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> performance &gt; /sys/devices/system/cpu/cpu6/cpufreq/scaling_governor</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>为什么要设置 performance 模式？<br>现代 CPU 默认使用动态调频（如 powersave 或 schedutil），当负载低时会降频休眠。唤醒时 CPU 升频本身就会产生数百微秒的延迟。为了隔离变量，专注于软件逻辑带来的抖动，必须锁定 CPU 最高频率。</p>
+</blockquote>
+<h2 id="宏观观测：使用cyclictest观测"><a href="#宏观观测：使用cyclictest观测" class="headerlink" title="宏观观测：使用cyclictest观测"></a>宏观观测：使用cyclictest观测</h2><p>cyclictest 是最经典的延迟测量工具，但它只能告诉你“系统有延迟”，无法告诉你“为什么延迟”。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 启动 cyclictest：在 CPU6 上运行一个优先级为 99 的实时线程</span></span><br><span class="line">taskset -c 6 cyclictest -t 1 -c 1 -m --policy=fifo -Sp 99 -D 1m -q &amp;</span><br><span class="line"></span><br><span class="line"><span class="comment"># 注入 1000us 的中断延迟</span></span><br><span class="line"><span class="built_in">echo</span> 1000 &gt; /sys/module/irq_noise/parameters/latency_us</span><br></pre></td></tr></table></figure>
+<p>cyclictest 参数解读：</p>
+<ul>
+<li>-m: 锁定内存，防止因缺页中断引入额外延迟。</li>
+<li>–policy&#x3D;fifo -Sp 99: 使用 SCHED_FIFO 调度策略，优先级设为最高 99。</li>
+<li>-q: 安静模式，仅在结束时输出统计。</li>
+</ul>
+<p>实践结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">[  271.590484] irq_noise: Burned 1000 us in Hard IRQ context on CPU6</span><br><span class="line">T: 0 ( 1622) P:99 I:1000 C:  60000 Min:     13 Act:   13 Avg:   15 Max:     907</span><br></pre></td></tr></table></figure>
+<p>我们注入了 1000us 延迟，但 Max 却是 907us，这正常吗？正常。因为从硬件定时器溢出到内核代码执行 __udelay() 存在微小开销。仅从结果上看，此时我们仅知道了延迟的上限约 1ms，但无法确认这是由于中断关太久，还是因为高优先级任务占用了 CPU。</p>
+<h2 id="微观定位：使用timerlat观测"><a href="#微观定位：使用timerlat观测" class="headerlink" title="微观定位：使用timerlat观测"></a>微观定位：使用timerlat观测</h2><p>为了区分“中断响应延迟”与“任务调度延迟”，我们需要引入 timerlat（Linux 5.14+ 新特性）。它能分别在中断上下文和线程上下文打点，计算各自耗时。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">TRACE_DIR=<span class="string">&quot;/sys/kernel/debug/tracing&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 重置追踪器</span></span><br><span class="line"><span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on &amp;&amp; <span class="built_in">echo</span> &gt; <span class="variable">$TRACE_DIR</span>/trace</span><br><span class="line"><span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/events/enable</span><br><span class="line"><span class="built_in">echo</span> 40 &gt; <span class="variable">$TRACE_DIR</span>/tracing_cpumask <span class="comment"># 仅追踪 CPU6</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 配置 timerlat 参数</span></span><br><span class="line"><span class="built_in">echo</span> 6 &gt; <span class="variable">$TRACE_DIR</span>/osnoise/cpus</span><br><span class="line"><span class="built_in">echo</span> 600000 &gt; <span class="variable">$TRACE_DIR</span>/tracing_thresh     <span class="comment"># 阈值设为 600us (单位 ns)</span></span><br><span class="line"><span class="built_in">echo</span> 600 &gt; <span class="variable">$TRACE_DIR</span>/osnoise/print_stack   <span class="comment"># 打印中断上下文堆栈</span></span><br><span class="line"><span class="built_in">echo</span> 600 &gt; <span class="variable">$TRACE_DIR</span>/osnoise/stop_tracing_us <span class="comment"># 若中断延迟超 600us 则停止追踪</span></span><br><span class="line"><span class="built_in">echo</span> timerlat &gt; <span class="variable">$TRACE_DIR</span>/current_tracer</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; <span class="variable">$TRACE_DIR</span>/events/osnoise/enable</span><br><span class="line"></span><br><span class="line"><span class="comment"># 启动追踪并注入延迟</span></span><br><span class="line"><span class="built_in">echo</span> 1 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on &amp;&amp; \</span><br><span class="line"><span class="built_in">echo</span> 1000 &gt; /sys/module/irq_noise/parameters/latency_us &amp;&amp; \</span><br><span class="line"><span class="built_in">sleep</span> 0.1 &amp;&amp; <span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on &amp;&amp; \</span><br><span class="line"><span class="built_in">cat</span> <span class="variable">$TRACE_DIR</span>/trace</span><br></pre></td></tr></table></figure>
+<p>核心参数解读：</p>
+<ul>
+<li>tracing_thresh: 触发记录的延迟阈值。设为 600000ns，即只有延迟超过 600us 才抓取，过滤噪声。</li>
+<li>stop_tracing_us: 一旦 IRQ 延迟超过此值立即停止，保留现场，防止高延迟事件被后续覆盖。</li>
+</ul>
+<p>结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"># tracer: timerlat</span><br><span class="line">#</span><br><span class="line">#                                _-------=&gt; irqs-off</span><br><span class="line">#                               / _------=&gt; need-resched</span><br><span class="line">#                              | / _-----=&gt; need-resched-lazy</span><br><span class="line">#                              || / _----=&gt; hardirq/softirq</span><br><span class="line">#                              ||| / _---=&gt; preempt-depth</span><br><span class="line">#                              |||| / _--=&gt; preempt-lazy-depth</span><br><span class="line">#                              ||||| / _-=&gt; migrate-disable</span><br><span class="line">#                              |||||| /</span><br><span class="line">#                              |||||||             ACTIVATION</span><br><span class="line">#           TASK-PID      CPU# |||||||   TIMESTAMP    ID            CONTEXT                LATENCY</span><br><span class="line">#              | |         |   |||||||      |         |                  |                       |</span><br><span class="line">          &lt;idle&gt;-0       [006] d..h2..  6609.849389: irq_noise: IPI:2 start 6609.849385032 duration 2403 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] d..h1..  6609.850402: #2094  context    irq timer_latency    951641 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] d..h2..  6609.850404: &lt;stack trace&gt;</span><br><span class="line"> =&gt; timerlat_irq</span><br><span class="line"> =&gt; __hrtimer_run_queues</span><br><span class="line"> =&gt; hrtimer_interrupt</span><br><span class="line"> =&gt; arch_timer_handler_phys</span><br><span class="line"> =&gt; handle_percpu_devid_irq</span><br><span class="line"> =&gt; generic_handle_domain_irq</span><br><span class="line"> =&gt; gic_handle_irq</span><br><span class="line"> =&gt; call_on_irq_stack</span><br><span class="line"> =&gt; do_interrupt_handler</span><br><span class="line"> =&gt; el1_interrupt</span><br><span class="line"> =&gt; el1h_64_irq_handler</span><br><span class="line"> =&gt; el1h_64_irq</span><br><span class="line"> =&gt; cpuidle_enter_state</span><br><span class="line"> =&gt; cpuidle_enter</span><br><span class="line"> =&gt; do_idle</span><br><span class="line"> =&gt; cpu_startup_entry</span><br><span class="line"> =&gt; secondary_start_kernel</span><br><span class="line"> =&gt; __secondary_switched</span><br><span class="line"> =&gt; ...</span><br></pre></td></tr></table></figure>
+<p>很显而易见，是中断响应太慢了。</p>
+<ul>
+<li>看数值：irq timer_latency 951641 ns 表明，在中断上下文测得的延迟约为 951us，几乎占据了总延迟的全部。</li>
+<li>看堆栈：调用栈是 timerlat hrtimer回调函数的中断上下文（陷入异常级别 1 ），证明这次的延迟测试的抖动异常是在中断上下文发生的。</li>
+</ul>
+<p>这证实了延迟发生在中断响应阶段（IRQ Latency），而非任务调度阶段（Thread Latency）。</p>
+<h2 id="使用irqsoff追踪延迟点"><a href="#使用irqsoff追踪延迟点" class="headerlink" title="使用irqsoff追踪延迟点"></a>使用irqsoff追踪延迟点</h2><p>在确认延迟属于“中断响应延迟”后，现在需要确认其原因，大多数是因为中断关闭导致的。使用 <code>irqsoff</code> 追踪器捕获关中断的起始与结束点，而且还能通过图形化选项定位耗时最长的代码段。</p>
+<p>首先使用 <code>irqsoff</code> 的默认配置进行追踪。当系统发生超过阈值的关中断事件时，它会自动记录并停止追</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">TRACE_DIR=<span class="string">&quot;/sys/kernel/debug/tracing&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 重置追踪器</span></span><br><span class="line"><span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on &amp;&amp; <span class="built_in">echo</span> &gt; <span class="variable">$TRACE_DIR</span>/trace</span><br><span class="line"><span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/events/enable</span><br><span class="line"><span class="built_in">echo</span> 40 &gt; <span class="variable">$TRACE_DIR</span>/tracing_cpumask <span class="comment"># CPU6</span></span><br><span class="line"><span class="built_in">echo</span> 1000 &gt; <span class="variable">$TRACE_DIR</span>/tracing_thresh <span class="comment"># 注意：irqsoff 的 tracing_thresh 单位是微秒</span></span><br><span class="line"><span class="built_in">echo</span> irqsoff &gt; <span class="variable">$TRACE_DIR</span>/current_tracer</span><br><span class="line"></span><br><span class="line"><span class="comment"># 启动测量并注入延迟</span></span><br><span class="line">taskset -c 6 cyclictest -t 1 -c 1 -m --policy=fifo -Sp 99 -D 1m -q &amp;</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on &amp;&amp;\</span><br><span class="line"><span class="built_in">echo</span> 1000 &gt; /sys/module/irq_noise/parameters/latency_us &amp;&amp;\</span><br><span class="line"><span class="built_in">sleep</span> 0.1 &amp;&amp; <span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on  &amp;&amp;\</span><br><span class="line"><span class="built_in">cat</span> <span class="variable">$TRACE_DIR</span>/trace</span><br></pre></td></tr></table></figure>
+<p>结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line"># tracer: irqsoff</span><br><span class="line">#</span><br><span class="line"># irqsoff latency trace v1.1.5 on 6.1.115-rt16-ge73a0d6a8cc4-dirty</span><br><span class="line"># --------------------------------------------------------------------</span><br><span class="line"># latency: 1090 us, #154/154, CPU#6 | (M:preempt_rt VP:0, KP:0, SP:0 HP:0 #P:8)</span><br><span class="line">#    -----------------</span><br><span class="line">#    | task: swapper/6-0 (uid:0 nice:0 policy:0 rt_prio:0)</span><br><span class="line">#    -----------------</span><br><span class="line">#  =&gt; started at: el1_interrupt</span><br><span class="line">#  =&gt; ended at:   el1_interrupt</span><br><span class="line">#</span><br><span class="line">#</span><br><span class="line">#                    _--------=&gt; CPU#</span><br><span class="line">#                   / _-------=&gt; irqs-off/BH-disabled</span><br><span class="line">#                  | / _------=&gt; need-resched</span><br><span class="line">#                  || / _-----=&gt; need-resched-lazy</span><br><span class="line">#                  ||| / _----=&gt; hardirq/softirq</span><br><span class="line">#                  |||| / _---=&gt; preempt-depth</span><br><span class="line">#                  ||||| / _--=&gt; preempt-lazy-depth</span><br><span class="line">#                  |||||| / _-=&gt; migrate-disable</span><br><span class="line">#                  ||||||| /     delay</span><br><span class="line">#  cmd     pid     |||||||| time  |   caller</span><br><span class="line">#     \   /        ||||||||  \    |    /</span><br><span class="line">  &lt;idle&gt;-0         6d...1..    0us : enter_from_kernel_mode &lt;-el1_interrupt</span><br><span class="line">  &lt;idle&gt;-0         6d...1..    1us : irq_enter_rcu &lt;-el1_interrupt</span><br><span class="line">  &lt;idle&gt;-0         6d...1..    1us : preempt_count_add &lt;-irq_enter_rcu</span><br><span class="line">...</span><br><span class="line">  &lt;idle&gt;-0         6d..h2..   35us : __hrtimer_run_queues &lt;-hrtimer_interrupt</span><br><span class="line">  &lt;idle&gt;-0         6d..h2..   36us : _raw_spin_unlock_irqrestore &lt;-__hrtimer_run_queues</span><br><span class="line">  &lt;idle&gt;-0         6d..h2..   36us : preempt_count_sub &lt;-_raw_spin_unlock_irqrestore</span><br><span class="line">  &lt;idle&gt;-0         6d..h1..   37us : timer_callback &lt;-__hrtimer_run_queues</span><br><span class="line">  &lt;idle&gt;-0         6d..h1..   37us : __udelay &lt;-timer_callback	&lt;-- 进入耗时函数</span><br><span class="line">  &lt;idle&gt;-0         6d..h1..   38us : __delay &lt;-__udelay</span><br><span class="line">  &lt;idle&gt;-0         6d..h1..   38us!: arch_timer_evtstrm_available &lt;-__delay</span><br><span class="line">  &lt;idle&gt;-0         6d..h1.. 1038us : _printk &lt;-timer_callback	&lt;-- 时间突增至 1038us</span><br><span class="line">  &lt;idle&gt;-0         6d..h1.. 1039us : vprintk &lt;-_printk</span><br><span class="line">  &lt;idle&gt;-0         6d..h1.. 1039us : vprintk_default &lt;-vprintk</span><br><span class="line">  &lt;idle&gt;-0         6d..h1.. 1040us : vprintk_emit &lt;-vprintk_default</span><br><span class="line">  &lt;idle&gt;-0         6d..h1.. 1041us : vprintk_store &lt;-vprintk_emit</span><br><span class="line">...</span><br><span class="line">  &lt;idle&gt;-0         6dn..1.. 1090us : exit_to_kernel_mode &lt;-el1_interrupt</span><br><span class="line">  &lt;idle&gt;-0         6dn..1.. 1091us : tracer_hardirqs_on &lt;-el1_interrupt</span><br><span class="line">  &lt;idle&gt;-0         6dn..1.. 1094us : &lt;stack trace&gt;</span><br><span class="line"> =&gt; el1_interrupt</span><br><span class="line"> =&gt; el1h_64_irq_handler</span><br><span class="line"> =&gt; el1h_64_irq</span><br><span class="line"> =&gt; cpuidle_enter_state</span><br><span class="line"> =&gt; cpuidle_enter</span><br><span class="line"> =&gt; do_idle</span><br><span class="line"> =&gt; cpu_startup_entry</span><br><span class="line"> =&gt; secondary_start_kernel</span><br><span class="line"> =&gt; __secondary_switched</span><br></pre></td></tr></table></figure>
+<p>在上面这段输出中，你需要自己对比时间戳，才能发现从 38us 到 1038us 的 1000us 跨度，正好对应了我们注入的 __udelay 函数。这对于复杂的真实场景来说，犹如大海捞针。</p>
+<blockquote>
+<p>注意：我这里是通过 <code>echo 1000 &gt; $TRACE_DIR/tracing_thresh</code> ，使 irqsoff 记录一次大于 1000us 的关中断延迟。如果你注入的延迟没有打破当前系统的历史最大记录，trace 文件中将不会更新新的数据。</p>
+</blockquote>
+<p>为了解决文本格式难以阅读的问题，irqsoff 支持集成 function_graph 的输出样式。它通过缩进和花括号展示了函数的调用层级，并直接在右侧打印函数执行的总耗时。<br>在执行上述追踪命令前，仅需多加一项配置：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> 1 &gt; <span class="variable">$TRACE_IRQSOFF_DIR</span>/options/display-graph</span><br></pre></td></tr></table></figure>
+<p>再次执行追踪后，输出将变为如下高度可视化的格式：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br></pre></td><td class="code"><pre><span class="line"># tracer: irqsoff</span><br><span class="line">#</span><br><span class="line"># irqsoff latency trace v1.1.5 on 6.1.115-rt16-ge73a0d6a8cc4-dirty</span><br><span class="line"># --------------------------------------------------------------------</span><br><span class="line"># latency: 1183 us, #307/307, CPU#6 | (M:preempt_rt VP:0, KP:0, SP:0 HP:0 #P:8)</span><br><span class="line">#    -----------------</span><br><span class="line">#    | task: swapper/6-0 (uid:0 nice:0 policy:0 rt_prio:0)</span><br><span class="line">#    -----------------</span><br><span class="line">#  =&gt; started at: el1_interrupt</span><br><span class="line">#  =&gt; ended at:   el1_interrupt</span><br><span class="line">#</span><br><span class="line">#</span><br><span class="line">#                                       _-----=&gt; irqs-off</span><br><span class="line">#                                      / _----=&gt; need-resched</span><br><span class="line">#                                     | / _---=&gt; hardirq/softirq</span><br><span class="line">#                                     || / _--=&gt; preempt-depth</span><br><span class="line">#                                     ||| /</span><br><span class="line">#   REL TIME      CPU  TASK/PID       ||||     DURATION                  FUNCTION CALLS</span><br><span class="line">#      |          |     |    |        ||||      |   |                     |   |   |   |</span><br><span class="line">        0 us |   6)    &lt;idle&gt;-0    |  d...1.. |   0.000 us    |  enter_from_kernel_mode();</span><br><span class="line">        1 us |   6)    &lt;idle&gt;-0    |  d...1.. |               |      irq_enter_rcu() &#123;</span><br><span class="line">        2 us |   6)    &lt;idle&gt;-0    |  d...1.. |   0.594 us    |        preempt_count_add();</span><br><span class="line">        3 us |   6)    &lt;idle&gt;-0    |  d..h1.. |               |        tick_irq_enter() &#123;</span><br><span class="line">        3 us |   6)    &lt;idle&gt;-0    |  d..h1.. |   0.513 us    |          tick_check_oneshot_broadcast_this_cpu();</span><br><span class="line">        5 us |   6)    &lt;idle&gt;-0    |  d..h1.. |               |          ktime_get() &#123;</span><br><span class="line">        5 us |   6)    &lt;idle&gt;-0    |  d..h1.. |   0.702 us    |            arch_counter_read();</span><br><span class="line">        6 us |   6)    &lt;idle&gt;-0    |  d..h1.. |   1.701 us    |          &#125;</span><br><span class="line">        7 us |   6)    &lt;idle&gt;-0    |  d..h1.. |   0.702 us    |          nr_iowait_cpu();</span><br><span class="line">        8 us |   6)    &lt;idle&gt;-0    |  d..h1.. |   0.595 us    |          tick_do_update_jiffies64();</span><br><span class="line">       10 us |   6)    &lt;idle&gt;-0    |  d..h1.. |   6.752 us    |        &#125;</span><br><span class="line">       10 us |   6)    &lt;idle&gt;-0    |  d..h1.. |   9.101 us    |      &#125;</span><br><span class="line">       11 us |   6)    &lt;idle&gt;-0    |  d..h1.. |               |      do_interrupt_handler() &#123;</span><br><span class="line">     1174 us |   6)    &lt;idle&gt;-0    |  dn.h1.. |   1163.847 us |      &#125;		&lt;-- 关键！</span><br><span class="line">     1175 us |   6)    &lt;idle&gt;-0    |  dn.h1.. |               |      irq_exit_rcu() &#123;</span><br><span class="line">     1176 us |   6)    &lt;idle&gt;-0    |  dn.h1.. |   0.594 us    |        preempt_count_sub();</span><br><span class="line">     1177 us |   6)    &lt;idle&gt;-0    |  dn..1.. |   0.513 us    |        idle_cpu();</span><br><span class="line">     1178 us |   6)    &lt;idle&gt;-0    |  dn..1.. |               |        tick_nohz_irq_exit() &#123;</span><br><span class="line">     1179 us |   6)    &lt;idle&gt;-0    |  dn..1.. |               |          ktime_get() &#123;</span><br><span class="line">     1179 us |   6)    &lt;idle&gt;-0    |  dn..1.. |   0.539 us    |            arch_counter_read();</span><br><span class="line">     1180 us |   6)    &lt;idle&gt;-0    |  dn..1.. |   1.727 us    |          &#125;</span><br><span class="line">     1181 us |   6)    &lt;idle&gt;-0    |  dn..1.. |   2.780 us    |        &#125;</span><br><span class="line">     1181 us |   6)    &lt;idle&gt;-0    |  dn..1.. |   6.476 us    |      &#125;</span><br><span class="line">     1183 us |   6)    &lt;idle&gt;-0    |  dn..1.. |   0.000 us    |  exit_to_kernel_mode();</span><br><span class="line">     1184 us |   6)    &lt;idle&gt;-0    |  dn..1.. |   0.000 us    |  tracer_hardirqs_on();</span><br><span class="line">  &lt;idle&gt;-0         6dn..1.. 1189us : &lt;stack trace&gt;</span><br><span class="line"> =&gt; el1_interrupt</span><br><span class="line"> =&gt; el1h_64_irq_handler</span><br><span class="line"> =&gt; el1h_64_irq</span><br><span class="line"> =&gt; cpuidle_enter_state</span><br><span class="line"> =&gt; cpuidle_enter</span><br><span class="line"> =&gt; do_idle</span><br><span class="line"> =&gt; cpu_startup_entry</span><br><span class="line"> =&gt; secondary_start_kernel</span><br><span class="line"> =&gt; __secondary_switched</span><br></pre></td></tr></table></figure>
+<p>图形化输出阅读方法：</p>
+<ol>
+<li>FUNCTION CALLS 列（调用关系）：<ul>
+<li>缩进代表调用深度。例如 irq_enter_rcu() { … } 表示这是一个父函数，花括号内是其调用的子函数。</li>
+<li>} 独占一行，表示该层函数调用结束。</li>
+</ul>
+</li>
+<li>DURATION 列（持续时间）：<ul>
+<li>显示在 ) 或 } 所在行的耗时，代表该函数从进入到退出所耗费的总时间。</li>
+</ul>
+</li>
+<li>快速定位技巧：<ul>
+<li>扫描 DURATION 列，寻找异常的大数值。在上面的输出中，do_interrupt_handler() 右侧的 } 对应的耗时赫然写着 1163.847 us！我们无需手动计算时间戳差值，一眼即可锁定：延迟就发生在这个中断处理函数的内部。</li>
+</ul>
+</li>
+</ol>
+<p><strong>结论验证</strong><br>无论是基础的文本追踪还是图形化追踪，最终的堆栈信息均指向 el1_interrupt。结合 irqsoff 捕获到的超过 1ms 的关中断时长，这就确认了：手动注入的 __udelay 在中断上下文中造成了长时间的关中断，从而引发了实时抖动。</p>
+<h2 id="如果没有timerlat该怎么追踪？"><a href="#如果没有timerlat该怎么追踪？" class="headerlink" title="如果没有timerlat该怎么追踪？"></a>如果没有timerlat该怎么追踪？</h2><p>大多数情况来说，一个任务调度延迟抖动大，或中断响应延迟抖动大，大多数是因为抢占或中断关闭，我们可以直接先使用 tracer preemptirqsoff ，尝试定位是否是因为抢占还是中断被关闭导致的抖动：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="variable">$latency_thresh</span> &gt; <span class="variable">$TRACE_DIR</span>/tracing_thresh</span><br><span class="line"><span class="built_in">echo</span> preemptirqsoff &gt; <span class="variable">$TRACE_DIR</span>/current_tracer</span><br></pre></td></tr></table></figure>
+
+<h1 id="通过抢占关闭观测实时抖动"><a href="#通过抢占关闭观测实时抖动" class="headerlink" title="通过抢占关闭观测实时抖动"></a>通过抢占关闭观测实时抖动</h1><p>本节目标：模拟内核代码中关闭抢占（<code>preempt_disable</code>）的场景，实践如何通过 <code>cyclictest</code> 察觉异常，并利用 <code>timerlat</code> 区分出这是“任务调度延迟”，最终结合调用栈锁定耗时函数。</p>
+<blockquote>
+<p>以下实践指定使用 CPU6 为例，读者根据自己的实践环境修改。</p>
+</blockquote>
+<h2 id="注入延迟：加载测试模块-1"><a href="#注入延迟：加载测试模块-1" class="headerlink" title="注入延迟：加载测试模块"></a>注入延迟：加载测试模块</h2><p>加载 <code>preempt-noise</code> 模块，并在内核线程中通过 <code>__udelay</code> 模拟关抢占的长临界区。</p>
+<ol>
+<li>编译内核模块 preempt-noise ，并把它放到开发板 &#x2F;root ：</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> preempt-noise &amp;&amp; make </span><br></pre></td></tr></table></figure>
+<ol start="2">
+<li>加载模块，将模块绑定至 CPU6，避免干扰其它 CPU</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">insmod /root/preempt-noise.ko</span><br><span class="line"><span class="built_in">echo</span> 6 &gt; /sys/module/preempt_noise/parameters/cpu</span><br></pre></td></tr></table></figure>
+<ol start="3">
+<li>将 CPU6 设为性能模式</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> performance &gt; /sys/devices/system/cpu/cpu6/cpufreq/scaling_governor</span><br></pre></td></tr></table></figure>
+
+<h2 id="使用cyclictest观测"><a href="#使用cyclictest观测" class="headerlink" title="使用cyclictest观测"></a>使用cyclictest观测</h2><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> -1 &gt; /sys/module/preempt_noise/parameters/rt_priority</span><br><span class="line">taskset -c 6 cyclictest -t 1 -c 1 -m --policy=fifo -Sp 99 -D 1m -q &amp;</span><br><span class="line"><span class="keyword">for</span> n <span class="keyword">in</span> &#123;1..5&#125;; <span class="keyword">do</span> <span class="built_in">echo</span> 1000 &gt; /sys/module/preempt_noise/parameters/latency_us &amp;&amp; <span class="built_in">sleep</span> 0.1; <span class="keyword">done</span></span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>为什么先设优先级为 -1？<br>这是为了先用最低权限的普通进程来制造干扰。在 Linux 中，即便进程优先级很低，只要它在内核态执行时调用了 spin_lock 等操作进入了关抢占区，哪怕是优先级 99 的实时进程也无法抢占它。</p>
+</blockquote>
+<p>结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">T: 0 ( 1678) P:99 I:1000 C:  60000 Min:     13 Act:   13 Avg:   15 Max:     778</span><br></pre></td></tr></table></figure>
+<p>我们注入了 1000us，为什么 Max 只有 778us？<br>这里体现了抢占关闭与中断关闭的重大差异：</p>
+<ol>
+<li>中断未被关闭：硬件定时器准时到来，cyclictest 被即时唤醒（Wakeup），此时时间戳计时已经开始。</li>
+<li>调度被阻止：但由于 CPU 正处于关抢占区间，cyclictest 无法立刻获得 CPU 运行。</li>
+<li>调度延迟波动：cyclictest 实际获得的延迟，取决于定时器中断到来时，那个关抢占的临界区还剩下多少时间没执行完。因此，Max 往往小于注入时间，且数值具有随机波动性。</li>
+</ol>
+<h2 id="微观定位：使用timerlat观测-1"><a href="#微观定位：使用timerlat观测-1" class="headerlink" title="微观定位：使用timerlat观测"></a>微观定位：使用timerlat观测</h2><p>timerlat 的内核测试线程的调度策略是 SCHED_FIFO ，实时优先级为 95 ，故把注入抖动的线程的实时优先级也调整为 95 ：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> 95 &gt; /sys/module/preempt_noise/parameters/rt_priority</span><br></pre></td></tr></table></figure>
+<p>开始测试：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">TRACE_DIR=<span class="string">&quot;/sys/kernel/debug/tracing&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 重置追踪器</span></span><br><span class="line"><span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on &amp;&amp; <span class="built_in">echo</span> &gt; <span class="variable">$TRACE_DIR</span>/trace</span><br><span class="line"><span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/events/enable <span class="comment"># Turn everything off first</span></span><br><span class="line"><span class="built_in">echo</span> 40 &gt; <span class="variable">$TRACE_DIR</span>/tracing_cpumask <span class="comment"># CPU6</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 配置 timerlat 参数</span></span><br><span class="line"><span class="built_in">echo</span> 6 &gt; <span class="variable">$TRACE_DIR</span>/osnoise/cpus</span><br><span class="line"><span class="built_in">echo</span> 100000 &gt; <span class="variable">$TRACE_DIR</span>/tracing_thresh <span class="comment"># 100us (ns单位)</span></span><br><span class="line"><span class="built_in">echo</span> 100 &gt; <span class="variable">$TRACE_DIR</span>/osnoise/print_stack</span><br><span class="line"><span class="built_in">echo</span> 100 &gt; <span class="variable">$TRACE_DIR</span>/osnoise/stop_tracing_total_us	<span class="comment"># 总延迟超100us则停止</span></span><br><span class="line"><span class="built_in">echo</span> timerlat &gt; <span class="variable">$TRACE_DIR</span>/current_tracer</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; <span class="variable">$TRACE_DIR</span>/events/osnoise/enable</span><br><span class="line"></span><br><span class="line"><span class="comment"># 启动追踪并连续注入延迟</span></span><br><span class="line"><span class="built_in">echo</span> 1 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on</span><br><span class="line"><span class="keyword">for</span> n <span class="keyword">in</span> &#123;1..5&#125;; <span class="keyword">do</span> <span class="built_in">echo</span> 1000 &gt; /sys/module/preempt_noise/parameters/latency_us &amp;&amp; <span class="built_in">sleep</span> 0.1; <span class="keyword">done</span></span><br><span class="line"><span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on</span><br><span class="line"><span class="built_in">cat</span> <span class="variable">$TRACE_DIR</span>/trace</span><br></pre></td></tr></table></figure>
+<p>结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"># tracer: timerlat</span><br><span class="line">#</span><br><span class="line">#                                _-------=&gt; irqs-off</span><br><span class="line">#                               / _------=&gt; need-resched</span><br><span class="line">#                              | / _-----=&gt; need-resched-lazy</span><br><span class="line">#                              || / _----=&gt; hardirq/softirq</span><br><span class="line">#                              ||| / _---=&gt; preempt-depth</span><br><span class="line">#                              |||| / _--=&gt; preempt-lazy-depth</span><br><span class="line">#                              ||||| / _-=&gt; migrate-disable</span><br><span class="line">#                              |||||| /</span><br><span class="line">#                              |||||||             ACTIVATION</span><br><span class="line">#           TASK-PID      CPU# |||||||   TIMESTAMP    ID            CONTEXT                LATENCY</span><br><span class="line">#              | |         |   |||||||      |         |                  |                       |</span><br><span class="line">          &lt;idle&gt;-0       [006] d..h1..  5952.635792: #5355  context    irq timer_latency      1004 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] dn.h2..  5952.635795: irq_noise: arch_timer:13 start 5952.635791457 duration 3208 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] d...3..  5952.635796: thread_noise: swapper/6:0 start 5952.635791749 duration 1459 ns</span><br><span class="line">      timerlat/6-4334    [006] .......  5952.635797: #5355  context thread timer_latency      5962 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] dn.h2..  5952.635827: irq_noise: IPI:1 start 5952.635827040 duration 292 ns</span><br><span class="line"> k_preempt_noise-4335    [006] d..h2..  5952.636614: irq_noise: arch_timer:13 start 5952.636609874 duration 2916 ns</span><br><span class="line"> k_preempt_noise-4335    [006] d..h1..  5952.636792: #5356  context    irq timer_latency       798 ns</span><br><span class="line"> k_preempt_noise-4335    [006] d..h2..  5952.636793: irq_noise: arch_timer:13 start 5952.636791290 duration 1459 ns</span><br><span class="line"> k_preempt_noise-4335    [006] d...3..  5952.636854: thread_noise: k_preempt_noise:4335 start 5952.636791582 duration 61541 ns</span><br><span class="line">      timerlat/6-4334    [006] .......  5952.636856: #5356  context thread timer_latency     64963 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] d..h1..  5952.637792: #5357  context    irq timer_latency      1468 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] dn.h2..  5952.637794: irq_noise: arch_timer:13 start 5952.637791999 duration 1750 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] d...3..  5952.637795: thread_noise: swapper/6:0 start 5952.637792290 duration 1458 ns</span><br><span class="line">      timerlat/6-4334    [006] .......  5952.637796: #5357  context thread timer_latency      5260 ns</span><br><span class="line">...</span><br><span class="line">          &lt;idle&gt;-0       [006] d..h1..  5952.738796: #5458  context    irq timer_latency       868 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] dn.h2..  5952.738797: irq_noise: arch_timer:13 start 5952.738795582 duration 1458 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] d...3..  5952.738798: thread_noise: swapper/6:0 start 5952.738795873 duration 1458 ns</span><br><span class="line">      timerlat/6-4334    [006] .......  5952.738799: #5458  context thread timer_latency      4076 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] dn.h2..  5952.739170: irq_noise: IPI:1 start 5952.739169498 duration 292 ns</span><br><span class="line"> k_preempt_noise-4337    [006] d..h2..  5952.739616: irq_noise: arch_timer:13 start 5952.739613707 duration 2041 ns</span><br><span class="line"> k_preempt_noise-4337    [006] d..h1..  5952.739795: #5459  context    irq timer_latency       663 ns</span><br><span class="line"> k_preempt_noise-4337    [006] d..h2..  5952.739797: irq_noise: arch_timer:13 start 5952.739795123 duration 1459 ns</span><br><span class="line"> k_preempt_noise-4337    [006] d...3..  5952.740189: thread_noise: k_preempt_noise:4337 start 5952.739795415 duration 392583 ns</span><br><span class="line">      timerlat/6-4334    [006] .......  5952.740191: #5459  context thread timer_latency    395856 ns</span><br><span class="line">      timerlat/6-4334    [006] ....1..  5952.740191: &lt;stack trace&gt;</span><br><span class="line"> =&gt; timerlat_irq</span><br><span class="line"> =&gt; __hrtimer_run_queues</span><br><span class="line"> =&gt; hrtimer_interrupt</span><br><span class="line"> =&gt; arch_timer_handler_phys</span><br><span class="line"> =&gt; handle_percpu_devid_irq</span><br><span class="line"> =&gt; handle_irq_desc</span><br><span class="line"> =&gt; generic_handle_domain_irq</span><br><span class="line"> =&gt; gic_handle_irq</span><br><span class="line"> =&gt; call_on_irq_stack</span><br><span class="line"> =&gt; do_interrupt_handler</span><br><span class="line"> =&gt; el1_interrupt</span><br><span class="line"> =&gt; el1h_64_irq_handler</span><br><span class="line"> =&gt; el1h_64_irq</span><br><span class="line"> =&gt; __delay</span><br><span class="line"> =&gt; __udelay</span><br><span class="line"> =&gt; preempt_thread_fn</span><br><span class="line"> =&gt; kthread</span><br><span class="line"> =&gt; ret_from_fork</span><br></pre></td></tr></table></figure>
+<p>根据以上输出信息进行推理：</p>
+<ol>
+<li>看 IRQ Latency：irq timer_latency 663 ns，非常短！证明中断响应极快，系统没有被关中断。</li>
+<li>看 Thread Latency：thread timer_latency 395856 ns（约 395us），极其漫长！证明从中断唤醒到线程真正运行之间发生了严重的阻塞。</li>
+<li>看干扰源：thread_noise: k_preempt_noise:4337 duration 392583 ns，明确指出了一个名为 k_preempt_noise 的线程霸占了 CPU 近 393us。</li>
+<li>看堆栈：调用栈落在了 __udelay -&gt; preempt_thread_fn，证实正是我们注入的内核线程在关抢占状态下执行延时，导致了实时任务被阻挠。</li>
+</ol>
+<h2 id="使用preemptirqsoff追踪延迟点"><a href="#使用preemptirqsoff追踪延迟点" class="headerlink" title="使用preemptirqsoff追踪延迟点"></a>使用preemptirqsoff追踪延迟点</h2><p>使用 timerlat 之后，我们基本能定位到抢占关闭的所在位置。当然，我们也能使用 preemptirqsoff 或 preemptoff 来定位问题。<br><code>timerlat</code> 是在特定的测量点采样，而 <code>preemptirqsoff</code> 则会记录下<strong>从关闭抢占开始，直到重新开启抢占为止</strong>这段时间内，CPU 上发生的所有函数调用。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">TRACE_DIR=<span class="string">&quot;/sys/kernel/debug/tracing&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 开启图形化显示</span></span><br><span class="line"><span class="built_in">echo</span> 1 &gt; <span class="variable">$TRACE_DIR</span>/options/display-graph</span><br><span class="line"></span><br><span class="line"><span class="comment"># 重置追踪器</span></span><br><span class="line"><span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on &amp;&amp; <span class="built_in">echo</span> &gt; <span class="variable">$TRACE_DIR</span>/trace</span><br><span class="line"><span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/events/enable <span class="comment"># Turn everything off first</span></span><br><span class="line"><span class="built_in">echo</span> 40 &gt; <span class="variable">$TRACE_DIR</span>/tracing_cpumask <span class="comment"># CPU6</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 设置阈值：只记录超过 1000us 的长延迟，避免无用数据淹没有效信息</span></span><br><span class="line"><span class="built_in">echo</span> 1000 &gt; <span class="variable">$TRACE_DIR</span>/tracing_thresh</span><br><span class="line"><span class="comment"># 启用追踪器：记录关闭抢占或中断的最长时段</span></span><br><span class="line"><span class="built_in">echo</span> preemptirqsoff &gt; <span class="variable">$TRACE_DIR</span>/current_tracer</span><br><span class="line"></span><br><span class="line"><span class="comment"># 后台运行 cyclictest 制造唤醒压力，并注入噪声</span></span><br><span class="line">taskset -c 6 cyclictest -t 1 -c 1 -m --policy=fifo -Sp 99 -D 1m -q &amp;</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on &amp;&amp;\</span><br><span class="line"><span class="keyword">for</span> n <span class="keyword">in</span> &#123;1..5&#125;; <span class="keyword">do</span> <span class="built_in">echo</span> 1000 &gt; /sys/module/preempt_noise/parameters/latency_us &amp;&amp; <span class="built_in">sleep</span> 0.1; <span class="keyword">done</span> &amp;&amp;\</span><br><span class="line"><span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on  &amp;&amp;\</span><br><span class="line"><span class="built_in">cat</span> <span class="variable">$TRACE_DIR</span>/trace</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>开启 <code>display-graph</code> 选项非常重要，它能让追踪结果以函数调用图的形式展现，层次分明，否则只会看到一维平铺的函数列表。</p>
+</blockquote>
+<p>追踪结果不仅给出了总延迟，还揭示了延迟期间 CPU 的微观活动：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line"># tracer: preemptirqsoff</span><br><span class="line">#</span><br><span class="line"># preemptirqsoff latency trace v1.1.5 on 6.1.141-rt36</span><br><span class="line"># --------------------------------------------------------------------</span><br><span class="line"># latency: 1001 us, #342/342, CPU#6 | (M:preempt_rt VP:0, KP:0, SP:0 HP:0 #P:8)</span><br><span class="line">#    -----------------</span><br><span class="line">#    | task: k_preempt_noise-4370 (uid:0 nice:0 policy:1 rt_prio:95)</span><br><span class="line">#    -----------------</span><br><span class="line">#  =&gt; started at: preempt_thread_fn</span><br><span class="line">#  =&gt; ended at:   return_to_handler</span><br><span class="line">#</span><br><span class="line">#</span><br><span class="line">#                                       _-----=&gt; irqs-off</span><br><span class="line">#                                      / _----=&gt; need-resched</span><br><span class="line">#                                     | / _---=&gt; hardirq/softirq</span><br><span class="line">#                                     || / _--=&gt; preempt-depth</span><br><span class="line">#                                     ||| /</span><br><span class="line">#   REL TIME      CPU  TASK/PID       ||||     DURATION                  FUNCTION CALLS</span><br><span class="line">#      |          |     |    |        ||||      |   |                     |   |   |   |</span><br><span class="line">        0 us |   6)  k_preem-4370  |  ....1.. |   0.000 us    |  preempt_thread_fn [preempt_noise]();</span><br><span class="line">        0 us |   6)  k_preem-4370  |  ....1.. |               |  __udelay() &#123;</span><br><span class="line">        0 us |   6)  k_preem-4370  |  ....1.. |               |    __delay() &#123;</span><br><span class="line">        1 us |   6)  k_preem-4370  |  ....1.. |   0.292 us    |      arch_timer_evtstrm_available();</span><br><span class="line">      802 us |   6)  k_preem-4370  |  d...1.. |               |      irq_enter_rcu() &#123;</span><br><span class="line">      802 us |   6)  k_preem-4370  |  d...1.. |   0.292 us    |        preempt_count_add();</span><br><span class="line">      803 us |   6)  k_preem-4370  |  d..h1.. |   0.875 us    |      &#125;</span><br><span class="line">      803 us |   6)  k_preem-4370  |  d..h1.. |               |      do_interrupt_handler() &#123;</span><br><span class="line">      831 us |   6)  k_preem-4370  |  dn.h1.. |   28.000 us   |      &#125;</span><br><span class="line">      831 us |   6)  k_preem-4370  |  dn.h1.. |               |      irq_exit_rcu() &#123;</span><br><span class="line">      831 us |   6)  k_preem-4370  |  dn.h1.. |   0.292 us    |        preempt_count_sub();</span><br><span class="line">      832 us |   6)  k_preem-4370  |  dn..1.. |   0.291 us    |        idle_cpu();</span><br><span class="line">      832 us |   6)  k_preem-4370  |  dn..1.. |   1.167 us    |      &#125;</span><br><span class="line">      913 us |   6)  k_preem-4370  |  dn..1.. |               |      irq_enter_rcu() &#123;</span><br><span class="line">      913 us |   6)  k_preem-4370  |  dn..1.. |   0.292 us    |        preempt_count_add();</span><br><span class="line">      914 us |   6)  k_preem-4370  |  dn.h1.. |   0.875 us    |      &#125;</span><br><span class="line">      914 us |   6)  k_preem-4370  |  dn.h1.. |               |      do_interrupt_handler() &#123;</span><br><span class="line">      956 us |   6)  k_preem-4370  |  dn.h1.. |   42.291 us   |      &#125;</span><br><span class="line">      956 us |   6)  k_preem-4370  |  dn.h1.. |               |      irq_exit_rcu() &#123;</span><br><span class="line">      957 us |   6)  k_preem-4370  |  dn.h1.. |   0.000 us    |        preempt_count_sub();</span><br><span class="line">      957 us |   6)  k_preem-4370  |  dn..1.. |   0.292 us    |        idle_cpu();</span><br><span class="line">      958 us |   6)  k_preem-4370  |  dn..1.. |   1.167 us    |      &#125;</span><br><span class="line">     1001 us |   6)  k_preem-4370  |  .n..1.. |   1000.125 us |    &#125;</span><br><span class="line">     1001 us |   6)  k_preem-4370  |  .n..1.. |   1001.000 us |  &#125;</span><br><span class="line">     1001 us |   6)  k_preem-4370  |  .n..1.. |               |  preempt_count_sub() &#123;</span><br><span class="line">     1001 us |   6)  k_preem-4370  |  .n..1.. |   0.000 us    |  return_to_handler();</span><br><span class="line">     1002 us |   6)  k_preem-4370  |  .n..1.. |   0.000 us    |  tracer_preempt_on();</span><br><span class="line">k_preemp-4370      6.n..1.. 1005us : &lt;stack trace&gt;</span><br><span class="line"> =&gt; preempt_thread_fn</span><br><span class="line"> =&gt; kthread</span><br><span class="line"> =&gt; ret_from_fork</span><br></pre></td></tr></table></figure>
+<p>头部信息明确指出，最长延迟（latency: 1001 us）发生在 k_preempt_noise 线程中，始于 preempt_thread_fn（我们的模块入口），终于 return_to_handler（开启抢占的时刻）。</p>
+<p>看标志位变化，印证理论：</p>
+<ul>
+<li>….1..：最后一列是 preempt-depth（抢占深度）。1 表示当前处于关抢占状态（通常是因为调用了 preempt_disable 或拿了 spinlock）。这贯穿了绝大多数行。</li>
+<li>d…1.. 到 d..h1..：在 802us 和 913us 时，发生了两次硬件中断。标志位短暂地变成了 h（hardirq），同时 need-resched 标志也被置位（n），说明中断唤醒了高优先级任务。</li>
+</ul>
+<p>这完美印证了我们之前的结论：关抢占并不妨碍中断进来，也不妨碍系统在中断里唤醒实时任务，只是实时任务醒来后无法立刻抢回 CPU 控制权。</p>
+<p>看耗时拆解：</p>
+<ul>
+<li>__delay() 函数耗时 1000.125 us，几乎占据了全部延迟。其中包含了两次定时器中断处理的耗时（约几十 us），剩余时间都在“空转”等待。</li>
+<li>最后调用 preempt_count_sub 和 tracer_preempt_on，宣告抢占关闭区间结束，追踪结束。</li>
+</ul>
+<h1 id="通过线程抢占观测实时抖动"><a href="#通过线程抢占观测实时抖动" class="headerlink" title="通过线程抢占观测实时抖动"></a>通过线程抢占观测实时抖动</h1><p>前一节我们探讨了“关闭抢占”，那是系统层面的“锁门”——只要门锁着，谁也别想进来。但在实时系统中，还有一种更隐蔽、更常见的延迟来源：门明明没锁，但门口站着一个“VIP”——高优先级任务正在执行，调度器遵循严格的优先级法则，拒绝让低优先级任务抢占。这就是<strong>优先级压制</strong>造成的调度延迟。</p>
+<h2 id="概念辨析：优先级压制-vs-关闭抢占"><a href="#概念辨析：优先级压制-vs-关闭抢占" class="headerlink" title="概念辨析：优先级压制 vs 关闭抢占"></a>概念辨析：优先级压制 vs 关闭抢占</h2><ul>
+<li><strong>关闭抢占</strong>：属于<strong>代码逻辑主动防护</strong>（如持锁）。此时 <code>preempt_depth != 0</code>，调度器被物理禁止进行切换。</li>
+<li><strong>优先级压制</strong>：属于<strong>调度策略被动结果</strong>。此时 <code>preempt_depth</code> 可能为 0，系统允许调度，但调度器经过计算发现当前运行的任务优先级更高，于是“合法”地拒绝了低优先级任务的抢占请求。</li>
+</ul>
+<p>对于等待被调度的实时任务，这两种情况的体感是一样的，就是都等不到 CPU ；但在追踪工具的显微镜下，它们的机理截然不同。</p>
+<blockquote>
+<p>以下实践指定使用 CPU6 为例，读者根据自己的实践环境修改。</p>
+</blockquote>
+<h2 id="环境准备"><a href="#环境准备" class="headerlink" title="环境准备"></a>环境准备</h2><p>为了模拟高优先级 VIP 霸占 CPU，我们需要做两件事：一是赋予噪声线程最高的实时优先级；二是解除内核对 RT 任务的限流保护。</p>
+<p>继续沿用内核模块 preempt_noise 进行测试：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 将噪声线程优先级设为 99（SCHED_FIFO 最高优先级）</span></span><br><span class="line"><span class="built_in">echo</span> 99 &gt; /sys/module/preempt_noise/parameters/rt_priority</span><br><span class="line"><span class="built_in">echo</span> 6 &gt; /sys/module/preempt_noise/parameters/cp</span><br><span class="line"></span><br><span class="line"><span class="comment"># 关闭 RT 组调度限流</span></span><br><span class="line"><span class="built_in">echo</span> -1 &gt; /proc/sys/kernel/sched_rt_runtime_us</span><br></pre></td></tr></table></figure>
+<p>为什么要修改 sched_rt_runtime_us？<br>Linux 内核默认开启了 RT 任务的 CPU 带宽限制（sched_rt_runtime_us 默认通常为 0.95s，而周期 sched_rt_period_us 为 1s）。这意味着在 1 秒的周期内，所有 RT 任务最多只能运行 0.95 秒，剩下的 0.05 秒必须留给普通任务，以防失控的 RT 任务锁死系统。<br>在我们的实验中，如果不设为 -1 取消限制，当高优先级的噪声线程持续霸占 CPU 一段时间后，内核会强行将其挂起。这种“被内核惩罚”的挂起会干扰我们对“纯粹优先级压制”的观测，因此必须解除枷锁。</p>
+<h2 id="使用timerlat观测"><a href="#使用timerlat观测" class="headerlink" title="使用timerlat观测"></a>使用timerlat观测</h2><p>这次我们将注入参数设为 0（echo 0），让模块按其内部默认逻辑运行（包含 500us 的 udelay 循环），重点观察在抢占开启的情况下，高优先级线程如何阻塞测量线程。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">TRACE_DIR=<span class="string">&quot;/sys/kernel/debug/tracing&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on &amp;&amp; <span class="built_in">echo</span> &gt; <span class="variable">$TRACE_DIR</span>/trace</span><br><span class="line"><span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/events/enable <span class="comment"># Turn everything off first</span></span><br><span class="line"><span class="built_in">echo</span> 40 &gt; <span class="variable">$TRACE_DIR</span>/tracing_cpumask <span class="comment"># CPU6</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> 6 &gt; <span class="variable">$TRACE_DIR</span>/osnoise/cpus</span><br><span class="line"><span class="built_in">echo</span> 100 &gt; <span class="variable">$TRACE_DIR</span>/osnoise/print_stack</span><br><span class="line"><span class="built_in">echo</span> 100 &gt; <span class="variable">$TRACE_DIR</span>/osnoise/stop_tracing_total_us</span><br><span class="line"><span class="built_in">echo</span> timerlat &gt; <span class="variable">$TRACE_DIR</span>/current_tracer</span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> 1 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on</span><br><span class="line"><span class="comment"># 注意这里注入值为 0 ，作用是抢占开启，但是延迟 500us 。</span></span><br><span class="line"><span class="keyword">for</span> n <span class="keyword">in</span> &#123;1..5&#125;; <span class="keyword">do</span> <span class="built_in">echo</span> 0 &gt; /sys/module/preempt_noise/parameters/latency_us &amp;&amp; <span class="built_in">sleep</span> 0.1; <span class="keyword">done</span></span><br><span class="line"><span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on &amp;&amp; <span class="built_in">cat</span> <span class="variable">$TRACE_DIR</span>/trace</span><br></pre></td></tr></table></figure>
+<p>结果如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"># tracer: timerlat</span><br><span class="line">#</span><br><span class="line">#                                _-------=&gt; irqs-off</span><br><span class="line">#                               / _------=&gt; need-resched</span><br><span class="line">#                              | / _-----=&gt; need-resched-lazy</span><br><span class="line">#                              || / _----=&gt; hardirq/softirq</span><br><span class="line">#                              ||| / _---=&gt; preempt-depth</span><br><span class="line">#                              |||| / _--=&gt; preempt-lazy-depth</span><br><span class="line">#                              ||||| / _-=&gt; migrate-disable</span><br><span class="line">#                              |||||| /</span><br><span class="line">#                              |||||||             ACTIVATION</span><br><span class="line">#           TASK-PID      CPU# |||||||   TIMESTAMP    ID            CONTEXT                LATENCY</span><br><span class="line">#              | |         |   |||||||      |         |                  |                       |</span><br><span class="line">          &lt;idle&gt;-0       [006] d..h1..  6803.679818: #116   context    irq timer_latency      1643 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] dn.h2..  6803.679819: irq_noise: arch_timer:13 start 6803.679818002 duration 1167 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] d...3..  6803.679821: thread_noise: swapper/6:0 start 6803.679818294 duration 1167 ns</span><br><span class="line">      timerlat/6-4423    [006] .......  6803.679821: #116   context thread timer_latency      4268 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] d..h1..  6803.680818: #117   context    irq timer_latency       855 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] dn.h2..  6803.680819: irq_noise: arch_timer:13 start 6803.680817252 duration 1167 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] d...3..  6803.680820: thread_noise: swapper/6:0 start 6803.680817544 duration 1458 ns</span><br><span class="line">      timerlat/6-4423    [006] .......  6803.680820: #117   context thread timer_latency      3772 ns</span><br><span class="line">          &lt;idle&gt;-0       [006] dn.h2..  6803.681438: irq_noise: IPI:1 start 6803.681437919 duration 292 ns</span><br><span class="line"> k_preempt_noise-4426    [006] d..h...  6803.681818: #118   context    irq timer_latency       942 ns</span><br><span class="line"> k_preempt_noise-4426    [006] d..h1..  6803.681819: irq_noise: arch_timer:13 start 6803.681817377 duration 1459 ns</span><br><span class="line"> k_preempt_noise-4426    [006] d...3..  6803.681956: thread_noise: k_preempt_noise:4426 start 6803.681817669 duration 136500 ns</span><br><span class="line">      timerlat/6-4423    [006] .......  6803.681957: #118   context thread timer_latency    140062 ns</span><br><span class="line">      timerlat/6-4423    [006] ....1..  6803.681957: &lt;stack trace&gt;</span><br><span class="line"> =&gt; timerlat_irq</span><br><span class="line"> =&gt; __hrtimer_run_queues</span><br><span class="line"> =&gt; hrtimer_interrupt</span><br><span class="line"> =&gt; arch_timer_handler_phys</span><br><span class="line"> =&gt; handle_percpu_devid_irq</span><br><span class="line"> =&gt; handle_irq_desc</span><br><span class="line"> =&gt; generic_handle_domain_irq</span><br><span class="line"> =&gt; gic_handle_irq</span><br><span class="line"> =&gt; call_on_irq_stack</span><br><span class="line"> =&gt; do_interrupt_handler</span><br><span class="line"> =&gt; el1_interrupt</span><br><span class="line"> =&gt; el1h_64_irq_handler</span><br><span class="line"> =&gt; el1h_64_irq</span><br><span class="line"> =&gt; __delay</span><br><span class="line"> =&gt; __const_udelay</span><br><span class="line"> =&gt; preempt_thread_fn</span><br><span class="line"> =&gt; kthread</span><br><span class="line"> =&gt; ret_from_fork</span><br></pre></td></tr></table></figure>
+<p>根据以上输出信息进行推理：</p>
+<ol>
+<li>看 IRQ Latency：irq timer_latency 942 ns，极短！再次证明中断响应毫无阻碍。</li>
+<li>看 Thread Latency：thread timer_latency 140062 ns（约 140us），又飙升了！</li>
+<li>看干扰源：thread_noise: k_preempt_noise:4426 duration 136500 ns，这是铁证！</li>
+<li>核心归因：在 #118 采样点，定时器中断发生时，CPU 正在运行 k_preempt_noise。我们将其优先级设为了 99，而 timerlat&#x2F;6 的优先级仅为 95 。当中断返回试图调度 timerlat&#x2F;6 时，调度器发现当前任务的优先级（99）高于被唤醒的任务（95），于是依据“绝对优先级”原则，拒绝抢占，继续执行 k_preempt_noise。直到后者执行完 __udelay 主动让出 CPU，timerlat&#x2F;6 才得以喘息。</li>
+<li>细节补充：你可能注意到 preempt-depth 为 3（d…3..），这不是因为我们手动关了抢占，而是因为 ftrace 自身在追踪时会产生嵌套的 preempt_disable，但这只是观测带来的副作用，并不影响高优先级压制低优先级的本质逻辑。</li>
+</ol>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>本节演示的场景，在实际的实时应用开发中相当常见。很多开发者以为给任务打上 SCHED_FIFO 并赋高优先级就没事了，却忽视了该任务内部是否存在长耗时循环或 udelay。</p>
+<p>在 PREEMPT_RT 内核中，大部分硬中断都被线程化了，它们也受调度器管辖，有了优先级。 如果你的高优先级业务线程出现 Bug（如死循环、长时间轮询寄存器），不仅会饿死同 CPU 上的其他普通任务，甚至可能压制中断线程，导致系统看上去像“关了中断”一样卡死。这也是为什么在使用实时调度策略时，必须配合严格的代码审查与 Watchdog 机制。</p>
+<h1 id="硬件延迟"><a href="#硬件延迟" class="headerlink" title="硬件延迟"></a>硬件延迟</h1><p>在前面的章节中，无论是硬中断风暴、调度延迟还是关闭抢占，它们都有一个共同点：罪魁祸首都在 Linux 内核的管辖范围内，因此 Ftrace 能够忠实地记录下它们的“作案过程”。<br>然而，实时开发中最令人绝望的场景往往发生在内核视线之外：系统明明没有高负载，Ftrace 报告也干干净净，但 <code>cyclictest</code> 却测出了毫无规律的毫秒级抖动。这就是所谓的“硬件黑洞”。</p>
+<h2 id="原理：消失的时间去哪了？"><a href="#原理：消失的时间去哪了？" class="headerlink" title="原理：消失的时间去哪了？"></a>原理：消失的时间去哪了？</h2><h3 id="对于ARM64架构"><a href="#对于ARM64架构" class="headerlink" title="对于ARM64架构"></a>对于ARM64架构</h3><p>在 ARM64 架构中，特权级分层非常严格：</p>
+<ul>
+<li><strong>EL0</strong>：用户态应用程序。</li>
+<li><strong>EL1</strong>：Linux 内核。</li>
+<li><strong>EL2</strong>：虚拟化层。</li>
+<li><strong>EL3</strong>：安全固件层。</li>
+</ul>
+<p>当内核正常执行时，它处于 EL1。但如果发生系统调用（陷入 EL2 Hypervisor）或安全服务调用（SMI 陷入 EL3 ATF），CPU 的控制权会暂时脱离 Linux 内核。在这段时间内：</p>
+<ul>
+<li><strong>内核完全冻结</strong>：时钟中断无法响应，调度器停滞。</li>
+<li><strong>Ftrace 失效</strong>：因为内核代码都没跑，追踪点自然无法触发。</li>
+<li><strong>现象</strong>：Trace 日志中会出现一段空白，紧接着发生时间戳的剧烈跳变。</li>
+</ul>
+<p>这就好比有人把监控室的录像机暂停了半小时，虽然录像带上看起来风平浪静，但外面的世界其实已经发生了翻天覆地的变化。</p>
+<h3 id="对于X86架构"><a href="#对于X86架构" class="headerlink" title="对于X86架构"></a>对于X86架构</h3><p>在 x86 平台上，这种黑洞有一个具体的名字：<strong>SMI（System Management Interrupt）</strong>。它是 x86 架构实时性优化的“头号公敌”。<br>x86 架构不仅有我们熟悉的 Ring 0（内核）和 Ring 3（用户态），还有更底层的 Ring -1 和 Ring -2。SMI 运行在 Ring -2 的 <strong>SMM（System Management Mode）</strong> 模式下。</p>
+<p>当 SMI 发生时：</p>
+<ol>
+<li><strong>接管一切</strong>：CPU 暂停当前所有任务（包括 Linux 内核），保存状态后进入 SMM 模式。</li>
+<li><strong>完全不可见</strong>：操作系统对此毫不知情。在 Linux 看来，CPU 就像“丢失了”一段时间片。</li>
+<li><strong>用途广泛</strong>：BIOS 厂商通常利用 SMI 来处理风扇转速控制、温度监控、电源管理等“关键任务”。</li>
+</ol>
+<p>虽然 SMI 对系统稳定性很重要，但对实时性来说却是灾难。</p>
+<ul>
+<li><strong>不可阻塞</strong>：SMI 的优先级高于任何操作系统中断。Linux 内核无法屏蔽它，必须等待其执行完毕。</li>
+<li><strong>耗时不确定</strong>：如果 BIOS 编写不当，某些 SMI 处理例程（如复杂的风扇调速逻辑）可能耗时长达<strong>数毫秒</strong>。对于微秒级敏感的实时应用，这简直是毁灭性的打击。</li>
+</ul>
+<blockquote>
+<p><strong>参考资料来源</strong>：<br>在<a target="_blank" rel="noopener" href="https://lwn.net/Articles/656807/">Realtime KVM</a>指出：“SMIs for x86 take care of things such as fan speed… SMIs cannot be blocked by the operating system and can take up to milliseconds to run in extreme cases. During this time, the operating system is completely blocked from running.”</p>
+</blockquote>
+<h2 id="排查工具：hwlatdetect"><a href="#排查工具：hwlatdetect" class="headerlink" title="排查工具：hwlatdetect"></a>排查工具：hwlatdetect</h2><p>对于这种“隐身”的延迟，Linux 提供了一个专门的 tracer ：<code>hwlat</code> 。<br>它的原理非常直接且“霸道”：创建一个高优先级的内核线程，在指定的 CPU 上疯狂轮询读取硬件时钟（如 TSC 或 arch_timer）。如果发现两次读取操作的时间差远超预期，就说明 CPU 被“偷走”去执行 EL2&#x2F;EL3 代码了（ARM64）。<br>使用方法如下：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">TRACE_DIR=<span class="string">&quot;/sys/kernel/debug/tracing&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on &amp;&amp; <span class="built_in">echo</span> &gt; <span class="variable">$TRACE_DIR</span>/trace</span><br><span class="line"><span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/events/enable <span class="comment"># Turn everything off first</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> <span class="variable">$thresh</span> &gt; <span class="variable">$TRACE_DIR</span>/tracing_thresh <span class="comment"># hwlat 的 tracing_thresh 单位是纳秒</span></span><br><span class="line"><span class="built_in">echo</span> hwlat &gt; <span class="variable">$TRACE_DIR</span>/current_tracer</span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> 1 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on</span><br><span class="line"><span class="comment"># waiting</span></span><br><span class="line"><span class="built_in">echo</span> 0 &gt; <span class="variable">$TRACE_DIR</span>/tracing_on &amp;&amp; <span class="built_in">cat</span> <span class="variable">$TRACE_DIR</span>/trace</span><br></pre></td></tr></table></figure>
+
+<p>另外，在 Linux 5.14 及以上版本，tracer osnoise 也能追踪：被高优先级的线程抢占、IRQ、SoftIRQ、NMI 和硬件延迟等。开启内核配置 <code>CONFIG_OSNOISE_TRACER</code> 后，使用以下命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> <span class="variable">$thresh</span> &gt; <span class="variable">$TRACE_DIR</span>/tracing_thresh <span class="comment"># osnoise 的 tracing_thresh 单位是纳秒</span></span><br><span class="line"><span class="built_in">echo</span> osnoise &gt; <span class="variable">$TRACE_DIR</span>/current_tracer</span><br></pre></td></tr></table></figure>
+
+<h1 id="总结-1"><a href="#总结-1" class="headerlink" title="总结"></a>总结</h1><p>回顾本文的实践，实时延迟排查可以按四个层次推进：</p>
+<ol>
+<li><strong>第一层：应用感知</strong> │ 工具：cyclictest, rt-tests<ul>
+<li>发现问题：P99延迟超标、周期抖动</li>
+</ul>
+</li>
+<li><strong>第二层：分类定责</strong> │ 工具：timerlat, function_graph<ul>
+<li>区分：中断响应延迟 vs 调度延迟</li>
+<li>关键指标：IRQ Latency、Thread Latency</li>
+</ul>
+</li>
+<li><strong>第三层：代码定位</strong> │ 工具：preemptirqsoff, irqsoff<ul>
+<li>定位：关中断、关抢占的持锁路径</li>
+<li>典型场景：自旋锁持有时长、中断屏蔽</li>
+</ul>
+</li>
+<li><strong>第四层：硬件探测</strong> │ 工具：hwlatdetect<ul>
+<li>硬件黑洞：SMI（x86）、ATF&#x2F;TrustZone（ARM）</li>
+<li>固件陷阱：BIOS配置、节能特性</li>
+</ul>
+</li>
+</ol>
+<p>Linux 实时延迟的常见来源，整理如下：</p>
+<table>
+<thead>
+<tr>
+<th align="center">延迟类型</th>
+<th align="center">根本原因</th>
+<th align="center">典型场景</th>
+<th align="center">排查工具</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">中断阻塞</td>
+<td align="center">中断被屏蔽（local_irq_disable）</td>
+<td align="center">驱动持锁关中断、长时间ISR</td>
+<td align="center">irqsoff, timerlat</td>
+</tr>
+<tr>
+<td align="center">抢占阻塞</td>
+<td align="center">抢占被禁止（preempt_disable）</td>
+<td align="center">自旋锁持有、RCU读临界区</td>
+<td align="center">preemptoff, preemptirqsoff</td>
+</tr>
+<tr>
+<td align="center">调度延迟</td>
+<td align="center">高优先级任务占用CPU</td>
+<td align="center">SCHED_FIFO任务死循环、优先级反转</td>
+<td align="center">timerlat, sched_switch事件</td>
+</tr>
+</tbody></table>
+<p>实时性排查没有银弹。上面这些工具和方法，从不同维度逼近同一个目标：搞清楚那几毫秒到底花在了哪里。本文只是模拟现象去使用各自工具去排查实时抖动，但在实际环境中，很多问题都是环环相扣的，又或者说输出的报错信息只是一个表象，根源还得经过层层解剖才能得知。所以说，在当今 AI 时代，解决问题永远是需要具备基础原理和实践经验，还有一把趁手的工具。</p>
+<h1 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h1><p><a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/h0wLSA7BUNCUMfTAF9gdiQ?scene=25#wechat_redirect">硬核排查：我是如何抓到 Linux 内核里那个“消失的 3 毫秒”的？</a></p>
+<blockquote>
+<p>本文与实践由作者本人完成，后期用 AI 补充与润色。</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Ftrace/" rel="tag"># Ftrace</a>
+              <a href="/tags/Kernel/" rel="tag"># Kernel</a>
+              <a href="/tags/RTOS/" rel="tag"># RTOS</a>
+              <a href="/tags/Preempt/" rel="tag"># Preempt</a>
+              <a href="/tags/Interrupt/" rel="tag"># Interrupt</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/04/15/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/4-Linux-%E4%BD%BF%E7%94%A8%E7%A4%BA%E6%B3%A2%E5%99%A8%E8%A7%82%E5%AF%9F%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/" rel="prev" title="Linux - 使用“GPIO+示波器”的方式观测实时抖动">
+                  <i class="fa fa-angle-left"></i> Linux - 使用“GPIO+示波器”的方式观测实时抖动
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/04/30/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/6-Linux-%E4%BD%BF%E7%94%A8%E5%AE%9E%E6%97%B6%E5%88%86%E6%9E%90%E5%B7%A5%E5%85%B7rtla%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6/" rel="next" title="Linux - 使用实时分析工具rtla观测实时">
+                  Linux - 使用实时分析工具rtla观测实时 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">369k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">22:22</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

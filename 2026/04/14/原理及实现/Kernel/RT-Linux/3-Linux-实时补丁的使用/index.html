@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="怎么使用实时补丁虽然 Linux 6.12 版本已把实时补丁合并到主线，但是随着版本更新，仍有一些新的改动和特性未被合并到主线分支，所以还是有必要了解怎么使用 RT 补丁。 下载补丁实时内核补丁下载地址： https:&#x2F;&#x2F;mirrors.edge.kernel.org&#x2F;pub&#x2F;linux&#x2F;kernel&#x2F;projects&#x2F;rt&#x2F; 在目录内根据内核版本，找到相应的版本的补丁并下载。比如说我的内核版本是">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - 实时补丁的使用">
+<meta property="og:url" content="http://example.com/2026/04/14/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/3-Linux-%E5%AE%9E%E6%97%B6%E8%A1%A5%E4%B8%81%E7%9A%84%E4%BD%BF%E7%94%A8/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="怎么使用实时补丁虽然 Linux 6.12 版本已把实时补丁合并到主线，但是随着版本更新，仍有一些新的改动和特性未被合并到主线分支，所以还是有必要了解怎么使用 RT 补丁。 下载补丁实时内核补丁下载地址： https:&#x2F;&#x2F;mirrors.edge.kernel.org&#x2F;pub&#x2F;linux&#x2F;kernel&#x2F;projects&#x2F;rt&#x2F; 在目录内根据内核版本，找到相应的版本的补丁并下载。比如说我的内核版本是">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/Linux-%E5%AE%9E%E6%97%B6%E8%A1%A5%E4%B8%81%E7%9A%84%E4%BD%BF%E7%94%A8/rt-patch.png">
+<meta property="article:published_time" content="2026-04-13T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-04-13T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Kernel">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="RTOS">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/Linux-%E5%AE%9E%E6%97%B6%E8%A1%A5%E4%B8%81%E7%9A%84%E4%BD%BF%E7%94%A8/rt-patch.png">
+
+
+<link rel="canonical" href="http://example.com/2026/04/14/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/3-Linux-%E5%AE%9E%E6%97%B6%E8%A1%A5%E4%B8%81%E7%9A%84%E4%BD%BF%E7%94%A8/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2026/04/14/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/3-Linux-%E5%AE%9E%E6%97%B6%E8%A1%A5%E4%B8%81%E7%9A%84%E4%BD%BF%E7%94%A8/","path":"2026/04/14/原理及实现/Kernel/RT-Linux/3-Linux-实时补丁的使用/","title":"Linux - 实时补丁的使用"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - 实时补丁的使用 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%80%8E%E4%B9%88%E4%BD%BF%E7%94%A8%E5%AE%9E%E6%97%B6%E8%A1%A5%E4%B8%81"><span class="nav-number">1.</span> <span class="nav-text">怎么使用实时补丁</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%8B%E8%BD%BD%E8%A1%A5%E4%B8%81"><span class="nav-number">1.1.</span> <span class="nav-text">下载补丁</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%89%93%E8%A1%A5%E4%B8%81"><span class="nav-number">1.2.</span> <span class="nav-text">打补丁</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BC%98%E5%8C%96%E5%AE%9E%E6%97%B6"><span class="nav-number">2.</span> <span class="nav-text">优化实时</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#CPU%E6%80%A7%E8%83%BD%E7%9B%B8%E5%85%B3"><span class="nav-number">2.1.</span> <span class="nav-text">CPU性能相关</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#CPU%E9%9A%94%E7%A6%BB"><span class="nav-number">2.1.1.</span> <span class="nav-text">CPU隔离</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#NO-HZ-FULL"><span class="nav-number">2.1.2.</span> <span class="nav-text">NO_HZ_FULL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CPU%E9%A2%91%E7%8E%87%E6%8B%89%E9%AB%98"><span class="nav-number">2.1.3.</span> <span class="nav-text">CPU频率拉高</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%AD%E6%96%AD%E9%9A%94%E7%A6%BB"><span class="nav-number">2.1.4.</span> <span class="nav-text">中断隔离</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%86%85%E5%AD%98DRAM%E7%9B%B8%E5%85%B3"><span class="nav-number">2.2.</span> <span class="nav-text">内存DRAM相关</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#DRAM%E9%A2%91%E7%8E%87%E8%B0%83%E6%95%B4"><span class="nav-number">2.2.1.</span> <span class="nav-text">DRAM频率调整</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B0%83%E6%95%B4%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E7%AD%96%E7%95%A5%EF%BC%88%E5%8F%AF%E9%80%89%EF%BC%89"><span class="nav-number">2.2.2.</span> <span class="nav-text">调整内存分配策略（可选）</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8"><span class="nav-number">3.</span> <span class="nav-text">测试实时抖动</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">73</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">73</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2026/04/14/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/3-Linux-%E5%AE%9E%E6%97%B6%E8%A1%A5%E4%B8%81%E7%9A%84%E4%BD%BF%E7%94%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - 实时补丁的使用 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - 实时补丁的使用
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2026-04-14 00:00:00" itemprop="dateCreated datePublished" datetime="2026-04-14T00:00:00+08:00">2026-04-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>2.3k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>8 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="怎么使用实时补丁"><a href="#怎么使用实时补丁" class="headerlink" title="怎么使用实时补丁"></a>怎么使用实时补丁</h1><p>虽然 Linux 6.12 版本已把实时补丁合并到主线，但是随着版本更新，仍有一些新的改动和特性未被合并到主线分支，所以还是有必要了解怎么使用 RT 补丁。</p>
+<h2 id="下载补丁"><a href="#下载补丁" class="headerlink" title="下载补丁"></a>下载补丁</h2><p>实时内核补丁下载地址：</p>
+<p><a target="_blank" rel="noopener" href="https://mirrors.edge.kernel.org/pub/linux/kernel/projects/rt/">https://mirrors.edge.kernel.org/pub/linux/kernel/projects/rt/</a></p>
+<p>在目录内根据内核版本，找到相应的版本的补丁并下载。比如说我的内核版本是 6.1 ，则需要找该版本的实时补丁：</p>
+<div align=center><img src="/images/原理及实现/Kernel/RT-Linux/Linux-实时补丁的使用/rt-patch.png"></div>
+
+<p>补丁文件被压缩成压缩文件，它们可被分为两种，一是单一补丁，可直接使用命令 <code>patch -p1</code> 打补丁；二是多个补丁，需要按顺序打补丁。</p>
+<span id="more"></span>
+
+<h2 id="打补丁"><a href="#打补丁" class="headerlink" title="打补丁"></a>打补丁</h2><p>用单一补丁打补丁很方便，下载并解压后，放到内核源码目录，执行以下命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">patch -p1 &lt; ./patch-6.1.167-rt62.patch</span><br></pre></td></tr></table></figure>
+
+<p>由于代码有差异而导致冲突，会把失败的地方用 .rej 文件记录下来，用以下命令找出该文件：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">find ./ -name <span class="string">&quot;*.rej&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>然后根据冲突的地方更改即可。</p>
+<h1 id="优化实时"><a href="#优化实时" class="headerlink" title="优化实时"></a>优化实时</h1><p>打完补丁后，有需要进一步优化实时，主要是解决任务调度的延迟抖动。</p>
+<h2 id="CPU性能相关"><a href="#CPU性能相关" class="headerlink" title="CPU性能相关"></a>CPU性能相关</h2><h3 id="CPU隔离"><a href="#CPU隔离" class="headerlink" title="CPU隔离"></a>CPU隔离</h3><p>添加以下内核参数，隔离一个或多核用于跑实时任务。</p>
+<p>以下是隔离 CPU3 的例子：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">isolcpus=3</span><br></pre></td></tr></table></figure>
+
+<p>以下是隔离 CPU0、CPU3 和 CPU7 的例子：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">isolcpus=0,3,7</span><br></pre></td></tr></table></figure>
+
+<p>以下是隔离 CPU1 到 CPU7 的例子：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">isolcpus=1-7</span><br></pre></td></tr></table></figure>
+
+<h3 id="NO-HZ-FULL"><a href="#NO-HZ-FULL" class="headerlink" title="NO_HZ_FULL"></a>NO_HZ_FULL</h3><p>目前 Linux 支持三种调度定时器策略：</p>
+<ol>
+<li><code>CONFIG_HZ_PERIODIC</code> ：一直周期性地触发调度定时器，不管 CPU 是否处于 IDLE 状态。</li>
+<li><code>CONFIG_NO_HZ_IDLE</code> ：除了 CPU 处于 IDLE 状态，一直周期性地触发调度定时器。</li>
+<li><code>CONFIG_NO_HZ_FULL</code> ：一直周期性地触发调度定时器，除了 CPU 处于 IDLE 状态，以及它的调度就绪队列仅有一个 task 。</li>
+</ol>
+<p>如果选择 <code>CONFIG_NO_HZ_FULL</code> ，则一个且仅有一个实时任务绑定在一个 CPU 运行时，不会触发调度定时器中断。<br>但需要添加内核参数 <code>nohz_full</code> 指定哪个，或哪些 CPU 去使用这个策略。</p>
+<p>选择以下配置：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">CONFIG_NO_HZ_FULL=y</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>如果以上配置，CONFIG_RCU_NOCB_CPU 会被默认选择，表示 RCU 的旧资源处理操作不会在指定的 CPU 进行。</p>
+</blockquote>
+<p>添加以下内核参数，指定一个或多核使用 <code>NO_HZ_FULL</code> 和 <code>RCU_NOCB_CPU</code>。</p>
+<p>以下以 CPU3 为例子：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nohz_full=3 rcu_nocbs=3</span><br></pre></td></tr></table></figure>
+
+<p>以下是以 CPU0、CPU3 和 CPU7 为例子：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nohz_full=0,3,7 rcu_nocbs=0,3,7</span><br></pre></td></tr></table></figure>
+
+<p>以下是以 CPU1 到 CPU7 为例子：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">nohz_full=1-7 rcu_nocbs=1-7</span><br></pre></td></tr></table></figure>
+
+<h3 id="CPU频率拉高"><a href="#CPU频率拉高" class="headerlink" title="CPU频率拉高"></a>CPU频率拉高</h3><p>把 CPU 的性能拉满，比如说，我需要在 CPU6 和 CPU7 测试实时抖动，则：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">echo performance &gt;  /sys/devices/system/cpu/cpu6/cpufreq/scaling_governor</span><br><span class="line">echo performance &gt;  /sys/devices/system/cpu/cpu7/cpufreq/scaling_governor</span><br></pre></td></tr></table></figure>
+
+<p>另外，可以把 Linux 的实时仲裁策略设为 -1 ，表示关闭该策略：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">echo -1 &gt; /proc/sys/kernel/sched_rt_runtime_us</span><br></pre></td></tr></table></figure>
+
+<p>又或者可以把实时改为 990000 ，即 0.99 秒用于运行实时任务，0.01 秒运行非实时任务。</p>
+<h3 id="中断隔离"><a href="#中断隔离" class="headerlink" title="中断隔离"></a>中断隔离</h3><p>还有，如果系统有频繁的中断触发，而你不想把这些中断响应加载在用于测试实时抖动的 CPU ，从而可能影响测试结果，则使用以下命令，设置 CPU 亲和性：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> &lt;cpu_bitmap&gt; /proc/irq/&lt;irq&gt;/smp_affinity</span><br></pre></td></tr></table></figure>
+
+<p>比如系统有 4 个 CPU ，则查看一个 IRQ68 的 CPU 亲和性：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ <span class="built_in">cat</span> /proc/irq/68/smp_affinity</span><br><span class="line">f</span><br></pre></td></tr></table></figure>
+
+<p>输出信息“f”，为十六进制，对应二进制 4’b1111。比如我不想让 CPU2 处理该中断，则对应的位图是 4’b1011 ，转换为十六进制，则是 0xB ：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> b &gt; /proc/irq/68/smp_affinity</span><br></pre></td></tr></table></figure>
+
+<h2 id="内存DRAM相关"><a href="#内存DRAM相关" class="headerlink" title="内存DRAM相关"></a>内存DRAM相关</h2><h3 id="DRAM频率调整"><a href="#DRAM频率调整" class="headerlink" title="DRAM频率调整"></a>DRAM频率调整</h3><p>如果系统支持对内存 DRAM 的频率进行调整，则可以查看该小节。</p>
+<p>查看可设备的策略：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> /sys/class/devfreq/dmc/available_governors</span><br><span class="line">rknpu_ondemand dmc_ondemand vop2_ondemand venc_ondemand userspace powersave performance simple_ondemand</span><br></pre></td></tr></table></figure>
+
+<p>查看可调节的频率：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> /sys/class/devfreq/dmc/available_frequencies</span><br><span class="line">528000000 1068000000 1560000000 2112000000</span><br></pre></td></tr></table></figure>
+
+<p>将DDR频率固定为上面的可用值，比如支持 2,112MHz ：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> userspace &gt; /sys/class/devfreq/dmc/governor</span><br><span class="line"><span class="built_in">echo</span> 2112000000 &gt; /sys/class/devfreq/dmc/userspace/set_freq</span><br></pre></td></tr></table></figure>
+
+<p>查看设置结果：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cat</span> /sys/class/devfreq/dmc/cur_freq</span><br></pre></td></tr></table></figure>
+
+<h3 id="调整内存分配策略（可选）"><a href="#调整内存分配策略（可选）" class="headerlink" title="调整内存分配策略（可选）"></a>调整内存分配策略（可选）</h3><p>这主要是避免发生 OOM（Out Of Memory）。当出现 OMM 时，可能会把负载程序错杀，从而导致测试结果误导。而且下列负载测试中，需要用到内存分配+映射作为负载的一部分。使用以下命令，降低内存的使用效率，以及浪费内存资源，但是不会发生OOM，以此增加系统的确定性。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> 2 &gt; /proc/sys/vm/overcommit_memory</span><br></pre></td></tr></table></figure>
+
+<h1 id="测试实时抖动"><a href="#测试实时抖动" class="headerlink" title="测试实时抖动"></a>测试实时抖动</h1><p>在压力测试需要用到以下命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">stress-ng --vm 1 --vm-bytes 50% --taskset 3 --<span class="built_in">timeout</span> 24h &amp;</span><br></pre></td></tr></table></figure>
+
+<p><strong>用途</strong>：对系统进行虚拟内存压力测试，并限制在特定的CPU核心上运行，持续24小时。</p>
+<p><strong>参数说明</strong>：</p>
+<ul>
+<li><code>**--vm 1**</code>：启动 1 个虚拟内存压力测试工作进程。每个实例都会分配内存并进行压力测试。</li>
+<li><code>**--vm-bytes 50%**</code>：指定虚拟内存压力测试进程总共将占用系统可用内存的 50%。根据工具说明，如果是1个进程共享50%的内存，则每个进程大约占用 6.25% 的可用内存。</li>
+<li><code>**--taskset 3**</code>：设置 CPU 亲和性，将压力测试进程绑定到 CPU 3 上运行，使其只在指定的 CPU 核心上施加压力。</li>
+<li><code>**--timeout 24h**</code>：设置压力测试的持续时间为 24 小时。</li>
+</ul>
+<hr>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">stress-ng --sock 1 --taskset 3 --<span class="built_in">timeout</span> 24h &amp;</span><br></pre></td></tr></table></figure>
+
+<p><strong>用途</strong>：对系统进行网络套接字压力测试，同样限制在特定的CPU核心上运行，持续24小时。</p>
+<p><strong>参数说明</strong>：</p>
+<ul>
+<li><code>**--sock 1**</code>：启动 1 个套接字压力测试进程，用于锻炼网络子和系统内核的套接字接口。</li>
+<li><code>**--taskset 3**</code>：设置 CPU 亲和性，将压力测试进程绑定到 CPU 3 上运行。</li>
+<li><code>**--timeout 24h**</code>：设置压力测试的持续时间为 24 小时。</li>
+</ul>
+<hr>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">stress-ng --io 1 --taskset 3 --<span class="built_in">timeout</span> 24h &amp;</span><br></pre></td></tr></table></figure>
+
+<p><strong>用途</strong>：对系统进行网络套接字压力测试，同样限制在特定的CPU核心上运行，持续24小时。</p>
+<p><strong>参数说明</strong>：</p>
+<ul>
+<li><code>**stress-ng**</code>：调用 stress-ng 压力测试工具。</li>
+<li><code>**--io 1**</code>：启动 1 个 IO 压力测试进程，用于锻炼 Block 子系统。</li>
+<li><code>**--taskset 3**</code>：设置 CPU 亲和性，将压力测试进程绑定到 CPU 3 上运行。</li>
+<li><code>**--timeout 24h**</code>：设置压力测试的持续时间为 24 小时。</li>
+<li><code>**&amp;**</code>：将命令放入后台运行。</li>
+</ul>
+<hr>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">stress-ng -c 36 --taskset 3 --cpu-method fft --timerfd-freq 1000000 --<span class="built_in">timeout</span> 24h &amp;</span><br></pre></td></tr></table></figure>
+
+<p><strong>用途</strong>：对系统进行高强度的 CPU 计算压力测试，结合高频的定时器事件来增加调度负载，限制在特定的CPU核心上运行，持续24小时。</p>
+<p><strong>参数说明</strong>：</p>
+<ul>
+<li><code>**-c 36**</code>：启动 36 个 CPU 压力测试工作线程，对 CPU 施加负载。</li>
+<li><code>**--taskset 3**</code>：设置 CPU 亲和性，将压力测试进程绑定到 CPU 3 上运行。</li>
+<li><code>**--cpu-method fft**</code>：指定 CPU 压力测试使用的方法为 <strong>fft（快速傅里叶变换，Fast Fourier Transform）</strong>。这是一种计算密集型的算法，非常适合用于 CPU 压力测试。</li>
+<li><code>**--timerfd-freq 1000000**</code>：设置定时器的频率为 1000000（即 1 MHz）。根据参考资料，1000000 纳秒等于 1 毫秒，此参数调整了负载任务的调度频率，使其更频繁地进行计算和中断，可以在每秒产生大量的定时器事件。</li>
+<li><code>**--timeout 24h**</code>：设置压力测试的持续时间为 24 小时。</li>
+</ul>
+<hr>
+<p>结合以上命令进行压力负载，把负载任务绑定在 CPU3 ：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">stress-ng --vm 1 --vm-bytes 50%  --taskset 3 --<span class="built_in">timeout</span> 24h &amp;</span><br><span class="line">stress-ng --sock 1 --taskset 3 --<span class="built_in">timeout</span> 24h &amp;</span><br><span class="line">stress-ng --io 1 --taskset 3 --<span class="built_in">timeout</span> 24h &amp;</span><br><span class="line">stress-ng -c 36 --taskset 3 --cpu-method fft --timerfd-freq 1000000 --<span class="built_in">timeout</span> 24h &amp;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<p>下一步，使用命令<code>cyclictest</code>测试实时抖动：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">taskset -c 3 cyclictest -t 1  -c 1 -m --policy=fifo -Sp 99 -D 24h -N</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>**taskset -c 3**</code>：这是一个 CPU 亲和性设置命令，用于将后续的 <code>cyclictest</code> 进程强制绑定到 <strong>CPU 核心 3</strong> 上运行。这样可以避免进程在多核之间迁移带来的缓存失效和调度延迟，保证测试的稳定性。</li>
+<li><code>**cyclictest**</code>：高精度测试程序，用于测量和分析 Linux 系统的实时延迟性能。</li>
+<li><code>**-t 1**</code>：指定测试的线程数量为 <strong>1</strong>。</li>
+<li><code>**-c 1**</code>：选择时钟类型。1 代表 <strong>CLOCK_REALTIME</strong>（默认 0 代表 CLOCK_MONOTONIC）。</li>
+<li><code>**-m**</code>（<code>--mlockall</code>）：锁定当前和接下来的内存，防止发生 <strong>swap（换页）</strong>，避免因为内存交换而影响实时测试的准确性。</li>
+<li><code>**--policy=fifo**</code>：设定测量线程的调度策略为 <strong>FIFO（先进先出）</strong>。这是一种实时调度策略，适用于对延迟要求严格的实时任务。</li>
+<li><code>**-Sp 99**</code>： </li>
+<li><code>-S</code>（<code>--smp</code>）：标准 SMP 架构测试，使所有线程使用相同的参数。</li>
+<li><code>p 99</code>（<code>--prio=99</code>）：设置测试线程的优先级为 <strong>99</strong>（实时优先级的最高值）。</li>
+<li><code>**-D 24h**</code>（<code>--duration=TIME</code>）：指定测试的持续时间为 <strong>24 小时</strong>（h 代表小时）。</li>
+<li><code>**-N**</code>（<code>--nsecs</code>）：测试结果使用精度更高的 <strong>纳秒</strong> 显示（默认单位是微秒 us）。</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Kernel/" rel="tag"># Kernel</a>
+              <a href="/tags/RTOS/" rel="tag"># RTOS</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/04/09/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/2-Linux-%E5%8F%AF%E6%8A%A2%E5%8D%A0%E5%86%85%E6%A0%B8%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E8%B7%B5/" rel="prev" title="Linux-可抢占内核的原理与实践">
+                  <i class="fa fa-angle-left"></i> Linux-可抢占内核的原理与实践
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/04/15/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/4-Linux-%E4%BD%BF%E7%94%A8%E7%A4%BA%E6%B3%A2%E5%99%A8%E8%A7%82%E5%AF%9F%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/" rel="next" title="Linux - 使用“GPIO+示波器”的方式观测实时抖动">
+                  Linux - 使用“GPIO+示波器”的方式观测实时抖动 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">369k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">22:22</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

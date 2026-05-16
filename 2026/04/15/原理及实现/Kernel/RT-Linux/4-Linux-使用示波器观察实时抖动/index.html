@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#222" media="(prefers-color-scheme: dark)"><meta name="generator" content="Hexo 8.1.1">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Gemini","darkmode":true,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":false,"style":null},"fold":{"enable":false,"height":500},"language":false},"bookmark":{"enable":true,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="前言现在在想，能否用 GPIO+示波器 的方式去测试实时抖动？通过之前的文档可知，实时操作系统的核心在于确定性，所以我们首要关心的是，在进行长时间的持续测试中，延迟抖动的最大值是多少，以此确定 RTOS 的确定性；其次是平均值是多少，以此确定 RTOS 的性能。见以下例图，使用 cyclictest 能测试出“中断发出-&gt;中断响应-&gt;任务唤醒-&gt;任务调度-&gt;返回到用户空间”">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Linux - 使用“GPIO+示波器”的方式观测实时抖动">
+<meta property="og:url" content="http://example.com/2026/04/15/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/4-Linux-%E4%BD%BF%E7%94%A8%E7%A4%BA%E6%B3%A2%E5%99%A8%E8%A7%82%E5%AF%9F%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/index.html">
+<meta property="og:site_name" content="Calon&#39;s Blog">
+<meta property="og:description" content="前言现在在想，能否用 GPIO+示波器 的方式去测试实时抖动？通过之前的文档可知，实时操作系统的核心在于确定性，所以我们首要关心的是，在进行长时间的持续测试中，延迟抖动的最大值是多少，以此确定 RTOS 的确定性；其次是平均值是多少，以此确定 RTOS 的性能。见以下例图，使用 cyclictest 能测试出“中断发出-&gt;中断响应-&gt;任务唤醒-&gt;任务调度-&gt;返回到用户空间”">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/Linux-%E4%BD%BF%E7%94%A8%E7%A4%BA%E6%B3%A2%E5%99%A8%E8%A7%82%E5%AF%9F%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/cyclictest-latency.drawio.png">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/Linux-%E4%BD%BF%E7%94%A8%E7%A4%BA%E6%B3%A2%E5%99%A8%E8%A7%82%E5%AF%9F%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/dso_11.jpg">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/Linux-%E4%BD%BF%E7%94%A8%E7%A4%BA%E6%B3%A2%E5%99%A8%E8%A7%82%E5%AF%9F%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/dso_14.jpg">
+<meta property="og:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/Linux-%E4%BD%BF%E7%94%A8%E7%A4%BA%E6%B3%A2%E5%99%A8%E8%A7%82%E5%AF%9F%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/dso_15.jpg">
+<meta property="article:published_time" content="2026-04-14T16:00:00.000Z">
+<meta property="article:modified_time" content="2026-04-15T16:00:00.000Z">
+<meta property="article:author" content="Calon Zhang">
+<meta property="article:tag" content="Interrupt">
+<meta property="article:tag" content="Kernel">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="Preempt">
+<meta property="article:tag" content="RTOS">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/images/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/Linux-%E4%BD%BF%E7%94%A8%E7%A4%BA%E6%B3%A2%E5%99%A8%E8%A7%82%E5%AF%9F%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/cyclictest-latency.drawio.png">
+
+
+<link rel="canonical" href="http://example.com/2026/04/15/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/4-Linux-%E4%BD%BF%E7%94%A8%E7%A4%BA%E6%B3%A2%E5%99%A8%E8%A7%82%E5%AF%9F%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2026/04/15/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/4-Linux-%E4%BD%BF%E7%94%A8%E7%A4%BA%E6%B3%A2%E5%99%A8%E8%A7%82%E5%AF%9F%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/","path":"2026/04/15/原理及实现/Kernel/RT-Linux/4-Linux-使用示波器观察实时抖动/","title":"Linux - 使用“GPIO+示波器”的方式观测实时抖动"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Linux - 使用“GPIO+示波器”的方式观测实时抖动 | Calon's Blog</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script><script src="/js/bookmark.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">Calon's Blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>Search
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="Searching..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%B3%BB%E7%BB%9F%E6%9E%B6%E6%9E%84%E6%A6%82%E8%BF%B0"><span class="nav-number">2.</span> <span class="nav-text">系统架构概述</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E5%B7%A5%E4%BD%9C%E6%B5%81%E7%A8%8B%E4%B8%8E%E5%8E%9F%E7%90%86"><span class="nav-number">2.1.</span> <span class="nav-text">核心工作流程与原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B5%8B%E9%87%8F%E7%BB%93%E6%9E%9C"><span class="nav-number">2.2.</span> <span class="nav-text">测量结果</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AE%9E%E8%B7%B5%E8%A7%82%E6%B5%8B"><span class="nav-number">3.</span> <span class="nav-text">实践观测</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%A8%E5%BF%97%E5%B9%B3%E5%8F%B0%EF%BC%88T536%EF%BC%89"><span class="nav-number">3.1.</span> <span class="nav-text">全志平台（T536）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95%E6%95%88%E6%9E%9C"><span class="nav-number">3.1.1.</span> <span class="nav-text">测试效果</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8FTrace%E8%A7%82%E6%B5%8B%E6%95%88%E6%9E%9C"><span class="nav-number">3.1.2.</span> <span class="nav-text">使用FTrace观测效果</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RK%E5%B9%B3%E5%8F%B0%EF%BC%88RK3588%EF%BC%89"><span class="nav-number">3.2.</span> <span class="nav-text">RK平台（RK3588）</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95%E6%95%88%E6%9E%9C-1"><span class="nav-number">3.2.1.</span> <span class="nav-text">测试效果</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8FTrace%E8%A7%82%E6%B5%8B%E6%95%88%E6%9E%9C-1"><span class="nav-number">3.2.2.</span> <span class="nav-text">使用FTrace观测效果</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%A1%E7%AE%97%E4%B8%AD%E6%96%AD%E5%BB%B6%E8%BF%9F"><span class="nav-number">3.3.</span> <span class="nav-text">计算中断延迟</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Calon Zhang"
+      src="/images/user.png">
+  <p class="site-author-name" itemprop="name">Calon Zhang</p>
+  <div class="site-description" itemprop="description">Just for fun.</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">73</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">73</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/HAOYZ886" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;HAOYZ886" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i></a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:zhangyh135@foxmail.com" title="E-Mail → mailto:zhangyh135@foxmail.com" rel="noopener me" target="_blank"><i class="fa fa-envelope fa-fw"></i></a>
+      </span>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="sidebar-inner sidebar-blogroll">
+      <div class="links-of-blogroll animated">
+        <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+          Links
+        </div>
+        <ul class="links-of-blogroll-list">
+            <li class="links-of-blogroll-item">
+              <a href="https://hexo.io/" title="https:&#x2F;&#x2F;hexo.io" rel="noopener" target="_blank">Hexo</a>
+            </li>
+            <li class="links-of-blogroll-item">
+              <a href="https://theme-next.js.org/" title="https:&#x2F;&#x2F;theme-next.js.org&#x2F;" rel="noopener" target="_blank">NexT</a>
+            </li>
+        </ul>
+      </div>
+    </div>
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2026/04/15/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/4-Linux-%E4%BD%BF%E7%94%A8%E7%A4%BA%E6%B3%A2%E5%99%A8%E8%A7%82%E5%AF%9F%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/user.png">
+      <meta itemprop="name" content="Calon Zhang">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Calon's Blog">
+      <meta itemprop="description" content="Just for fun.">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Linux - 使用“GPIO+示波器”的方式观测实时抖动 | Calon's Blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Linux - 使用“GPIO+示波器”的方式观测实时抖动
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2026-04-15 00:00:00" itemprop="dateCreated datePublished" datetime="2026-04-15T00:00:00+08:00">2026-04-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2026-04-16 00:00:00" itemprop="dateModified" datetime="2026-04-16T00:00:00+08:00">2026-04-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/" itemprop="url" rel="index"><span itemprop="name">原理及实现</span></a>
+        </span>
+    </span>
+
+  
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="Word count in article">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">Word count in article: </span>
+      <span>3.1k</span>
+    </span>
+    <span class="post-meta-item" title="Reading time">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">Reading time &asymp;</span>
+      <span>11 mins.</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>现在在想，能否用 GPIO+示波器 的方式去测试实时抖动？通过之前的文档可知，实时操作系统的核心在于确定性，所以我们首要关心的是，在进行长时间的持续测试中，延迟抖动的最大值是多少，以此确定 RTOS 的确定性；其次是平均值是多少，以此确定 RTOS 的性能。<br>见以下例图，使用 cyclictest 能测试出“中断发出-&gt;中断响应-&gt;任务唤醒-&gt;任务调度-&gt;返回到用户空间”的总体耗时。</p>
+<div align=center><img src="/images/原理及实现/Kernel/RT-Linux/Linux-使用示波器观察实时抖动/cyclictest-latency.drawio.png"></div>
+
+<span id="more"></span>
+
+<p>如果通过 GPIO+示波器 的方式去观测，目前我能想到的，就是写一个内核模块以及一个用户空间测试程序。用户进程通过系统调用陷入内核层，并计时睡眠。当定时器触发并唤醒该进程，唤醒前把 GPIO 拉高。用户进程被调度执行，并返回到用户空间后，再到把该 GPIO 拉低。这个区间作为一个“任务唤醒-&gt;任务调度-&gt;返回到用户空间”的耗时，并显示到示波器上。<br>为什么无法在示波器上“中断发出-&gt;中断响应”的延迟？从实现难度上讲，就需要在中断发出时立即把 GPIO 拉高，但是中断从发出到 CPU 响应，这也需要时间，这是无法实现的。<br>那能否再用一个 GPIO ，记录用户进程进入内核层，到发出 hrtimer 定时的执行时间？这是可以的，但仅能估算出中断延迟的平均时间，无法计算出中断延迟的最大时间（详情见以下实践部分）。</p>
+<p>另外，还需要额外注意的，就是通过 MMIO 访问 GPIO 的寄存器并置位，再到 GPIO 的电平拉高&#x2F;拉低指定电压（上升沿&#x2F;下降沿的抖动），这也是延迟，属于硬件延迟，这个根据 SoC 而定。</p>
+<p>所以，总得来说，GPIO+示波器 的方式去观测实时抖动，只能用作于展示，个人认为这还是一个玩具，但借此去再次深入理解 RTOS 的实时抖动还是挺有意思的。</p>
+<h1 id="系统架构概述"><a href="#系统架构概述" class="headerlink" title="系统架构概述"></a>系统架构概述</h1><p>源码下载地址：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://github.com/HAOYZ886/gpio-jitter-test</span><br></pre></td></tr></table></figure>
+<p>该测试套件包含一个内核驱动模块和一个用户空间测试程序，通过 GPIO 的电平变化来可视化系统的实时抖动。<br>该套件由两部分组成，协同工作以测量从“进程唤醒”到“用户进程实际执行”的时间差：</p>
+<ul>
+<li>内核模块 (<code>gpio_jitter.c</code>)：负责产生定时中断、在中断上下文中标记时间（拉高GPIO），并唤醒用户进程。</li>
+<li>用户程序 (<code>app_jitter.c</code>)：负责在被唤醒后第一时间执行动作（拉低GPIO），并直接操作硬件寄存器以减少软件开销。</li>
+</ul>
+<h2 id="核心工作流程与原理"><a href="#核心工作流程与原理" class="headerlink" title="核心工作流程与原理"></a>核心工作流程与原理</h2><p>整个测试过程模拟了一个实时事件的处理链，其核心时序原理如下：</p>
+<ul>
+<li><p>阶段一：初始化与配置</p>
+<ul>
+<li><strong>用户程序</strong>通过 <code>ioctl</code> 将GPIO的物理地址、引脚号、定时器间隔等配置传递给内核模块。</li>
+<li><strong>内核模块</strong>使用 <code>ioremap</code> 将物理地址映射为内核虚拟地址，并初始化高精度定时器 (<code>hrtimer</code>) 和同步机制（等待队列或完成量）。</li>
+</ul>
+</li>
+<li><p>阶段二：触发测试，用户程序调用 <code>read</code> 函数进入阻塞状态（模拟等待事件）。</p>
+<ul>
+<li>可选，用户程序调用 <code>read</code> 前，把 GPIO1 拉高，记录睡眠前执行耗时的起点。</li>
+<li><strong>内核模块</strong>的 <code>rt_jitter_read</code> 函数被调用，它执行 <code>test_cb</code> 回调。</li>
+<li>回调函数启动 <code>hrtimer</code>，把 GPIO1 拉低，记录睡眠前执行耗时的结束（可选）。</li>
+<li>当前进程进入睡眠等待状态（通过 <code>wait_event</code> 或 <code>wait_for_completion</code>）。</li>
+</ul>
+</li>
+<li><p>阶段三：中断响应（时间点 T1）</p>
+<ul>
+<li>当定时器到期，内核产生硬件中断。</li>
+<li>在中断上下文（高精度定时器）中，回调函数 <code>timer_callback</code> 被执行。</li>
+<li><strong>关键动作</strong>：立即执行 <code>pin0_set()</code> 拉高 <strong>GPIO0</strong>。这是时间点 <strong>T1</strong>，代表“硬件中断触发的时刻”。</li>
+</ul>
+</li>
+<li><p>阶段四：进程唤醒与执行（时间点 T2）</p>
+<ul>
+<li>紧接着，内核调用 <code>wake_up_interruptible</code> 或 <code>complete</code> 唤醒正在睡眠的用户进程。</li>
+<li>调度器介入，将用户进程调度到CPU上运行。</li>
+<li>用户进程从 <code>read</code> 调用返回，立即拉低 <strong>GPIO0</strong>。这是时间点 <strong>T2</strong>，代表“用户进程实际处理事件的时刻”。</li>
+</ul>
+</li>
+</ul>
+<h2 id="测量结果"><a href="#测量结果" class="headerlink" title="测量结果"></a>测量结果</h2><p>通过示波器观察 <strong>GPIO0</strong> 的电平：</p>
+<ul>
+<li><strong>高电平波形宽度 &#x3D; T2 - T1</strong></li>
+<li>这个时间差即为任务唤醒+调度的<strong>实时响应延迟</strong>，包含了中断处理延迟（部分）和进程调度延迟（主要）。</li>
+</ul>
+<h1 id="实践观测"><a href="#实践观测" class="headerlink" title="实践观测"></a>实践观测</h1><h2 id="全志平台（T536）"><a href="#全志平台（T536）" class="headerlink" title="全志平台（T536）"></a>全志平台（T536）</h2><h3 id="测试效果"><a href="#测试效果" class="headerlink" title="测试效果"></a>测试效果</h3><p>使用以下命令，给 CPU3 性能拉满，满负载：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> performance &gt;  /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor</span><br><span class="line"><span class="built_in">echo</span> -1 &gt; /proc/sys/kernel/sched_rt_runtime_us</span><br><span class="line">stress-ng --vm 8 --vm-bytes 50%  --taskset 3 --<span class="built_in">timeout</span> 24h &amp;</span><br><span class="line">stress-ng --sock 8 --taskset 3 --<span class="built_in">timeout</span> 24h &amp;</span><br><span class="line">stress-ng -c 36 --taskset 3 --cpu-method fft --timerfd-freq 1000000 --<span class="built_in">timeout</span> 24h &amp;</span><br></pre></td></tr></table></figure>
+
+<p>加载模块，并把测试程序绑定到 CPU3 运行：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /root &amp;&amp; insmod gpio_jitter.ko &amp;&amp; taskset -c 3 ./app_jitter</span><br></pre></td></tr></table></figure>
+
+<p>以下是测试 12 小时的效果：</p>
+<div align=center><img src="/images/原理及实现/Kernel/RT-Linux/Linux-使用示波器观察实时抖动/dso_11.jpg"></div>
+
+<p>定时 32us ，黄色波形是任务调度的实时抖动测试，绿色波形可暂时不要管。</p>
+<p>由此可知，从任务唤醒-&gt;任务调度-&gt;任务执行-&gt;返回到用户空间，最大的延迟是 30.890us ，最小 8.3010us ，平均 11.367us 。</p>
+<h3 id="使用FTrace观测效果"><a href="#使用FTrace观测效果" class="headerlink" title="使用FTrace观测效果"></a>使用FTrace观测效果</h3><p>接下来用 ftrace 观测效果，执行以下命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> performance &gt;  /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor</span><br><span class="line"><span class="built_in">echo</span> -1 &gt; /proc/sys/kernel/sched_rt_runtime_us</span><br><span class="line"><span class="built_in">echo</span> 2 &gt; /proc/sys/vm/overcommit_memory</span><br><span class="line">insmod gpio_jitter.ko</span><br><span class="line"><span class="built_in">cd</span> /sys/kernel/debug/tracing/</span><br><span class="line"><span class="built_in">echo</span> 0 &gt; tracing_on; <span class="built_in">echo</span> &gt; trace</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; events/irq/enable</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; events/sched/enable</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; tracing_on; \</span><br><span class="line">taskset -c 3 /mnt/UDISK/gpio_jitter_test; \</span><br><span class="line"><span class="built_in">echo</span> 0 &gt; tracing_on</span><br><span class="line"><span class="built_in">cat</span> trace</span><br></pre></td></tr></table></figure>
+
+<p>输出结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"># tracer: nop</span><br><span class="line">#</span><br><span class="line"># entries-in-buffer/entries-written: 129384/6150166   #P:4</span><br><span class="line">#</span><br><span class="line">#                                _-------=&gt; irqs-off</span><br><span class="line">#                               / _------=&gt; need-resched</span><br><span class="line">#                              | / _-----=&gt; need-resched-lazy</span><br><span class="line">#                              || / _----=&gt; hardirq/softirq</span><br><span class="line">#                              ||| / _---=&gt; preempt-depth</span><br><span class="line">#                              |||| / _--=&gt; preempt-lazy-depth</span><br><span class="line">#                              ||||| / _-=&gt; migrate-disable</span><br><span class="line">#                              |||||| /     delay</span><br><span class="line">#           TASK-PID     CPU#  |||||||  TIMESTAMP  FUNCTION</span><br><span class="line">#              | |         |   |||||||      |         |</span><br><span class="line">          &lt;idle&gt;-0       [003] d...2..  4017.343388: sched_switch: prev_comm=swapper/3 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=gpio_jitter_tes next_pid=560 next_prio=19</span><br><span class="line"> gpio_jitter_tes-560     [003] d...2..  4017.343401: sched_switch: prev_comm=gpio_jitter_tes prev_pid=560 prev_prio=19 prev_state=D ==&gt; next_comm=swapper/3 next_pid=0 next_prio=120</span><br><span class="line">          &lt;idle&gt;-0       [003] d..h1..  4017.343430: irq_handler_entry: irq=11 name=arch_timer</span><br><span class="line">          &lt;idle&gt;-0       [003] d..h4..  4017.343432: sched_waking: comm=gpio_jitter_tes pid=560 prio=19 target_cpu=003</span><br><span class="line">          &lt;idle&gt;-0       [003] dN.h5..  4017.343434: sched_wakeup: comm=gpio_jitter_tes pid=560 prio=19 target_cpu=003</span><br><span class="line">          &lt;idle&gt;-0       [003] dN.h1..  4017.343436: irq_handler_exit: irq=11 ret=handled</span><br><span class="line">          &lt;idle&gt;-0       [003] d...2..  4017.343442: sched_switch: prev_comm=swapper/3 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=gpio_jitter_tes next_pid=560 next_prio=19</span><br><span class="line"> gpio_jitter_tes-560     [003] d...2..  4017.343455: sched_switch: prev_comm=gpio_jitter_tes prev_pid=560 prev_prio=19 prev_state=D ==&gt; next_comm=swapper/3 next_pid=0 next_prio=120</span><br></pre></td></tr></table></figure>
+
+<p>通过以上输出信息拆解延迟时长，</p>
+<p>从中断响应开始（第 17 行），到唤醒线程（第 19 行），期间耗时 4us（4017.343434 - 4017.343430）。</p>
+<p>再从唤醒线程（第 19 行），到线程调度（第 21 行），期间耗时 8us（4017.343442 - 4017.343434）。</p>
+<p>组合起来，这次的任务调度延迟在 12us~13us（加上从系统调用返回的延迟）。</p>
+<h2 id="RK平台（RK3588）"><a href="#RK平台（RK3588）" class="headerlink" title="RK平台（RK3588）"></a>RK平台（RK3588）</h2><h3 id="测试效果-1"><a href="#测试效果-1" class="headerlink" title="测试效果"></a>测试效果</h3><p>使用以下命令，给 CPU6 性能拉满，满负载：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> performance &gt;  /sys/devices/system/cpu/cpu6/cpufreq/scaling_governor</span><br><span class="line"><span class="built_in">echo</span> -1 &gt; /proc/sys/kernel/sched_rt_runtime_us</span><br><span class="line"><span class="built_in">echo</span> userspace &gt; /sys/class/devfreq/dmc/governor</span><br><span class="line"><span class="built_in">echo</span> 2112000000 &gt; /sys/class/devfreq/dmc/userspace/set_freq</span><br><span class="line">stress-ng --vm 8 --vm-bytes 50%  --taskset 6 --<span class="built_in">timeout</span> 24h &amp;</span><br><span class="line">stress-ng --sock 1 --taskset 6 --<span class="built_in">timeout</span> 24h &amp;</span><br><span class="line">stress-ng -c 36 --taskset 6 --cpu-method fft --timerfd-freq 1000000 --<span class="built_in">timeout</span> 24h &amp;</span><br></pre></td></tr></table></figure>
+
+<p>加载模块，并把测试程序绑定到 CPU6 运行：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /root &amp;&amp; insmod gpio_jitter.ko &amp;&amp; taskset -c 6 ./app_jitter</span><br></pre></td></tr></table></figure>
+
+<p>以下是测试 12 小时的效果：</p>
+<div align=center><img src="/images/原理及实现/Kernel/RT-Linux/Linux-使用示波器观察实时抖动/dso_14.jpg"></div>
+
+<p>黄色波形是任务调度的实时抖动测试，定时 32us 。</p>
+<p>由此可知，从任务唤醒-&gt;任务调度-&gt;任务执行-&gt;返回到用户空间，最大的延迟是 11.626us ，最小 2.6660us ，平均 4.5232us 。</p>
+<h3 id="使用FTrace观测效果-1"><a href="#使用FTrace观测效果-1" class="headerlink" title="使用FTrace观测效果"></a>使用FTrace观测效果</h3><p>接下来用 ftrace 观测效果，执行以下命令：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">echo</span> performance &gt;  /sys/devices/system/cpu/cpu6/cpufreq/scaling_governor</span><br><span class="line"><span class="built_in">echo</span> -1 &gt; /proc/sys/kernel/sched_rt_runtime_us</span><br><span class="line"><span class="built_in">echo</span> userspace &gt; /sys/class/devfreq/dmc/governor</span><br><span class="line"><span class="built_in">echo</span> 2112000000 &gt; /sys/class/devfreq/dmc/userspace/set_freq</span><br><span class="line"><span class="built_in">echo</span> 2 &gt; /proc/sys/vm/overcommit_memory</span><br><span class="line"><span class="built_in">cd</span> /root &amp;&amp; insmod gpio_jitter.ko</span><br><span class="line"><span class="built_in">cd</span> /sys/kernel/debug/tracing/</span><br><span class="line"><span class="built_in">echo</span> 0 &gt; tracing_on; <span class="built_in">echo</span> &gt; trace</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; events/irq/enable</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; events/sched/enable</span><br><span class="line"><span class="built_in">echo</span> 1 &gt; tracing_on; \</span><br><span class="line">taskset -c 6 /root/app_jitter; \</span><br><span class="line"><span class="built_in">echo</span> 0 &gt; tracing_on</span><br><span class="line"><span class="built_in">cat</span> trace_pipe</span><br></pre></td></tr></table></figure>
+
+<p>输出结果：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"># tracer: nop</span><br><span class="line">#</span><br><span class="line"># entries-in-buffer/entries-written: 129384/6150166   #P:4</span><br><span class="line">#</span><br><span class="line">#                                _-------=&gt; irqs-off</span><br><span class="line">#                               / _------=&gt; need-resched</span><br><span class="line">#                              | / _-----=&gt; need-resched-lazy</span><br><span class="line">#                              || / _----=&gt; hardirq/softirq</span><br><span class="line">#                              ||| / _---=&gt; preempt-depth</span><br><span class="line">#                              |||| / _--=&gt; preempt-lazy-depth</span><br><span class="line">#                              ||||| / _-=&gt; migrate-disable</span><br><span class="line">#                              |||||| /     delay</span><br><span class="line">#           TASK-PID     CPU#  |||||||  TIMESTAMP  FUNCTION</span><br><span class="line">#              | |         |   |||||||      |         |</span><br><span class="line">          &lt;idle&gt;-0       [006] d...2..   174.873903: sched_switch: prev_comm=swapper/6 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=gpio_jitter_tes next_pid=3310 next_prio=19</span><br><span class="line"> gpio_jitter_tes-3310    [006] d...2..   174.873905: sched_stat_runtime: comm=gpio_jitter_tes pid=3310 runtime=2916 [ns] vruntime=0 [ns]</span><br><span class="line"> gpio_jitter_tes-3310    [006] d...2..   174.873906: sched_stat_runtime: comm=gpio_jitter_tes pid=3310 runtime=584 [ns] vruntime=0 [ns]</span><br><span class="line"> gpio_jitter_tes-3310    [006] d...2..   174.873906: sched_switch: prev_comm=gpio_jitter_tes prev_pid=3310 prev_prio=19 prev_state=D ==&gt; next_comm=swapper/6 next_pid=0 next_prio=120</span><br><span class="line">          &lt;idle&gt;-0       [006] d..h1..   174.873937: irq_handler_entry: irq=13 name=arch_timer</span><br><span class="line">          &lt;idle&gt;-0       [006] d..h4..   174.873938: sched_waking: comm=gpio_jitter_tes pid=3310 prio=19 target_cpu=006</span><br><span class="line">          &lt;idle&gt;-0       [006] dn.h5..   174.873939: sched_wakeup: comm=gpio_jitter_tes pid=3310 prio=19 target_cpu=006</span><br><span class="line">          &lt;idle&gt;-0       [006] dn.h1..   174.873939: irq_handler_exit: irq=13 ret=handled</span><br><span class="line">          &lt;idle&gt;-0       [006] d...2..   174.873940: sched_switch: prev_comm=swapper/6 prev_pid=0 prev_prio=120 prev_state=R ==&gt; next_comm=gpio_jitter_tes next_pid=3310 next_prio=19</span><br><span class="line"> gpio_jitter_tes-3310    [006] d...2..   174.873942: sched_stat_runtime: comm=gpio_jitter_tes pid=3310 runtime=3209 [ns] vruntime=0 [ns]</span><br><span class="line"> gpio_jitter_tes-3310    [006] d...2..   174.873942: sched_stat_runtime: comm=gpio_jitter_tes pid=3310 runtime=583 [ns] vruntime=0 [ns]</span><br><span class="line"> gpio_jitter_tes-3310    [006] d...2..   174.873942: sched_switch: prev_comm=gpio_jitter_tes prev_pid=3310 prev_prio=19 prev_state=D ==&gt; next_comm=swapper/6 next_pid=0 next_prio=120</span><br></pre></td></tr></table></figure>
+
+<p>通过以上输出信息拆解延迟时长，</p>
+<p>从中断响应开始（第 19 行），到唤醒线程（第 21 行），期间耗时 2us（174.873939 - 174.873937）。</p>
+<p>再从唤醒线程（第 21 行），到线程调度（第 23 行），期间耗时 1us（174.873940 - 174.873939）。</p>
+<p>组合起来，这次的任务调度延迟在 3us~4us（加上从系统调用返回的延迟）。</p>
+<h2 id="计算中断延迟"><a href="#计算中断延迟" class="headerlink" title="计算中断延迟"></a>计算中断延迟</h2><p>现在来尝试通过两个 GPIO 的波形，来计算中断延迟。</p>
+<div align=center><img src="/images/原理及实现/Kernel/RT-Linux/Linux-使用示波器观察实时抖动/dso_15.jpg"></div>
+
+<p>其中黄色正波形是“任务唤醒-&gt;任务调度-&gt;返回到用户空间”的延迟，黄色负波形是“进入内核层-&gt;本身hrtimer函数的执行时间-&gt;32us定时-&gt;中断响应-&gt;部分hrtimer的执行执行时间（执行唤醒函数前）”的延迟。<br>而绿色正波形是““进入内核层-&gt;本身hrtimer函数的执行时间”，绿色负波形是“32us定时-&gt;中断响应-&gt;部分hrtimer的执行执行时间（执行唤醒函数前）-&gt;任务唤醒-&gt;任务调度-&gt;返回到用户空间”的延迟。<br>我想借此计算出中断延迟，先根据各波形的最小值来计算中断延迟的最小值，比如黄色正波形为5.02us，负波形为34.65us；绿色正波形为1.195us，负波形为38.264us，已知定时为32us，则中断延迟大约为：34.65-(1.195+32)&#x3D;1.455us 。其实这种方法也能用于计算中断延迟的平均值。</p>
+<p>但这种方法计算不了中断延迟的最大值。<br>期间我试过用绿正波形的最大值和最小值，分别计算中断延迟的最小值和最大值。但是，我忽略了跨周期的极值混搭会导致计算结果失去真实对应关系，就比如：<br>黄色负波形的最大值 来自某个周期（记为周期A）：</p>
+<ul>
+<li>黄负_max &#x3D; 32us + 中断延迟_A + 绿色正_A<br>绿色正波形的最大值 来自另一个周期（记为周期B）：</li>
+<li>绿正_max &#x3D; 内核+hrtimer执行时间_B<br>绿色正波形的最小值 来自又一个周期（记为周期C）：</li>
+<li>绿正_min &#x3D; 内核+hrtimer执行时间_C</li>
+</ul>
+<p>假设周期 A 中，黄色负波形很大是因为 “中断延迟很大 + 内核&#x2F;hrtimer执行时间也很大（比如绿正&#x3D;3us）”。<br>而周期 C 中，绿色正波形很小（比如绿正&#x3D;1us），是因为内核&#x2F;hrtimer执行时间很短，但那个周期里的黄色负波形可能很小（比如实际中断延迟只有0.5us）。<br>用 黄负_max（来自周期A，含3us绿正） - 32us - 绿正_min（来自周期C，1us），得到的结果是：</p>
+<ul>
+<li>(32+中断延迟_A+3) - 32 - 1 &#x3D; 中断延迟_A + 2us。</li>
+</ul>
+<p>这个 2us 完全是因为混用了不同周期的绿正值而产生的虚假增量，真实的中断延迟_A可能只有1us。<br>最终得到的“中断延迟最大值”可能比真实最大值大很多，甚至出现不合理的大值；而“中断延迟最小值”也可能比真实最小值小很多。这两个极值从来没有在一个真实的物理周期中同时出现过。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="reward-container">
+  <div>Buy me a coffee</div>
+  <button>
+    Donate
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Calon Zhang WeChat Pay">
+        <span>WeChat Pay</span>
+      </div>
+      <div>
+        <img src="/images/alipay.jpg" alt="Calon Zhang Alipay">
+        <span>Alipay</span>
+      </div>
+
+  </div>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/Kernel/" rel="tag"># Kernel</a>
+              <a href="/tags/RTOS/" rel="tag"># RTOS</a>
+              <a href="/tags/Preempt/" rel="tag"># Preempt</a>
+              <a href="/tags/Interrupt/" rel="tag"># Interrupt</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/04/14/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/3-Linux-%E5%AE%9E%E6%97%B6%E8%A1%A5%E4%B8%81%E7%9A%84%E4%BD%BF%E7%94%A8/" rel="prev" title="Linux - 实时补丁的使用">
+                  <i class="fa fa-angle-left"></i> Linux - 实时补丁的使用
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/04/25/%E5%8E%9F%E7%90%86%E5%8F%8A%E5%AE%9E%E7%8E%B0/Kernel/RT-Linux/5-Linux-%E6%89%8B%E5%8A%A8%E6%B3%A8%E5%85%A5%E5%BB%B6%E8%BF%9F%E6%9D%A5%E8%A7%82%E6%B5%8B%E5%AE%9E%E6%97%B6%E6%8A%96%E5%8A%A8/" rel="next" title="Linux - 手动注入延迟来观测实时抖动">
+                  Linux - 手动注入延迟来观测实时抖动 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2025 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">License: CC BY-NC-SA 4.0</span>
+  </div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+    <span title="Word count total">369k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="Reading time total">22:22</span>
+  </span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>
